@@ -1,0 +1,969 @@
+openapi: 3.0.3
+
+info:
+  title: datafusion-server
+  description:
+    This is a datafusion-server based on the OpenAPI 3.0 specification.
+  version: 1.0.0
+
+tags:
+  - name: Arrow
+    description: Non query Arrow responder
+  - name: JSON
+    description: Non query JSON responder
+  - name: DataFrame
+    description: Query based Arrow or JSON responder
+  - name: Session
+    description: Session context
+  - name: DataSource
+    description: Session based context query
+  - name: System
+    description: Other system APIs
+
+paths:
+  /arrow/csv/{fileName}:
+    get:
+      tags:
+        - Arrow
+      summary: Gets CSV file into Arrow response format
+      description: Single CSV file can only provided.
+      operationId: arrowCsv
+      parameters:
+        - name: fileName
+          in: path
+          description: Target file
+          required: true
+          schema:
+            type: string
+          example: sales.csv
+        - name: inferSchemaRows
+          in: query
+          description: Infer the schema rows
+          schema:
+            type: number
+          example: 50
+        - name: hasHeader
+          in: query
+          description: Content has header row
+          schema:
+            type: boolean
+          example: true
+        - name: dateTimePreset
+          in: query
+          description: Specified preset date time format
+          schema:
+            type: string
+          example: iso
+        - name: dateTimeRegex
+          in: query
+          description: Specified date time regex
+          schema:
+            type: string
+          example: '^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}$'
+        - name: dateTimeFormat
+          in: query
+          description: Specified date time format
+          schema:
+            type: string
+          example: '%y/%m/%d %H:%M:%S'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.apache.arrow.stream:
+              schema:
+                $ref: '#/components/schemas/responseArrow'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+  /arrow/parquet/{fileName}:
+    get:
+      tags:
+        - Arrow
+      summary: Gets parquet file into Arrow response format
+      description: Single parquet file can only provided.
+      operationId: arrowParquet
+      parameters:
+        - name: fileName
+          in: path
+          description: Target file
+          required: true
+          schema:
+            type: string
+          example: customer.parquet
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.apache.arrow.stream:
+              schema:
+                $ref: '#/components/schemas/responseArrow'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+  /json/csv/{fileName}:
+    get:
+      tags:
+        - JSON
+      summary: Gets JSON file into Arrow response format
+      description: Single parquet file can only provided.
+      operationId: jsonCsv
+      parameters:
+        - name: fileName
+          in: path
+          description: Target file
+          required: true
+          schema:
+            type: string
+          example: customer.csv
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.apache.arrow.stream:
+              schema:
+                $ref: '#/components/schemas/responseArrow'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+  /dataframe/query:
+    post:
+      tags:
+        - DataFrame
+      summary: Multiple data sources query
+      description: Across multiple type of data source provided
+      operationId: dataframeQuery
+      requestBody:
+        description: Data sources, query and response format. response is optional, default format as JSON. CSV charset only UTF-8.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/queryRequest'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.apache.arrow.stream:
+              schema:
+                $ref: '#/components/schemas/responseArrow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responseJSON'
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/responseCSV'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+
+  /session:
+    get:
+      tags:
+        - Session
+      summary: Get session identifiers
+      operationId: sessionIndex
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+                    created:
+                      type: number
+                      example: 1673923744103
+                      description: Created at (UTC, ms)
+                    ttl:
+                      type: number
+                      example: 26543390
+                      description: Remain time to live (ms)
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+  /session/{sessionId}:
+    get:
+      tags:
+        - Session
+      summary: Get a existing session information
+      operationId: session
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+                  created:
+                    type: string
+                    example: 2023-01-22T05:25:01.626Z
+                    description: Created at (RFC3339, UTC, milli-sec)
+                  ttl:
+                    type: number
+                    example: 3547521
+                    description: Remain time to live (sec)
+        '400':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+    delete:
+      tags:
+        - Session
+      summary: Remove a existing session
+      operationId: removeSession
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+      responses:
+        '200':
+          description: Successful operation
+        '400':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '500':
+          description: Can not remove a existing session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+  /session/create:
+    get:
+      tags:
+        - Session
+      summary: Create a new session
+      operationId: createSession
+      parameters:
+        - name: keepAlive
+          in: query
+          description: Sets the session keep alive time in seconds
+          schema:
+            type: number
+          default: 3600
+          example: 1800
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+                    created:
+                      type: string
+                      example: 2023-01-11T05:25:14.211Z
+                      description: Created at (RFC3339, UTC, milli-sec)
+                    ttl:
+                      type: number
+                      example: 3560106
+                      description: Remain time to live (sec)
+        '500':
+          description: Can not create a new session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+
+  /session/{sessionId}/datasource:
+    get:
+      tags:
+        - DataSource
+      summary: Data source (table) index from session context
+      operationId: dataSourceIndex
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+      responses:
+        '200':
+          description: Current existing table names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  example: customer
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+    post:
+      tags:
+        - DataSource
+      summary: Create tables to session context
+      operationId: createDataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: Request Body
+          in: body
+          description: Target data source
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/dataSource'
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '500':
+          description: Can not create table from data source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+  /session/{sessionId}/datasource/save:
+    post:
+      tags:
+        - DataSource
+      summary: Save data sources to local file system
+      operationId: saveDataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: Request Body
+          in: body
+          description: Target data source
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/dataSource'
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '500':
+          description: Can not write data sources to local file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+  /session/{sessionId}/datasource/{name}:
+    get:
+      tags:
+        - DataSource
+      summary: Data source (table) information
+      operationId: dataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: name
+          in: path
+          description: Data source (table) name
+          required: true
+          schema:
+            type: string
+          example: customer
+      responses:
+        '200':
+          description: Current existing tables
+          content:
+            application/json:
+              schema:
+                properties:
+                  name:
+                    type: string
+                    example: customer
+                  location:
+                    type: string
+                    example: file:///customer.csv
+                  schema:
+                    $ref: '#/components/schemas/dataSourceSchema'
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+    delete:
+      tags:
+        - DataSource
+      summary: Remove data source from session context
+      operationId: removeDataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: name
+          in: path
+          description: Data source (table) name
+          required: true
+          schema:
+            type: string
+          example: customer
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '500':
+          description: Can not remove data source from data source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+  /session/{sessionId}/datasource/{name}/refresh:
+    get:
+      tags:
+        - DataSource
+      summary: Reload data source from source
+      operationId: reloadDataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: name
+          in: path
+          description: Data source (table) name
+          required: true
+          schema:
+            type: string
+          example: customer
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '500':
+          description: Can not refresh specified data source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+
+  /session/{sessionId}/processor:
+    post:
+      tags:
+        - Processor
+      summary: Executes built-in processors
+      operationId: processor
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+        - name: Request Body
+          in: body
+          description: Target data source
+          required: true
+          schema:
+            $ref: '#/components/schemas/processor'
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '400':
+          description: Can not executes one or more processors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+
+  /session/{sessionId}/query:
+    post:
+      tags:
+        - Query
+      summary: Query across data sources of session context
+      operationId: querySession
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+      requestBody:
+        description: response is optional, default format as JSON. CSV charset only UTF-8.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/sessionQuery'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/vnd.apache.arrow.stream:
+              schema:
+                $ref: '#/components/schemas/responseArrow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/responseJSON'
+            text/csv:
+              schema:
+                $ref: '#/components/schemas/responseCSV'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error400'
+
+  /sysinfo:
+    get:
+      tags:
+        - System
+      summary: Server system information
+      operationId: sys_info
+      responses:
+        '200':
+          description: Server information and statistics
+          content:
+            application/json:
+              schema:
+                properties:
+                  name:
+                    type: string
+                    example: datafusion-server
+                  version:
+                    type: string
+                    example: 1.0.0
+                  plugin:
+                    properties:
+                      pythonInterpreter:
+                        type: string
+                        example: 3.9.6 (default, May 7 2023, 23:32:44) [Clang 14.0.3]
+                      connectors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            module:
+                              type: string
+                              example: example
+                            version:
+                              type: string
+                              example: 1.0.0
+                      processors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            module:
+                              type: string
+                              example: pivot-table
+                            version:
+                              type: string
+                              example: 1.0.0
+                  statistics:
+                    properties:
+                      runningTime:
+                        type: number
+                        example: 3213
+                        description: Elapsed time since the server was started in seconds
+
+  /healthz:
+    get:
+      tags:
+        - System
+      summary: Server health condition check
+      operationId: healthz
+      responses:
+        '204':
+          description: Server is alive (No Content)
+
+components:
+  schemas:
+    responseArrow:
+      type: integer
+      format: binary
+      description: Arrow columnar format
+      example: Flatbuffer binary stream
+    responseJSON:
+      type: array
+      description: JSON object array format
+      items:
+        type: object
+        additionalProperties:
+          type: string
+          example: string, number or a null
+    responseCSV:
+      type: string
+      format: text
+      description: UTF-8 encoded CSV format
+
+    error400:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int16
+          description: HTTP response code
+          example: 400
+        error:
+          type: string
+          description: Error identifier
+          example: 'unsupported_data_source_type'
+        message:
+          type: string
+          description: Detailed error message
+          example: 'Unsupported data source type: xml'
+
+    error404:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int16
+          description: HTTP response code
+          example: 404
+        error:
+          type: string
+          description: Error identifier
+          example: 'session_not_found'
+        message:
+          type: string
+          description: Detailed error message
+          example: 'Incorrect session identifier'
+
+    error500:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int16
+          description: HTTP response code
+          example: 500
+        error:
+          type: string
+          description: Error identifier
+          example: 'io_error'
+        message:
+          type: string
+          description: Detailed error message
+          example: 'Failed to create data source into record batches'
+
+    queryRequest:
+      type: object
+      properties:
+        dataSources:
+          type: array
+          items:
+            $ref: '#/components/schemas/dataSource'
+        processor:
+          $ref: '#/components/schemas/processor'
+        query:
+          $ref: '#/components/schemas/queryLang'
+        response:
+          $ref: '#/components/schemas/queryResponse'
+    dataSource:
+      type: object
+      properties:
+        format:
+          type: string
+          enum:
+            - json
+            - rawJson
+            - csv
+            - parquet
+        name:
+          type: string
+          description: Data source (table) name
+          example: customer
+        location:
+          type: string
+          example: http://other-server/endpoint
+        schema:
+          $ref: '#/components/schemas/dataSourceSchema'
+        options:
+          $ref: '#/components/schemas/dataSourceOptions'
+        pluginOptions:
+          $ref: '#/components/schemas/dataSourcePluginOptions'
+    dataSourceSchema:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: column1
+          dataType:
+            type: string
+            enum:
+              - Boolean
+              - Int8
+              - Int16
+              - Int32
+              - Int64
+              - UInt8
+              - UInt16
+              - UInt32
+              - UInt64
+              - Integer
+              - Float16
+              - Float32
+              - Float64
+              - Float
+              - TimestampSecond
+              - Timestamp
+              - TimestampMicro
+              - TimestampNano
+              - Date
+              - Time
+              - DurationSecond
+              - Duration
+              - DurationMicro
+              - DurationNano
+              - String
+            example: String
+          nullable:
+            type: boolean
+    dataSourceOptions:
+      type: object
+      properties:
+        hasHeader:
+          type: boolean
+          default: true
+          description: First row is the header row (only for CSV data source)
+        inferSchemaRows:
+          type: integer
+          format: uint32
+          default: 100
+          example: 1000
+        delimiter:
+          type: string
+          default: ','
+          description: Field separators (only for CSV data source)
+        jsonPath:
+          type: string
+          example: '$.entries[*]'
+        overwrite:
+          type: boolean
+          default: false
+          description: Overwrite existing data source by effects both read and write operations
+    dataSourcePluginOptions:
+      type: object
+      properties:
+        any:
+          type: string
+      example: '{ "foo": "string", "bar": 123.45678, "baz": true }'
+      description: Any object keys and types except `null` to Python plugin (Optional)
+    processorPluginOptions:
+      type: object
+      properties:
+        any:
+          type: string
+      example: '{ "values": "Sales", "index": ["State", "City"], "columns": "Department" }'
+      description: Any object keys and types except `null` to Python plugin (Optional)
+    processor:
+      type: object
+      properties:
+        mergeProcessors:
+          type: array
+          items:
+            type: object
+            properties:
+              direction:
+                type: string
+                enum:
+                  - row
+                  - column
+                example: row
+                description: Merge direction
+              baseTable:
+                type: string
+                example: table1
+                description: Merge all target tables into the base table
+              targetTables:
+                type: array
+                items:
+                  type: string
+                  example: ['table2', 'table3']
+                  description: Merge target tables (Only for row direction)
+              targets:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    table:
+                      type: string
+                      example: 'table2'
+                    baseKeys:
+                      type: array
+                      items:
+                        type: string
+                        example: ['col1', 'col2']
+                    targetKeys:
+                      type: array
+                      items:
+                        type: string
+                        example: ['id', 'category']
+                description: Merge target tables by keys (Only for column direction)
+              options:
+                type: object
+                properties:
+                  distinct:
+                    type: boolean
+                    example: false
+                    description: Removes same values records (Only for row direction)
+                  removeAfterMerged:
+                    type: boolean
+                    example: false
+                    description: Removes target tables when merge process has done
+    queryLang:
+      type: object
+      properties:
+        sql:
+          type: string
+          example: 'SELECT * FROM superstore'
+        postProcessors:
+          type: array
+          items:
+            $ref: '#/components/schemas/postProcessor'
+    postProcessor:
+      description: Specifies processor plugin that will call after the SQL query (Optional)
+      type: object
+      properties:
+        module:
+          type: string
+          description: Processor plugin name
+          example: 'pivot-table'
+        #pythonScript:
+        #  type: string
+        #  description: Python script code (Currently disabled for security reasons)
+        pluginOptions:
+          $ref: '#/components/schemas/processorPluginOptions'
+    queryResponse:
+      type: object
+      properties:
+        format:
+          type: string
+          enum:
+            - arrow
+            - json
+            - csv
+          example: json
+        options:
+          type: object
+          properties:
+            hasHeaders:
+              type: boolean
+              default: true
+              description: Presents first row as header (CSV only)
+            delimiter:
+              type: string
+              default: ','
+              description: Column delimiter, only accets single character (CSV only)
+    sessionQuery:
+      type: object
+      properties:
+        query:
+          $ref: '#/components/schemas/queryLang'
+        response:
+          $ref: '#/components/schemas/queryResponse'

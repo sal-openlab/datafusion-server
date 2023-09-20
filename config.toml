@@ -1,0 +1,14 @@
+# Configuration file of xapi-server
+
+[server]
+port = 4000
+base_url = "/"
+data_dir = "./data"
+plugin_dir = "./plugins"
+
+[session]
+default_keep_alive = 3600 # in seconds
+
+[log]
+# trace, debug, info, warn, error
+level = "debug"
