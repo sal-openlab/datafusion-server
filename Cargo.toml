@@ -1,6 +1,6 @@
 [package]
 name = "datafusion-server"
-version = "0.8.5"
+version = "0.8.6"
 description = "Arrow and other large datasets web server library"
 license-file = "LICENSE"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]

@@ -62,8 +62,8 @@ pub async fn entry() {
         cleanup_worker(session_mgr).await;
     });
 
-    log::debug!(
-        "data-server v{} started, listen on {:?}",
+    log::info!(
+        "datafusion-server v{} started, listen on {:?}",
         env!("CARGO_PKG_VERSION"),
         addr
     );
@@ -73,7 +73,7 @@ pub async fn entry() {
         log::error!("Server error: {:?}", err);
     }
 
-    log::debug!("Server stopped");
+    log::info!("Server stopped");
 }
 
 async fn cleanup_worker(session_mgr: Arc<tokio::sync::Mutex<SessionContextManager>>) {
