@@ -40,9 +40,8 @@ struct Args {
     config: PathBuf,
 }
 
-#[allow(dead_code)]
 #[tokio::main]
-async fn entry() -> anyhow::Result<()> {
+pub async fn entry() {
     let args = Args::parse();
     LAZY_SETTINGS
         .set(Settings::new(&args.config).expect("Can not initialize configurations"))
@@ -75,8 +74,6 @@ async fn entry() -> anyhow::Result<()> {
     }
 
     log::debug!("Server stopped");
-
-    Ok(())
 }
 
 async fn cleanup_worker(session_mgr: Arc<tokio::sync::Mutex<SessionContextManager>>) {

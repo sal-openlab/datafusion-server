@@ -2,11 +2,12 @@
 name = "datafusion-server"
 version = "0.8.4"
 description = "Arrow and other large datasets web server library"
-license = "MIT"
+license-file = "LICENSE"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
 keywords = ["http", "web", "arrow", "datafusion"]
 readme = "README.md"
 edition = "2021"
+repository = "https://github.com/neural-runner/datafusion-server.git"
 
 [profile.release]
 strip = true
