@@ -1,11 +1,11 @@
-# datafusion-server
+# datafusion-server crate
 
-A Simple Arrow server implemented by Rust.
+Multiple session, variety of data sources query server implemented by Rust.
 
 * Asynchronous architecture used by [Tokio](https://tokio.rs/) ecosystem
 * Apache Arrow with DataFusion
   + Supports multiple data source with SQL queries
-* Python plugin feature for data source connector
+* Python plugin feature for data source connector and post processor
 
 ## License
 
@@ -13,7 +13,7 @@ Copyright (c) 2022 - 2023 SAL Ltd. - https://sal.co.jp
 
 ## Supported environment
 
-* Linux with or without Docker
+* Linux
 * BSD based Unix incl. macOS 10.6+
 * SVR4 based Unix
 * Windows 10+ incl. WSL 2
@@ -43,7 +43,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.6"
+datafusion-server = "0.8.7"
 ```
 
 #### Example of src/main.rs
@@ -94,7 +94,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.8.6", features = ["plugin"] }
+datafusion-server = { version = "0.8.7", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -120,7 +120,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.8.6", features = ["plugin"] }
+datafusion-server = { version = "0.8.7", features = ["plugin"] }
 ```
 
 #### Build for release
@@ -135,65 +135,17 @@ $ cargo build --release
 $ cargo clean
 ```
 
-## Build to standalone Docker image
-
-### Building container
-
-```sh
-$ docker build -t datafusion-server:0.x.x .
-```
-
-The container image size is 40 MB, including OS and all required packages.
-
-```sh
-$ docker images
-REPOSITORY      TAG     IMAGE ID       CREATED         SIZE
-datafusion-server     0.x.x   de4a87a6a9b1   3 minutes ago   38.9MB
-```
-
-### Running container
-
-```sh
-$ docker run --rm \
-    -p 4000:4000 \
-    -v ./data:/var/datafusion-server/data \
-    --name datafusion-server \
-    datafusion-server:0.x.x
-```
-
-Embedded plugin placed at `/usr/local/datafusion-server/plugins` directory if the plugin feature has enabled.
-
-```sh
-$ docker run --rm \
-    -p 4000:4000 \
-    -v ./data:/var/datafusion-server/data \
-    -v ./plugins:/usr/local/datafusion-server/plugins \
-    --name datafusion-server \
-    datafusion-server:0.x.x
-```
-
 ## Usage
-
-### Single data source
-
-* CSV data source to Arrow response
-
-```sh
-$ curl http://localhost:4000/arrow/csv/superstore.csv
-```
-
-* Parquet to Arrow response
-
-```sh
-$ curl http://localhost:4000/arrow/parquet/superstore.parquet
-```
 
 ### Multiple data sources with SQL query
 
-* Can be used multiple kind of format
-* Query execution across multiple data sources
-  + SQL query engine uses Arrow DataFusion (See https://arrow.apache.org/datafusion/user-guide/sql/index.html for more information)
-* Arrow and JSON both type of response format
+* Can be used many kind of data source format (Parquet, JSON, ndJSON, CSV, ...).
+* Data can be retrieved from the local file system and from external REST services.
+  + Processing by JSONPath can be performed if necessary.
+* Query execution across multiple data sources.
+  + SQL query engine uses Arrow DataFusion.
+    - Details https://arrow.apache.org/datafusion/user-guide/sql/index.html for more information.
+* Arrow, JSON and CSV formats to response.
 
 ```sh
 $ curl -X "POST" "http://localhost:4000/dataframe/query" \

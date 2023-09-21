@@ -1,0 +1,11 @@
+# Plugin definition file for datafusion-server
+
+[general]
+title = "Example data source plugin (json, rawJson, arrow)"
+version = "1.1.0"
+plugin_type = "datasource"
+scheme = "example"
+
+[plugin]
+file = "plugin_main.py"
+entry = "main"

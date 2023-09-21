@@ -1,0 +1,11 @@
+# Plugin definition file for datafusion-server
+
+[general]
+title = "Microsoft Excel 2003+ data source connector plugin"
+version = "1.0.0"
+plugin_type = "datasource"
+scheme = "excel"
+
+[plugin]
+file = "plugin_main.py"
+entry = "main"

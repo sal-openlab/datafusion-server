@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.7 (2023-09-22)
+
+* Internal version number under adjustment was skipped
+* In the meantime, documentation and sample data were organized
+
 ## 0.8.4 (2023-09-16)
 
 * Updates to DataFusion v31 and Arrow v46

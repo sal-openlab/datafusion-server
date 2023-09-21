@@ -1,0 +1,11 @@
+# Plugin definition file for datafusion-server
+
+[general]
+title = "Pivot table processor plugin"
+version = "1.0.0"
+plugin_type = "processor"
+module = "pivot-table"
+
+[plugin]
+file = "plugin_main.py"
+entry = "main"
