@@ -27,34 +27,106 @@ and other [LLVM](https://llvm.org/) supported environment.
 * Rust Toolchain 1.70+ (Edition 2021) from https://www.rust-lang.org
 * _or_ the Docker official container image from https://hub.docker.com/_/rust
 
-### Debug build and run instantly
+### How to run
+
+```sh
+$ cargo init server-executer
+$ cd server-executer
+```
+
+#### Example of Cargo.toml
+
+```toml
+[package]
+name = "server-executer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+datafusion-server = "0.8.6"
+```
+
+#### Example of src/main.rs
+
+```rust
+fn main() {
+    datafusion_server::entry();
+}
+```
+
+#### Example of config.toml
+
+```toml
+# Configuration file of datafusion-server
+
+[server]
+port = 4000
+base_url = "/"
+data_dir = "./data"
+plugin_dir = "./plugins"
+
+[session]
+default_keep_alive = 3600 # in seconds
+
+[log]
+# trace, debug, info, warn, error
+level = "debug"
+```
+
+#### Debug build and run
 
 ```sh
 $ cargo run
 ```
 
-### Release build
-
-```sh
-$ cargo build --release
-```
-
-Creating executable binary at `target/release/datafusion-server`. Size of the executable file which does not depend on any shared libraries at about only 33 MB.
-
 ## datafusion-server with Python plugins feature
 
 Require Python interpreter v3.7+
 
-### Debug build and run instantly
+### How to run
 
-```sh
-$ cargo run --features plugin
+#### Example of Cargo.toml
+
+```toml
+[package]
+name = "server-executor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+datafusion-server = { version = "0.8.6", features = ["plugin"] }
 ```
 
-### Release build
+#### Debug build and run
 
 ```sh
-$ cargo build --release --features plugin
+$ cargo run
+```
+
+### Release build with full optimization
+
+#### Example of Cargo.toml
+
+```toml
+[package]
+name = "server-executor"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+opt-level = 'z'
+strip = true
+lto = "fat"
+codegen-units = 1
+
+[dependencies]
+datafusion-server = { version = "0.8.6", features = ["plugin"] }
+```
+
+#### Build for release
+
+```sh
+$ cargo build --release
 ```
 
 ### Clean workspace
