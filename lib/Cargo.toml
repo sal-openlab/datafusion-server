@@ -8,6 +8,8 @@ keywords = { workspace = true }
 readme = { workspace = true }
 edition = { workspace = true }
 rust-version = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
 
 [lib]
 name = "datafusion_server"

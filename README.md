@@ -45,7 +45,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.8"
+datafusion-server = "0.8.9"
 ```
 
 #### Example of src/main.rs
@@ -96,7 +96,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.8.7", features = ["plugin"] }
+datafusion-server = { version = "0.8.9", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -122,7 +122,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.8.7", features = ["plugin"] }
+datafusion-server = { version = "0.8.9", features = ["plugin"] }
 ```
 
 #### Build for release
