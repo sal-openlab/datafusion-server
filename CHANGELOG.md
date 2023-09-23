@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.8 (2023-09-23)
+
+* Prepared DataFusion Server to run in standalone and Docker environments
+
 ## 0.8.7 (2023-09-22)
 
 * Internal version number under adjustment was skipped

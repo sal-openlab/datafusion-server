@@ -1,0 +1,14 @@
+# Configuration file of datafusion-server for production environment
+
+[server]
+port = 4000
+base_url = "/"
+data_dir = "/var/datafusion-server/data"
+plugin_dir = "/usr/local/datafusion-server/plugins"
+
+[session]
+default_keep_alive = 3600 # in seconds
+
+[log]
+# trace, debug, info, warn, error
+level = "info"

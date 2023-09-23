@@ -9,6 +9,8 @@ Multiple session, variety of data sources query server implemented by Rust.
 
 ## License
 
+License under the [MIT](LICENSE)
+
 Copyright (c) 2022 - 2023 SAL Ltd. - https://sal.co.jp
 
 ## Supported environment
@@ -43,14 +45,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.7"
+datafusion-server = "0.8.8"
 ```
 
 #### Example of src/main.rs
 
 ```rust
 fn main() {
-    datafusion_server::entry();
+    datafusion_server::execute("path/to/config.toml");
 }
 ```
 

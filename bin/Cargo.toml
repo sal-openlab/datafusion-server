@@ -1,0 +1,21 @@
+[package]
+name = "datafusion-server"
+version = "0.1.0"
+description = "datafusion-server crate library command-line executer"
+license = "MIT"
+authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
+keywords = ["datafusion-server"]
+readme = "README.md"
+edition = "2021"
+
+[profile.release]
+strip = true
+lto = "fat"
+codegen-units = 1
+
+[features]
+plugin = ["datafusion-server/plugin"]
+
+[dependencies]
+datafusion-server = { path = "../lib" }
+clap = { version = "4.4.4", features = ["derive"] }

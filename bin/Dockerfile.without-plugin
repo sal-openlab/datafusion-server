@@ -1,0 +1,21 @@
+FROM rust:1.72 as builder
+
+WORKDIR /usr/src/datafusion-server
+
+COPY ./lib ./lib
+COPY ./bin ./bin
+COPY ./Cargo.toml ./
+
+RUN cd bin \
+ && cargo build --release
+
+FROM alpine:latest
+
+COPY --from=builder /usr/src/datafusion-server/bin/target/release/datafusion-server /usr/local/datafusion-server/bin/
+COPY ./bin/data /var/datafusion-server/data
+COPY ./bin/config-release.toml /etc/datafusion-server-config.toml
+
+RUN apk add --no-cache tini
+
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["/usr/local/datafusion-server/bin/datafusion-server", "-f", "/etc/datafusion-server-config.toml"]

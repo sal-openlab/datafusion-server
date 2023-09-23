@@ -1,4 +1,3 @@
-#![doc = include_str!("../README.md")]
 #![warn(clippy::pedantic)]
 
 // datafusion-server - Arrow and Large Datasets Web Server
@@ -6,14 +5,13 @@
 //
 
 use crate::context::session_manager::SessionManager;
-use clap::Parser;
 use context::session_manager::SessionContextManager;
 use log::Level;
 use plugin::plugin_manager::{PluginManager, PLUGIN_MANAGER};
 use server::http;
 use settings::{Settings, LAZY_SETTINGS};
 use statistics::{Statistics, LAZY_STATISTICS};
-use std::path::PathBuf;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::signal;
 
@@ -26,32 +24,23 @@ mod server;
 mod settings;
 mod statistics;
 
-#[derive(Parser)]
-#[clap(author, version, about = "Arrow and other large datasets web server", long_about = None)]
-struct Args {
-    #[clap(
-        long,
-        value_parser,
-        short = 'f',
-        value_name = "FILE",
-        help = "Configuration file",
-        default_value = "./config.toml"
-    )]
-    config: PathBuf,
-}
-
+#[allow(clippy::missing_panics_doc)] // TODO: to be made documentation
 #[tokio::main]
-pub async fn entry() {
-    let args = Args::parse();
+pub async fn execute(config_file: &Path) {
     LAZY_SETTINGS
-        .set(Settings::new(&args.config).expect("Can not initialize configurations"))
-        .unwrap();
-    LAZY_STATISTICS.set(Statistics::new()).unwrap();
+        .set(Settings::new(config_file).expect("Can not parse arguments"))
+        .expect("Can not initialize configurations");
+    LAZY_STATISTICS
+        .set(Statistics::new())
+        .expect("Can not register statistics manager");
 
-    simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info)).unwrap();
+    simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info))
+        .expect("Can not initialize logger subsystem");
 
-    let plugin_mgr = PluginManager::new().expect("Can not initialize plugin system");
-    PLUGIN_MANAGER.set(plugin_mgr).unwrap();
+    let plugin_mgr = PluginManager::new().expect("Can not initialize plugin subsystem");
+    PLUGIN_MANAGER
+        .set(plugin_mgr)
+        .expect("Can not register plugin manager");
 
     let session_mgr = Arc::new(tokio::sync::Mutex::new(SessionContextManager::new()));
 
