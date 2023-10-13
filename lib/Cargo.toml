@@ -1,6 +1,6 @@
 [package]
 name = "datafusion-server"
-description = "Arrow and other large datasets web server library"
+description = "Web server library for session-based queries using Arrow and other large datasets as data sources."
 version = { workspace = true }
 license = { workspace = true }
 authors = { workspace = true }
@@ -34,11 +34,11 @@ chrono = { version = "0.4.31", default-features = false, features = ["std", "clo
 jsonpath-rust = "0.3.1"
 futures-util = { version = "0.3.28", default-features = false, features = ["alloc"] }
 futures = "0.3.28"
-tokio = { version = "1.29.1", features = ["full"] }
+tokio = { version = "1.32.0", features = ["full"] }
 hyper = { version = "0.14.27", features = ["full"] }
 reqwest = { version = "0.11.20", features = ["default-tls", "cookies", "json", "stream"] }
 tower = "0.4.13"
 tower-http = { version = "0.4.4", features = ["cors"] }
 axum = "0.6.20"
-datafusion = { version = "31.0.0" }
+datafusion = { version = "32.0.0" }
 pyo3 = { version = "0.19.2", optional = true }

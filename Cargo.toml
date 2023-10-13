@@ -4,10 +4,10 @@ exclude = ["bin"]
 resolver = "2"
 
 [workspace.package]
-version = "0.8.9"
+version = "0.8.10"
 license = "MIT"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
-keywords = ["http", "web", "arrow", "datafusion"]
+keywords = ["http", "sql", "arrow", "datafusion"]
 readme = "README.md"
 edition = "2021"
 rust-version = "1.70"

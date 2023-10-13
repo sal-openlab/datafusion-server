@@ -39,7 +39,7 @@ impl SessionContext {
     }
 
     pub fn new_with_config(config: context::SessionConfig, keep_alive: Option<i64>) -> Self {
-        let df_ctx = context::SessionContext::with_config(config);
+        let df_ctx = context::SessionContext::new_with_config(config);
         let last_accessed_at = Utc::now();
         let data_source_map = HashMap::<String, DataSource>::new();
 

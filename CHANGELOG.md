@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.10 (2023-10-14)
+
+* Updates to DataFusion v32 and Arrow v47
+  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/32.0.0.md
+    - `SessionContext::with_config` has been deprecated, use `new_with_config` instead.
+  + https://github.com/apache/arrow-rs/blob/47.0.0/CHANGELOG.md
+* Updates to Tokio v1.33
+  + https://github.com/tokio-rs/tokio/blob/master/tokio/CHANGELOG.md#1330-october-9-2023
+* Addressed Clippy v0.1.73 warning: 'matching over () is more explicit'.
+
 ## 0.8.9 (2023-09-23)
 
 * Prepared DataFusion Server to run in standalone and Docker environments

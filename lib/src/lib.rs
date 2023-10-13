@@ -91,8 +91,8 @@ async fn register_shutdown_signal() {
     let terminate = std::future::pending::<()>();
 
     tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
+        () = ctrl_c => {},
+        () = terminate => {},
     }
 
     log::debug!("signal received, starting graceful shutdown");
