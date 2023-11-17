@@ -1,6 +1,6 @@
-FROM rust:1.72 as builder
+FROM rust:1.73 as builder
 
-ENV PYTHON_VERSION=3.11.5
+ENV PYTHON_VERSION=3.11.6
 ENV PYTHON_HOME=/opt/python
 ENV PYO3_PYTHON=$PYTHON_HOME/bin/python3
 ENV LANG=C.UTF-8
@@ -26,8 +26,8 @@ RUN curl -O https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_
  && ldconfig \
  && PATH=$PYTHON_HOME/bin:$PATH \
  && pip3 install --no-cache-dir requests==2.31.0 \
- && pip3 install --no-cache-dir pyarrow==12.0.0 \
- && pip3 install --no-cache-dir pandas==2.0.1 \
+ && pip3 install --no-cache-dir pyarrow==14.0.1 \
+ && pip3 install --no-cache-dir pandas==2.1.3 \
  && pip3 install --no-cache-dir openpyxl==3.1.2 \
  && find $PYTHON_HOME -depth \
       \( \
@@ -60,7 +60,7 @@ COPY ./bin/plugins /usr/local/datafusion-server/plugins
 COPY ./bin/config-release.toml /etc/datafusion-server-config.toml
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends openssl dumb-init \
+ && apt-get install -y --no-install-recommends ca-certificates dumb-init \
  && echo "$PYTHON_HOME/lib" > /etc/ld.so.conf.d/python.conf \
  && ldconfig \
  && apt-get autoremove -y \

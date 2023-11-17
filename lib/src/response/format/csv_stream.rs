@@ -13,7 +13,7 @@ pub fn make_stream(
     let mut buf = Vec::new();
 
     let builder = WriterBuilder::new()
-        .has_headers(options.has_headers.unwrap_or(true))
+        .with_header(options.has_headers.unwrap_or(true))
         .with_delimiter(options.delimiter.unwrap_or(',') as u8);
 
     let mut writer = builder.build(&mut buf);

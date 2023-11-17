@@ -17,7 +17,7 @@ pub fn write(
 
         // TODO: to be specified date time format - https://docs.rs/arrow-csv/38.0.0/arrow_csv/writer/struct.WriterBuilder.html
         let mut writer = WriterBuilder::new()
-            .has_headers(options.has_header.unwrap_or(true))
+            .with_header(options.has_header.unwrap_or(true))
             .build(file);
 
         for record_batch in record_batches {

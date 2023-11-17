@@ -34,7 +34,7 @@ pub fn to_record_batch(
     };
 
     let builder = csv::ReaderBuilder::new(df_schema)
-        .has_header(has_header)
+        .with_header(has_header)
         .with_delimiter(delimiter);
 
     let reader = builder
