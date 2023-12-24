@@ -1,11 +1,19 @@
 # Changelog
 
+## 0.8.12 (2023-12-24)
+
+* Updates to DataFusion v34 and Arrow v49
+  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/34.0.0.md
+  + https://github.com/apache/arrow-rs/blob/49.0.0/CHANGELOG.md
+    - Changed result value of `json::reader::infer_json_schema_from_seekable`.
+* And other crates updated
+
 ## 0.8.11 (2023-11-17)
 
 * Updates to DataFusion v33 and Arrow v48
   + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/33.0.0.md
   + https://github.com/apache/arrow-rs/blob/48.0.0/CHANGELOG.md
-    - `arrow_csv::WriterBuilder::has_headers` and `arrow_csv::ReaderBuilder::has_header`has been deprecated, use `with_header` instead.
+    - `arrow_csv::WriterBuilder::has_headers` and `arrow_csv::ReaderBuilder::has_header` has been deprecated, use `with_header` instead.
 * And other crates updated
 
 ## 0.8.10 (2023-10-14)

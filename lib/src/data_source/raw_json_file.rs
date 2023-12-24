@@ -23,7 +23,8 @@ pub fn to_record_batch(
     let builder = json::ReaderBuilder::new(SchemaRef::new(if let Some(schema) = schema {
         schema.to_datafusion_schema()
     } else {
-        infer_json_schema_from_seekable(&mut file_reader, options.infer_schema_rows)?
+        let (inferred_schema, _) = infer_json_schema_from_seekable(&mut file_reader, options.infer_schema_rows)?;
+        inferred_schema
     }));
 
     let reader = builder
