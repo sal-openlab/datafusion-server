@@ -18,4 +18,4 @@ plugin = ["datafusion-server/plugin"]
 
 [dependencies]
 datafusion-server = { path = "../lib" }
-clap = { version = "4.4.4", features = ["derive"] }
+clap = { version = "4.4.18", features = ["derive"] }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.13 (2024-01-27)
+
+* Updates to DataFusion v35 and Arrow v50
+  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/35.0.0.md
+  + https://github.com/apache/arrow-rs/blob/50.0.0/CHANGELOG.md
+* And other crates updated
+
 ## 0.8.12 (2023-12-24)
 
 * Updates to DataFusion v34 and Arrow v49

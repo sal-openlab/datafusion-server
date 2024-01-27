@@ -11,7 +11,7 @@ Multiple session, variety of data sources query server implemented by Rust.
 
 License under the [MIT](LICENSE)
 
-Copyright (c) 2022 - 2023 SAL Ltd. - https://sal.co.jp
+Copyright (c) 2022 - 2024 SAL Ltd. - https://sal.co.jp
 
 ## Supported environment
 
@@ -26,7 +26,7 @@ and other [LLVM](https://llvm.org/) supported environment.
 
 ### Pre-require
 
-* Rust Toolchain 1.70+ (Edition 2021) from https://www.rust-lang.org
+* Rust Toolchain 1.73+ (Edition 2021) from https://www.rust-lang.org
 * _or_ the Docker official container image from https://hub.docker.com/_/rust
 
 ### How to run
@@ -45,7 +45,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.12"
+datafusion-server = "0.8.13"
 ```
 
 #### Example of src/main.rs
@@ -96,7 +96,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.8.12", features = ["plugin"] }
+datafusion-server = { version = "0.8.13", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -122,7 +122,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.8.12", features = ["plugin"] }
+datafusion-server = { version = "0.8.13", features = ["plugin"] }
 ```
 
 #### Build for release
