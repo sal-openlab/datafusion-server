@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.14 (2024-02-18)
+
+* Updates to latest Tokio ecosystems
+  + Prepare for the upcoming axum v1.0
+    + Tokio v1.36, Hyper v1.1, axum v0.7.4
+    + https://github.com/tokio-rs/axum/blob/main/axum/CHANGELOG.md#074-13-january-2024
+
 ## 0.8.13 (2024-01-27)
 
 * Updates to DataFusion v35 and Arrow v50

@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::io::BufRead;
 
 pub fn from_json_value(
-    json_rows: &Vec<Value>,
+    json_rows: &[Value],
     options: &DataSourceOption,
 ) -> anyhow::Result<arrow::datatypes::Schema> {
     let infer_schema_rows =

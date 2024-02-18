@@ -83,7 +83,7 @@ impl From<anyhow::Error> for ResponseError {
 impl axum::response::IntoResponse for ResponseError {
     fn into_response(self) -> axum::response::Response {
         let payload = serde_json::to_string(&self).unwrap();
-        let body = axum::body::boxed(axum::body::Full::from(payload));
+        let body = axum::body::Body::new(axum::body::Body::from(payload));
 
         Response::builder().status(self.code).body(body).unwrap()
     }

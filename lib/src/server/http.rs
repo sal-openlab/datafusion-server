@@ -9,13 +9,9 @@ use axum::http::{header, Method};
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-#[allow(clippy::module_name_repetitions)]
-pub type HttpServer =
-    axum::Server<hyper::server::conn::AddrIncoming, axum::routing::IntoMakeService<axum::Router>>;
-
-pub fn create_server<S: SessionManager>(
+pub async fn create_server<S: SessionManager>(
     session_mgr: Arc<tokio::sync::Mutex<S>>,
-) -> (HttpServer, SocketAddr) {
+) -> Result<(axum::serve::Serve<axum::Router, axum::Router>, SocketAddr), anyhow::Error> {
     let app = routes::register::<S>(session_mgr).layer(
         tower_http::cors::CorsLayer::new()
             .allow_headers(vec![
@@ -36,10 +32,8 @@ pub fn create_server<S: SessionManager>(
             .allow_credentials(false),
     );
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], Settings::global().server.port));
+    let sock_addr = SocketAddr::from(([0, 0, 0, 0], Settings::global().server.port));
+    let listener = tokio::net::TcpListener::bind(sock_addr).await?;
 
-    (
-        axum::Server::bind(&addr).serve(app.into_make_service()),
-        addr,
-    )
+    Ok((axum::serve(listener, app), sock_addr))
 }
