@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.15 (2024-02-18)
+
+* Wrong information was given in the README.md example. Very sorry...
+  + `dataSources[*].location` requires scheme like a `file://`.
+
 ## 0.8.14 (2024-02-18)
 
 * Updates to latest Tokio ecosystems

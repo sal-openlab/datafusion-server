@@ -45,7 +45,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.13"
+datafusion-server = "0.8.15"
 ```
 
 #### Example of src/main.rs
@@ -122,7 +122,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.8.13", features = ["plugin"] }
+datafusion-server = { version = "0.8.15", features = ["plugin"] }
 ```
 
 #### Build for release
@@ -149,6 +149,8 @@ $ cargo clean
     - Details https://arrow.apache.org/datafusion/user-guide/sql/index.html for more information.
 * Arrow, JSON and CSV formats to response.
 
+#### Example (local file)
+
 ```sh
 $ curl -X "POST" "http://localhost:4000/dataframe/query" \
      -H 'Content-Type: application/json' \
@@ -156,17 +158,43 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
 {
   "dataSources": [
     {
+      "format": "csv",
+      "name": "sales",
+      "location": "file:///superstore.csv",
       "options": {
         "inferSchemaRows": 100,
         "hasHeader": true
-      },
-      "name": "sales",
-      "location": "superstore.csv",
-      "format": "csv"
+      }
     }
   ],
   "query": {
     "sql": "SELECT * FROM sales"
+  },
+  "response": {
+    "format": "json"
+  }
+}'
+```
+
+#### Example (remote REST API)
+
+```sh
+$ curl -X "POST" "http://localhost:4000/dataframe/query" \
+     -H 'Content-Type: application/json' \
+     -d $'
+{
+  "dataSources": [
+    {
+      "format": "json",
+      "name": "entry",
+      "location": "https://api.publicapis.org/entries",
+      "options": {
+        "jsonPath": "$.entries[*]"
+      }
+    }
+  ],
+  "query": {
+    "sql": "SELECT * FROM entry WHERE \"Category\"='Animals'"
   },
   "response": {
     "format": "json"
