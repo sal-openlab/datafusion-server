@@ -23,8 +23,8 @@ jobs:
       - name: Build and publish datafusion-server
         uses: docker/build-push-action@v2
         with:
-          context: ./bin
-          file: ./Dockerfile
+          context: bin
+          file: bin/Dockerfile
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/datafusion-server:${{ github.event.inputs.version }}
@@ -33,8 +33,8 @@ jobs:
       - name: Build and publish datafusion-server without plugin
         uses: docker/build-push-action@v2
         with:
-          context: ./bin
-          file: ./Dockerfile.without-plugin
+          context: bin
+          file: bin/Dockerfile.without-plugin
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ github.event.inputs.version }}
