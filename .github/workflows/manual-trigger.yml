@@ -7,9 +7,6 @@ on:
         description: 'Version Tag'
         required: true
 
-env:
-  IMAGE_NAME: datafusion-server
-
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
@@ -30,8 +27,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/$IMAGE_NAME:${{ steps.extract_tag.outputs.tag }}
-            ghcr.io/${{ github.repository }}/$IMAGE_NAME:latest
+            ghcr.io/${{ github.repository }}/datafusion-server:${{ steps.extract_tag.outputs.tag }}
+            ghcr.io/${{ github.repository }}/datafusion-server:latest
 
       - name: Build and publish datafusion-server without plugin
         uses: docker/build-push-action@v2
@@ -40,5 +37,5 @@ jobs:
           file: ./Dockerfile.without-plugin
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/$IMAGE_NAME-without-plugin:${{ steps.extract_tag.outputs.tag }}
-            ghcr.io/${{ github.repository }}/$IMAGE_NAME-without-plugin:latest
+            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ steps.extract_tag.outputs.tag }}
+            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:latest
