@@ -1,6 +1,6 @@
-FROM rust:1.73 as builder
+FROM rust:1.76 as builder
 
-ENV PYTHON_VERSION=3.11.6
+ENV PYTHON_VERSION=3.11.7
 ENV PYTHON_HOME=/opt/python
 ENV PYO3_PYTHON=$PYTHON_HOME/bin/python3
 ENV LANG=C.UTF-8
