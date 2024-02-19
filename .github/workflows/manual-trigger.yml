@@ -23,7 +23,7 @@ jobs:
       - name: Build and publish datafusion-server
         uses: docker/build-push-action@v2
         with:
-          context: bin
+          context: .
           file: bin/Dockerfile
           push: true
           tags: |
@@ -33,7 +33,7 @@ jobs:
       - name: Build and publish datafusion-server without plugin
         uses: docker/build-push-action@v2
         with:
-          context: bin
+          context: .
           file: bin/Dockerfile.without-plugin
           push: true
           tags: |
