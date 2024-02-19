@@ -27,7 +27,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/datafusion-server:${{ steps.extract_tag.outputs.tag }}
+            ghcr.io/${{ github.repository }}/datafusion-server:${{ github.event.inputs.version }}
             ghcr.io/${{ github.repository }}/datafusion-server:latest
 
       - name: Build and publish datafusion-server without plugin
@@ -37,5 +37,5 @@ jobs:
           file: ./Dockerfile.without-plugin
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ steps.extract_tag.outputs.tag }}
+            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ github.event.inputs.version }}
             ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:latest
