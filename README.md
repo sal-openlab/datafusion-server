@@ -22,12 +22,67 @@ Copyright (c) 2022 - 2024 SAL Ltd. - https://sal.co.jp
 
 and other [LLVM](https://llvm.org/) supported environment.
 
-## Build at local environment
+## Using pre-built Docker image (Currently available amd64 architecture only)
 
 ### Pre-require
 
-* Rust Toolchain 1.73+ (Edition 2021) from https://www.rust-lang.org
-* _or_ the Docker official container image from https://hub.docker.com/_/rust
+* Docker-ce/ee v20+
+
+### Pull container image from GitHub container registry
+
+```sh
+$ docker pull ghcr.io/sal-openlab/datafusion-server/datafusion-server:latest
+```
+
+or built without Python plugin version.
+
+```sh
+$ docker pull ghcr.io/sal-openlab/datafusion-server/datafusion-server-without-plugin:latest
+```
+
+### Executing container
+
+```sh
+$ docker run -d --rm \
+    -p 4000:4000 \
+    -v ./data:/var/datafusion-server/data \
+    --name datafusion-server \
+    ghcr.io/sal-openlab/datafusion-server/datafusion-server:latest
+```
+
+If you are only using sample data in a container, omit the `-v ./data:/var/xapi-server/data`.
+
+## Build container your self
+
+### Pre-require
+
+* Docker-ce/ee v20+
+
+### Build two containers, datafusion-server and datafusion-server-without-plugin
+
+```sh
+$ cd <repository-root-dir>
+$ ./make-containers.sh
+```
+
+### Executing container
+
+```sh
+$ docker run -d --rm \
+    -p 4000:4000 \
+    -v ./bin/data:/var/datafusion-server/data \
+    --name datafusion-server \
+    datafusion-server:0.8.15
+```
+
+If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
+
+## Build from source code for use in your project
+
+### Pre-require
+
+* Rust Toolchain 1.76+ (Edition 2021) from https://www.rust-lang.org
+* _or_ the Rust official container from https://hub.docker.com/_/rust
 
 ### How to run
 
@@ -96,7 +151,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.8.13", features = ["plugin"] }
+datafusion-server = { version = "0.8.15", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -195,6 +250,32 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
   ],
   "query": {
     "sql": "SELECT * FROM entry WHERE \"Category\"='Animals'"
+  },
+  "response": {
+    "format": "json"
+  }
+}'
+```
+
+#### Example (Python datasource connector)
+
+```sh
+$ curl -X "POST" "http://localhost:4000/dataframe/query" \
+     -H 'Content-Type: application/json' \
+     -d $'
+{
+  "dataSources": [
+    {
+      "format": "arrow",
+      "name": "example",
+      "location": "excel://example-workbook.xlsx/Sheet1",
+      "options": {
+        "skipRows": 2
+      }
+    }
+  ],
+  "query": {
+    "sql": "SELECT * FROM example"
   },
   "response": {
     "format": "json"
