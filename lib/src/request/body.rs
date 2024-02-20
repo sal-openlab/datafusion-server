@@ -58,8 +58,8 @@ pub enum DataSourceFormat {
     Csv,
     #[serde(rename = "json")]
     Json,
-    #[serde(rename = "rawJson")]
-    RawJson,
+    #[serde(rename = "ndJson")]
+    NdJson,
     #[serde(rename = "parquet")]
     Parquet,
     #[serde(rename = "arrow")]
@@ -72,7 +72,7 @@ impl DataSourceFormat {
         match self {
             DataSourceFormat::Csv => "csv",
             DataSourceFormat::Json => "json",
-            DataSourceFormat::RawJson => "rawJson",
+            DataSourceFormat::NdJson => "ndJson",
             DataSourceFormat::Parquet => "parquet",
             DataSourceFormat::Arrow => "arrow",
         }
@@ -107,10 +107,10 @@ impl DataSource {
                 }
             }
             DataSourceFormat::Json => {}
-            DataSourceFormat::RawJson => {
+            DataSourceFormat::NdJson => {
                 if self.options.is_some() && self.options.as_ref().unwrap().json_path.is_some() {
                     return Err(ResponseError::unsupported_type(
-                        "Not supported data source option, RawJson with JSONPath",
+                        "Not supported data source option, ndJson with JSONPath",
                     ));
                 }
             }
@@ -181,9 +181,11 @@ pub struct MergeProcessor {
     pub direction: MergeDirection,
     #[serde(rename = "baseTable")]
     pub base_table_name: String,
-    pub targets: Option<Vec<MergeTargets>>, // for column direction merge
+    pub targets: Option<Vec<MergeTargets>>,
+    // for column direction merge
     #[serde(rename = "targetTables")]
-    pub target_table_names: Option<Vec<String>>, // for row direction merge
+    pub target_table_names: Option<Vec<String>>,
+    // for row direction merge
     pub options: Option<MergeOption>,
 }
 

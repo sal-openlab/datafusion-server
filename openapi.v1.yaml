@@ -769,7 +769,7 @@ components:
           type: string
           enum:
             - json
-            - rawJson
+            - ndJson
             - csv
             - parquet
         name:
@@ -884,7 +884,7 @@ components:
                 type: array
                 items:
                   type: string
-                  example: ['table2', 'table3']
+                  example: [ 'table2', 'table3' ]
                   description: Merge target tables (Only for row direction)
               targets:
                 type: array
@@ -898,12 +898,12 @@ components:
                       type: array
                       items:
                         type: string
-                        example: ['col1', 'col2']
+                        example: [ 'col1', 'col2' ]
                     targetKeys:
                       type: array
                       items:
                         type: string
-                        example: ['id', 'category']
+                        example: [ 'id', 'category' ]
                 description: Merge target tables by keys (Only for column direction)
               options:
                 type: object

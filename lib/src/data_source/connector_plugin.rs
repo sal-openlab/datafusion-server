@@ -48,7 +48,7 @@ pub fn to_record_batch(
             DataSourceFormat::Json => {
                 build_record_batch::from_json(&py_result.to_string(), schema, options)?
             }
-            DataSourceFormat::RawJson => {
+            DataSourceFormat::NdJson => {
                 let json_text = &py_result.to_string();
 
                 let schema_ref = SchemaRef::new(if let Some(schema) = schema {
@@ -78,7 +78,7 @@ pub fn to_record_batch(
             .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?,
             _ => {
                 return Err(ResponseError::unsupported_type(
-                    "Currently supported only 'json', 'rawJson' or an 'arrow'",
+                    "Currently supported only 'json', 'ndJson' or an 'arrow'",
                 ));
             }
         }

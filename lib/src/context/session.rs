@@ -242,7 +242,7 @@ impl Session for ConcurrentSessionContext {
                 &data_source.schema,
                 &options,
             )?,
-            DataSourceFormat::RawJson => raw_json_file::to_record_batch(
+            DataSourceFormat::NdJson => raw_json_file::to_record_batch(
                 file_path.to_str().unwrap(),
                 &data_source.schema,
                 &options,
@@ -270,7 +270,7 @@ impl Session for ConcurrentSessionContext {
                 json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
                     .await?
             }
-            DataSourceFormat::RawJson => {
+            DataSourceFormat::NdJson => {
                 raw_json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
                     .await?
             }
@@ -372,7 +372,7 @@ impl Session for ConcurrentSessionContext {
                         &options,
                     )?;
                 }
-                DataSourceFormat::RawJson => {
+                DataSourceFormat::NdJson => {
                     writer::raw_json_file::write(
                         &data_frame.collect().await?,
                         file_path.to_str().unwrap(),

@@ -282,7 +282,7 @@ impl SessionManager for SessionContextManager {
                         self.append_parquet(session_id, data_source).await?;
                     }
                 }
-                DataSourceFormat::Json | DataSourceFormat::RawJson => {
+                DataSourceFormat::Json | DataSourceFormat::NdJson => {
                     if external_source(&scheme) {
                         self.append_json_rest(session_id, data_source).await?;
                     } else {
@@ -292,7 +292,7 @@ impl SessionManager for SessionContextManager {
                 DataSourceFormat::Arrow => {
                     // MEMO: will not to be reached this control path
                     return Err(ResponseError::request_validation(
-                        "Invalid data source scheme 'arrow', use 'csv', 'json', 'rawJson' and 'parquet'.",
+                        "Invalid data source scheme 'arrow', use 'csv', 'json', 'ndJson' and 'parquet'.",
                     ));
                 }
             }

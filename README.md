@@ -4,7 +4,7 @@ Multiple session, variety of data sources query server implemented by Rust.
 
 * Asynchronous architecture used by [Tokio](https://tokio.rs/) ecosystem
 * Apache Arrow with DataFusion
-  + Supports multiple data source with SQL queries
+    + Supports multiple data source with SQL queries
 * Python plugin feature for data source connector and post processor
 
 ## License
@@ -72,7 +72,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.8.15
+    datafusion-server:0.8.16
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -100,7 +100,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.8.15"
+datafusion-server = "0.8.16"
 ```
 
 #### Example of src/main.rs
@@ -151,7 +151,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.8.15", features = ["plugin"] }
+datafusion-server = { version = "0.8.16", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -177,7 +177,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.8.15", features = ["plugin"] }
+datafusion-server = { version = "0.8.16", features = ["plugin"] }
 ```
 
 #### Build for release
@@ -198,10 +198,10 @@ $ cargo clean
 
 * Can be used many kind of data source format (Parquet, JSON, ndJSON, CSV, ...).
 * Data can be retrieved from the local file system and from external REST services.
-  + Processing by JSONPath can be performed if necessary.
+    + Processing by JSONPath can be performed if necessary.
 * Query execution across multiple data sources.
-  + SQL query engine uses Arrow DataFusion.
-    - Details https://arrow.apache.org/datafusion/user-guide/sql/index.html for more information.
+    + SQL query engine uses Arrow DataFusion.
+        - Details https://arrow.apache.org/datafusion/user-guide/sql/index.html for more information.
 * Arrow, JSON and CSV formats to response.
 
 #### Example (local file)

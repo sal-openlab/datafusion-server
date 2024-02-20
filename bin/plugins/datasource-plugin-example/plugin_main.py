@@ -72,7 +72,7 @@ import pyarrow as pa
 
 def main(response_format: str, authority: str, path: str, schema: pa.Schema, **kwargs):
     """Plugin main function
-    :param response_format: request format (json, rawJson, csv, ...)
+    :param response_format: request format (json, ndJson, csv, ...)
     :param authority: authority in URI
     :param path: path in URI or None
     :param schema: schema definitions or None
@@ -87,8 +87,8 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
     if response_format == "json":
         return '[\n{"foo":"hello - json","bar":12345},\n{"foo":"world","bar":67890}\n]\n'
 
-    elif response_format == "rawJson":
-        return '{"foo":"hello - rawJson","bar":12345}\n{"foo":"world","bar":67890}'
+    elif response_format == "ndJson":
+        return '{"foo":"hello - ndJson","bar":12345}\n{"foo":"world","bar":67890}'
 
     elif response_format == "arrow":
         # Apache Arrow Python bindings - https://arrow.apache.org/docs/python/index.html

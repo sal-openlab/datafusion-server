@@ -1,48 +1,93 @@
 # Changelog
 
+## 0.8.16 (2024-02-20)
+
+* Raw JSON is now called ndJSON (new-line delimited JSON), so the data source format specification was changed
+  from `rawJson` to `ndJson`.
+    + In conjunction with this change, the related sections have been changed.
+
+E.g., Until now,
+
+```json
+{
+  "dataSources": [
+    {
+      "format": "rawJson",
+      "name": "table1",
+      "location": "file:///Superstore.raw.json"
+    }
+  ]
+}
+```
+
+From now on,
+
+```json
+{
+  "dataSources": [
+    {
+      "format": "ndJson",
+      "name": "table1",
+      "location": "file:///Superstore.ndjson"
+    }
+  ]
+}
+```
+
+The response format will still be suitable for `json`.
+
+```json
+{
+  "response": {
+    "format": "json"
+  }
+}
+```
+
 ## 0.8.15 (2024-02-18)
 
 * Wrong information was given in the README.md example. Very sorry...
-  + `dataSources[*].location` requires scheme like a `file://`.
+    + `dataSources[*].location` requires scheme like a `file://`.
 
 ## 0.8.14 (2024-02-18)
 
 * Updates to latest Tokio ecosystems
-  + Prepare for the upcoming axum v1.0
-    + Tokio v1.36, Hyper v1.1, axum v0.7.4
-    + https://github.com/tokio-rs/axum/blob/main/axum/CHANGELOG.md#074-13-january-2024
+    + Prepare for the upcoming axum v1.0
+        + Tokio v1.36, Hyper v1.1, axum v0.7.4
+        + https://github.com/tokio-rs/axum/blob/main/axum/CHANGELOG.md#074-13-january-2024
 
 ## 0.8.13 (2024-01-27)
 
 * Updates to DataFusion v35 and Arrow v50
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/35.0.0.md
-  + https://github.com/apache/arrow-rs/blob/50.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/35.0.0.md
+    + https://github.com/apache/arrow-rs/blob/50.0.0/CHANGELOG.md
 * And other crates updated
 
 ## 0.8.12 (2023-12-24)
 
 * Updates to DataFusion v34 and Arrow v49
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/34.0.0.md
-  + https://github.com/apache/arrow-rs/blob/49.0.0/CHANGELOG.md
-    - Changed result value of `json::reader::infer_json_schema_from_seekable`.
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/34.0.0.md
+    + https://github.com/apache/arrow-rs/blob/49.0.0/CHANGELOG.md
+        - Changed result value of `json::reader::infer_json_schema_from_seekable`.
 * And other crates updated
 
 ## 0.8.11 (2023-11-17)
 
 * Updates to DataFusion v33 and Arrow v48
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/33.0.0.md
-  + https://github.com/apache/arrow-rs/blob/48.0.0/CHANGELOG.md
-    - `arrow_csv::WriterBuilder::has_headers` and `arrow_csv::ReaderBuilder::has_header` has been deprecated, use `with_header` instead.
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/33.0.0.md
+    + https://github.com/apache/arrow-rs/blob/48.0.0/CHANGELOG.md
+        - `arrow_csv::WriterBuilder::has_headers` and `arrow_csv::ReaderBuilder::has_header` has been deprecated,
+          use `with_header` instead.
 * And other crates updated
 
 ## 0.8.10 (2023-10-14)
 
 * Updates to DataFusion v32 and Arrow v47
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/32.0.0.md
-    - `SessionContext::with_config` has been deprecated, use `new_with_config` instead.
-  + https://github.com/apache/arrow-rs/blob/47.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/32.0.0.md
+        - `SessionContext::with_config` has been deprecated, use `new_with_config` instead.
+    + https://github.com/apache/arrow-rs/blob/47.0.0/CHANGELOG.md
 * Updates to Tokio v1.33
-  + https://github.com/tokio-rs/tokio/blob/master/tokio/CHANGELOG.md#1330-october-9-2023
+    + https://github.com/tokio-rs/tokio/blob/master/tokio/CHANGELOG.md#1330-october-9-2023
 * Addressed Clippy v0.1.73 warning: 'matching over () is more explicit'.
 
 ## 0.8.9 (2023-09-23)
@@ -57,35 +102,36 @@
 ## 0.8.4 (2023-09-16)
 
 * Updates to DataFusion v31 and Arrow v46
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/31.0.0.md
-  + https://github.com/apache/arrow-rs/blob/46.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/31.0.0.md
+    + https://github.com/apache/arrow-rs/blob/46.0.0/CHANGELOG.md
 
 ## 0.8.3 (2023-09-03)
 
 * Refactored CSV relatives
-  + Drop deprecated date format parser options
-  + Response by CSV format were supported
+    + Drop deprecated date format parser options
+    + Response by CSV format were supported
 
 ## 0.8.2 (2023-08-26)
 
 * Updates to DataFusion v30 and Arrow v45
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/30.0.0.md
-  + https://github.com/apache/arrow-rs/blob/45.0.0/CHANGELOG.md
-  + DataFusion v29 was not officially released, but all changes are applied in v30
-    - https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/29.0.0.md
-    - https://github.com/apache/arrow-rs/blob/44.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/30.0.0.md
+    + https://github.com/apache/arrow-rs/blob/45.0.0/CHANGELOG.md
+    + DataFusion v29 was not officially released, but all changes are applied in v30
+        - https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/29.0.0.md
+        - https://github.com/apache/arrow-rs/blob/44.0.0/CHANGELOG.md
 
 ## 0.8.1 (2023-08-13)
 
 * Passing through Arrow schema structures to data source connector plugins when defined in data source definitions
-  + If a schema is defined in the data source definition, Arrow schema structure is created on Rust and passed to plugin modules
-  + See `plugins/datasource-plugin-example/plugin_main.py` for more detailed information
+    + If a schema is defined in the data source definition, Arrow schema structure is created on Rust and passed to
+      plugin modules
+    + See `plugins/datasource-plugin-example/plugin_main.py` for more detailed information
 
 ## 0.8.0 (2023-08-05) - Introducing built-in merge tables processor
 
 * Built-in merge tables processor feature
-  + Merges row and column direction from multiple tables
-  + For more details, further reading openapi.v1.yaml
+    + Merges row and column direction from multiple tables
+    + For more details, further reading openapi.v1.yaml
 
 #### Row direction merge
 
@@ -110,7 +156,10 @@ Request
       {
         "direction": "row",
         "baseTable": "table1",
-        "targetTables": ["table2", "table3"]
+        "targetTables": [
+          "table2",
+          "table3"
+        ]
       }
     ]
   }
@@ -142,7 +191,10 @@ If the `distinct` option has enabled like follows
       {
         "direction": "row",
         "baseTable": "table1",
-        "targetTables": ["table2", "table3"],
+        "targetTables": [
+          "table2",
+          "table3"
+        ],
         "options": {
           "distinct": true
         }
@@ -231,38 +283,39 @@ table1
 ## 0.7.0 (2023-07-29)
 
 * System information and statistics API
-  + `/sysinfo` endpoint to results information
-  + Details, further reading `endpoint.v1.yaml`
+    + `/sysinfo` endpoint to results information
+    + Details, further reading `endpoint.v1.yaml`
 
 ## 0.6.6 (2023-07-27)
 
 * Updates to DataFusion v28 and Arrow v43
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/28.0.0.md
-  + https://github.com/apache/arrow-rs/blob/43.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/28.0.0.md
+    + https://github.com/apache/arrow-rs/blob/43.0.0/CHANGELOG.md
 
 ## 0.6.5 (2023-07-01)
 
 * Updates to DataFusion v27 and Arrow v42
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/27.0.0.md
-  + https://github.com/apache/arrow-rs/blob/42.0.0/CHANGELOG.md
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/27.0.0.md
+    + https://github.com/apache/arrow-rs/blob/42.0.0/CHANGELOG.md
 * Updates to PyO3 v0.19
-  + https://pyo3.rs/main/changelog#0190---2023-05-31
+    + https://pyo3.rs/main/changelog#0190---2023-05-31
 * Updates Python interpreter to v3.11.4
-  + https://docs.python.org/release/3.11.4/whatsnew/changelog.html#python-3-11-4
+    + https://docs.python.org/release/3.11.4/whatsnew/changelog.html#python-3-11-4
 
 ## 0.6.4 (2023-06-10)
 
 * Updates to DataFusion v26 and Arrow v40
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/26.0.0.md
-  + https://github.com/apache/arrow-rs/blob/40.0.0/CHANGELOG.md
-  + Change `RecordBatchWriter` related specifications in Arrow v40, currently mismatched with DataFusion v26
-    - https://github.com/apache/arrow-rs/pull/4206
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/26.0.0.md
+    + https://github.com/apache/arrow-rs/blob/40.0.0/CHANGELOG.md
+    + Change `RecordBatchWriter` related specifications in Arrow v40, currently mismatched with DataFusion v26
+        - https://github.com/apache/arrow-rs/pull/4206
 
 ## 0.6.3 (2023-06-04)
 
 * Can be passed multiple record batches to Python plugin
 
-This query results could not be passed to the Python processor plugin. Because generated column(s) to separate multiple record batches.
+This query results could not be passed to the Python processor plugin. Because generated column(s) to separate multiple
+record batches.
 
 ```json
 {
@@ -297,9 +350,9 @@ Originally field order is `foo`, `bar` to sorts the dictionary order.
 ## 0.6.1 (2023-05-28)
 
 * Refactored data source connector plugin relatives
-  + Plugin can results the Arrow (record batch) format
-    - Therefore, passing through pandas DataFrame to datafusion-server
-    - Microsoft Excel data source via the pandas connector plugin included
+    + Plugin can results the Arrow (record batch) format
+        - Therefore, passing through pandas DataFrame to datafusion-server
+        - Microsoft Excel data source via the pandas connector plugin included
 
 ```json
 [
@@ -317,10 +370,10 @@ Originally field order is `foo`, `bar` to sorts the dictionary order.
 ## 0.6.0 (2023-05-27) - Introducing processor module plugin feature
 
 * Processor module plugin by Python feature
-  + Plugin will be triggered after the SQL query
-  + Plugin supported [pandas](https://pandas.pydata.org/) (+NumPy) for big data analysis
-    - Example pivot-table processor plugin included
-  + Multiple processor module can be chained
+    + Plugin will be triggered after the SQL query
+    + Plugin supported [pandas](https://pandas.pydata.org/) (+NumPy) for big data analysis
+        - Example pivot-table processor plugin included
+    + Multiple processor module can be chained
 
 ```json
 {
@@ -376,16 +429,16 @@ flowchart LR
 ## 0.5.5 (2023-05-24)
 
 * Updates to DataFusion v25 and Arrow v39
-  + Dropped specify the date format functionality to effected with CSV reader
-     - Arrow CSV parser recognize the date with `^\d{4}-\d\d-\d\d[T ]\d\d:\d\d:\d\d.\d{1,n}$`, if a trailing `z` is present it is not recognized as a date
-  　　- Probably, **schema specification is a must be required for CSV reading**　　
-  + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/25.0.0.md
-  + https://github.com/apache/arrow-rs/blob/39.0.0/CHANGELOG.md
+    + Dropped specify the date format functionality to effected with CSV reader
+        - Arrow CSV parser recognize the date with `^\d{4}-\d\d-\d\d[T ]\d\d:\d\d:\d\d.\d{1,n}$`, if a trailing `z` is
+          present it is not recognized as a date - Probably, **schema specification is a must be required for CSV
+          reading**+ https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/25.0.0.md
+    + https://github.com/apache/arrow-rs/blob/39.0.0/CHANGELOG.md
 
 ## 0.5.4 (2023-05-23) - Hot bugfix release
 
 * Core dumps (Panic!) occurs when reading into the huge size of data frames
-  + DataFusion's specification has changed the handling of RecordBatch size
+    + DataFusion's specification has changed the handling of RecordBatch size
 
 ## 0.5.3 (2023-05-13)
 
@@ -396,22 +449,21 @@ flowchart LR
 ## 0.5.2 (2023-05-05)
 
 * Completely re-write JSON, Raw JSON, CSV and Parquet serializer
-  + Now can be saved to file system by native JSON
+    + Now can be saved to file system by native JSON
 * Force over-write option in `DataSourceOption` to effects read/write data source operations
 
 ```json
  [
-   {
-     "format": "parquet",
-     "name": "apis",
-     "location": "file:///public-apis.parquet",
-     "options": {
-       "overwrite": true
-     }
-   }
+  {
+    "format": "parquet",
+    "name": "apis",
+    "location": "file:///public-apis.parquet",
+    "options": {
+      "overwrite": true
+    }
+  }
 ]
 ```
-
 
 ## 0.5.1 (2023-05-03)
 
@@ -445,23 +497,23 @@ $ curl http://localhost:4000/session/:id/datasource/table1
 ## 0.5.0 (2023-05-01)
 
 * Save selected data sources to local file system
-  + Currently NOT supported native JSON, use raw JSON alternatively 
+    + Currently NOT supported native JSON, use raw JSON alternatively
 
 ## 0.4.2 (2023-04-30)
 
 * Updates latest module dependencies
-  + Follows DataFusion v23.0
-  + Arrow officially dropped native JSON support
+    + Follows DataFusion v23.0
+    + Arrow officially dropped native JSON support
 
 ## 0.4.1 (2023-03-28)
 
 * Supports both native JSON and raw JSON response format
-  + Arrow deprecates to native JSON from v34.0
+    + Arrow deprecates to native JSON from v34.0
 
 ## 0.4.0 (2023-02-24) - Introducing Python plugin feature
 
 * Data source connector plugin by Python 3.7+
-* FIELD system EventDatabase plugin (scheme: `fsdb://`)
+* Example of data source connector plugin (scheme: `example://`)
 
 ## 0.3.0 (2023-01-19)
 
