@@ -9,10 +9,10 @@ jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v1
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -22,24 +22,24 @@ jobs:
         id: cargo_version
         run: |
           CONTAINER_VER=$(grep '^version' ./Cargo.toml | head -1 | awk -F '"' '{print $2}')
-          echo "::set-output name=version::$CONTAINER_VER"
+          echo "CONTAINER_VER=$CONTAINER_VER" >> $GITHUB_ENV
 
       - name: Build and publish datafusion-server
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: bin/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/datafusion-server:${{ steps.cargo_version.outputs.version }}
+            ghcr.io/${{ github.repository }}/datafusion-server:${{ env.CONTAINER_VER }}
             ghcr.io/${{ github.repository }}/datafusion-server:latest
 
       - name: Build and publish datafusion-server without plugin
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: .
           file: bin/Dockerfile.without-plugin
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ steps.cargo_version.outputs.version }}
+            ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:${{ env.CONTAINER_VER }}
             ghcr.io/${{ github.repository }}/datafusion-server-without-plugin:latest

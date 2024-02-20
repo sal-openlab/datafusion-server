@@ -257,7 +257,7 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
 }'
 ```
 
-#### Example (Python datasource connector)
+#### Example (Python datasource connector plugin)
 
 ```sh
 $ curl -X "POST" "http://localhost:4000/dataframe/query" \
