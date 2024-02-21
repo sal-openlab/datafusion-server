@@ -2,10 +2,11 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
-use crate::data_source::location_uri::SupportedScheme;
-use crate::data_source::{location_uri, schema};
-use crate::response::http_error::ResponseError;
 use serde::Deserialize;
+
+use crate::data_source::{location_uri, schema};
+use crate::data_source::location_uri::SupportedScheme;
+use crate::response::http_error::ResponseError;
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct DataSourceOption {
@@ -280,6 +281,13 @@ impl QueryResponse {
     pub fn new() -> Self {
         Self {
             format: ResponseFormat::Json,
+            options: None,
+        }
+    }
+
+    pub fn new_with_format(format: ResponseFormat) -> Self {
+        Self {
+            format,
             options: None,
         }
     }

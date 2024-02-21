@@ -2,24 +2,29 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> November 19, 2022
 //
 
-use crate::request::body::{QueryResponse, ResponseFormat, ResponseFormatOption};
-use crate::response::{
-    format::{arrow_stream, csv_stream, json_array_stream},
-    http_error::ResponseError,
-};
 use axum::{
     body::Body,
     http::{header, Response},
     response::IntoResponse,
 };
+use axum_extra::TypedHeader;
 use datafusion::arrow::record_batch::RecordBatch;
+
+use crate::request::body::{QueryResponse, ResponseFormat, ResponseFormatOption};
+use crate::response::{
+    format::{arrow_stream, csv_stream, json_array_stream},
+    http_error::ResponseError,
+};
 
 pub fn stream_responder(
     record_batches: &[RecordBatch],
     query_response: &Option<QueryResponse>,
+    accept_header: &Option<TypedHeader<crate::request::header::Accept>>,
 ) -> Result<impl IntoResponse, ResponseError> {
     let response = if let Some(response) = &query_response {
         response.clone()
+    } else if let Some(accept) = &accept_header {
+        QueryResponse::new_with_format(crate::request::header::response_format(accept)?)
     } else {
         QueryResponse::new()
     };
@@ -36,7 +41,12 @@ pub fn stream_responder(
             "application/json",
         ),
         ResponseFormat::Csv => {
-            let options = response.options.unwrap_or(ResponseFormatOption::new());
+            let options = if let Some(options) = &response.options {
+                options.clone()
+            } else {
+                ResponseFormatOption::new()
+            };
+
             from_byte_stream(
                 csv_stream::make_stream(record_batches, &options)
                     .map_err(ResponseError::json_stream_serialization)?,

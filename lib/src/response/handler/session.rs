@@ -2,19 +2,24 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 15, 2023
 //
 
-use crate::context::session_manager::SessionManager;
-#[cfg(feature = "plugin")]
-use crate::request::body::PluginOption;
-use crate::request::body::SessionQuery;
-use crate::response::{http_error::ResponseError, http_response};
-#[cfg(feature = "plugin")]
-use crate::PluginManager;
-use axum::extract::{self, Path, Query};
-use axum::response::IntoResponse;
-use datafusion::arrow::record_batch::RecordBatch;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+use axum::{
+    extract::{self, Path, Query},
+    response::IntoResponse,
+};
+use axum_extra::TypedHeader;
+use datafusion::arrow::record_batch::RecordBatch;
+use serde::Serialize;
+
+use crate::context::session_manager::SessionManager;
+#[cfg(feature = "plugin")]
+use crate::PluginManager;
+use crate::request::{body::SessionQuery, header};
+#[cfg(feature = "plugin")]
+use crate::request::body::PluginOption;
+use crate::response::{http_error::ResponseError, http_response};
 
 #[derive(Serialize)]
 pub struct Session {
@@ -88,6 +93,7 @@ pub async fn detail<E: SessionManager>(
 }
 
 pub async fn query<E: SessionManager>(
+    accept_header: Option<TypedHeader<header::Accept>>,
     Path(session_id): Path<String>,
     extract::State(session_mgr): extract::State<Arc<tokio::sync::Mutex<E>>>,
     extract::Json(payload): extract::Json<SessionQuery>,
@@ -95,9 +101,9 @@ pub async fn query<E: SessionManager>(
     log::info!("Accessing session query responder");
 
     #[cfg(feature = "plugin")]
-    let mut record_batches: Vec<RecordBatch>;
+        let mut record_batches: Vec<RecordBatch>;
     #[cfg(not(feature = "plugin"))]
-    let record_batches: Vec<RecordBatch>;
+        let record_batches: Vec<RecordBatch>;
     {
         record_batches = session_mgr
             .lock()
@@ -131,5 +137,6 @@ pub async fn query<E: SessionManager>(
     Ok(http_response::stream_responder(
         &record_batches,
         &payload.response,
+        &accept_header,
     ))
 }

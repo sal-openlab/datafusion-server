@@ -2,19 +2,23 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
-use crate::context::session_manager::SessionManager;
-use crate::request::body::DataFrameQuery;
-use crate::response::{http_error::ResponseError, http_response};
-use axum::extract;
-use axum::response::IntoResponse;
-use datafusion::arrow::record_batch::RecordBatch;
 use std::sync::Arc;
 
+use axum::{extract, response::IntoResponse};
+use axum_extra::TypedHeader;
+use datafusion::arrow::record_batch::RecordBatch;
+
+use crate::context::session_manager::SessionManager;
+use crate::request::{body::DataFrameQuery, header};
+use crate::response::{http_error::ResponseError, http_response};
+
 pub async fn query_responder<S: SessionManager>(
+    accept_header: Option<TypedHeader<header::Accept>>,
     extract::State(session_mgr): extract::State<Arc<tokio::sync::Mutex<S>>>,
     extract::Json(payload): extract::Json<DataFrameQuery>,
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing request query body to arrow responder");
+    log::debug!("Accept Header: {:?}", accept_header);
     log::trace!("Request Body: {:?}", payload);
 
     let record_batches: Vec<RecordBatch>;
@@ -44,5 +48,6 @@ pub async fn query_responder<S: SessionManager>(
     Ok(http_response::stream_responder(
         &record_batches,
         &payload.response,
+        &accept_header,
     ))
 }

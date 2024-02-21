@@ -5,7 +5,7 @@
 #[cfg(feature = "plugin")]
 use crate::data_source::connector_plugin;
 use crate::data_source::{
-    csv_file, json_file, json_rest, location_uri, parquet, raw_json_file, raw_json_rest, writer,
+    csv_file, json_file, json_rest, location_uri, nd_json_file, nd_json_rest, parquet, writer,
 };
 #[cfg(feature = "plugin")]
 use crate::request::body::PluginOption;
@@ -242,7 +242,7 @@ impl Session for ConcurrentSessionContext {
                 &data_source.schema,
                 &options,
             )?,
-            DataSourceFormat::NdJson => raw_json_file::to_record_batch(
+            DataSourceFormat::NdJson => nd_json_file::to_record_batch(
                 file_path.to_str().unwrap(),
                 &data_source.schema,
                 &options,
@@ -271,7 +271,7 @@ impl Session for ConcurrentSessionContext {
                     .await?
             }
             DataSourceFormat::NdJson => {
-                raw_json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
+                nd_json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
                     .await?
             }
             _ => {

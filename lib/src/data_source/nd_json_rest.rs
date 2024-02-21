@@ -1,4 +1,4 @@
-// raw_json_rest - Raw JSON to RecordBatch
+// nd_json_rest - ndJSON to RecordBatch
 // Sasaki, Naoki <nsasaki@sal.co.jp> March 27, 2023
 //
 

@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.9.0 (2024-02-21)
+
+* Response format can now be specified via the `Accept` request header.
+  If `response.format` is also specified in the request body, the request body takes precedence.
+    + This applies to both the `dataframe/query` and `session/:session_id/query` endpoints.
+
+In this example, specifying `csv` for `response.format` will result in the same response.
+
+```sh
+$ curl -X "POST" "http://127.0.0.1:4000/dataframe/query" \
+     -H 'Content-Type: application/json' \
+     -H 'Accept: text/csv' \
+     -d $'{
+  "dataSources": [
+    {
+      "name": "entry",
+      "format": "parquet",
+      "location": "file:///public-apis.parquet"
+    }
+  ]
+  "query": {
+    "sql": "SELECT * FROM entry"
+  }
+}'
+```
+
+If both `response.format` is specified in the `Accept` header and in the request body,
+the specification in `response.format` takes precedence. In this example, the response will be returned in
+Arrow format (`Content-Type: application/vnd.apache.arrow.stream`).
+
+```sh
+$ curl -X "POST" "http://127.0.0.1:4000/dataframe/query" \
+     -H 'Content-Type: application/json' \
+     -H 'Accept: application/json' \
+     -d $'{
+  "dataSources": [
+    {
+      "name": "entry",
+      "format": "parquet",
+      "location": "file:///public-apis.parquet"
+    }
+  ]
+  "query": {
+    "sql": "SELECT * FROM entry"
+  },
+  response: {
+    "format": "arrow"
+  }
+}'
+```
+
+* Updates to DataFusion v36
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/36.0.0.md
+
 ## 0.8.16 (2024-02-20)
 
 * Raw JSON is now called ndJSON (new-line delimited JSON), so the data source format specification was changed

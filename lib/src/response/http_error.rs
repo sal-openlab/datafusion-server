@@ -106,6 +106,14 @@ impl ResponseError {
         }
     }
 
+    pub fn unsupported_format(message: impl Into<String>) -> Self {
+        Self {
+            code: http::StatusCode::BAD_REQUEST,
+            error: "unsupported_format".to_string(),
+            message: message.into(),
+        }
+    }
+
     pub fn request_validation(message: impl Into<String>) -> Self {
         Self {
             code: http::StatusCode::BAD_REQUEST,

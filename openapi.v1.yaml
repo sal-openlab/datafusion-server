@@ -142,6 +142,17 @@ paths:
       summary: Multiple data sources query
       description: Across multiple type of data source provided
       operationId: dataframeQuery
+      parameters:
+        - in: header
+          name: Accept
+          schema:
+            type: string
+          required: false
+          description: |
+            Response format (`response.format` in the request body is specified, the request body takes precedence)
+            * application/json
+            * text/csv
+            * application/vnd.apache.arrow.stream
       requestBody:
         description: Data sources, query and response format. response is optional, default format as JSON. CSV charset only UTF-8.
         content:
@@ -576,6 +587,16 @@ paths:
       summary: Query across data sources of session context
       operationId: querySession
       parameters:
+        - in: header
+          name: Accept
+          schema:
+            type: string
+          required: false
+          description: |
+            Response format (`response.format` in the request body is specified, the request body takes precedence)
+            * application/json
+            * text/csv
+            * application/vnd.apache.arrow.stream
         - name: sessionId
           in: path
           description: Session identifier
