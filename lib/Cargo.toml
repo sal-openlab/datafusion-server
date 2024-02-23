@@ -35,11 +35,11 @@ jsonpath-rust = "0.5.0"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 futures = "0.3.30"
 tokio = { version = "1.36.0", features = ["full"] }
-hyper = { version = "1.1.0", features = ["full"] }
+hyper = { version = "1.2.0", features = ["full"] }
 reqwest = { version = "0.11.23", features = ["default-tls", "cookies", "json", "stream"] }
 tower = "0.4.13"
-tower-http = { version = "0.5.1", features = ["cors"] }
+tower-http = { version = "0.5.2", features = ["cors"] }
 axum = "0.7.4"
 axum-extra = { version = "0.9.2", features = ["typed-header"] }
 datafusion = { version = "36.0.0" }
-pyo3 = { version = "0.20.2", optional = true }
+pyo3 = { version = "0.20.3", optional = true }

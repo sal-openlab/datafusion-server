@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1 (2024-02-23)
+
+* Updates latest crates dependencies
+    + hyper v1.2.0, tower-https v0.5.2, pyo3 v0.20.3
+* Fixes containers version obtaining file in make-containers.sh (to same as crate version)
+* Updates README.md
+
 ## 0.9.0 (2024-02-21)
 
 * Response format can now be specified via the `Accept` request header.

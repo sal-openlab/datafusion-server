@@ -1,5 +1,9 @@
 # datafusion-server crate
 
+[![crates.io](https://img.shields.io/crates/v/datafusion-server?color=blue)](https://crates.io/crates/datafusion-server)
+[![license](https://img.shields.io/github/license/sal-openlab/datafusion-server?color=blue)](./LICENSE)
+[![build](https://img.shields.io/github/actions/workflow/status/sal-openlab/datafusion-server/push-trigger.yml?logo=github)](https://github.com/sal-openlab/datafusion-server/actions?query=workflow%3Apush-trigger)
+
 Multiple session, variety of data sources query server implemented by Rust.
 
 * Asynchronous architecture used by [Tokio](https://tokio.rs/) ecosystem
@@ -72,7 +76,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.9.0
+    datafusion-server:0.9.1
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -100,16 +104,36 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.9.0"
+datafusion-server = "0.9.1"
 ```
 
 #### Example of src/main.rs
 
 ```rust
+use clap::Parser;
+use std::path::PathBuf;
+
+#[derive(Parser)]
+#[clap(author, version, about = "datafusion-server", long_about = None)]
+struct Args {
+    #[clap(
+    long,
+    value_parser,
+    short = 'f',
+    value_name = "FILE",
+    help = "Configuration file",
+    default_value = "./config.toml"
+    )]
+    config: PathBuf,
+}
+
 fn main() {
-    datafusion_server::execute("path/to/config.toml");
+    let args = Args::parse();
+    datafusion_server::execute(&args.config);
 }
 ```
+
+For details, further reading [main.rs](bin/src/main.rs) and [Config.toml](bin/Cargo.toml).
 
 #### Example of config.toml
 
@@ -151,7 +175,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.9.0", features = ["plugin"] }
+datafusion-server = { version = "0.9.1", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -177,7 +201,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.9.0", features = ["plugin"] }
+datafusion-server = { version = "0.9.1", features = ["plugin"] }
 ```
 
 #### Build for release

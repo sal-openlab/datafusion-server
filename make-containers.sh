@@ -1,15 +1,10 @@
 #!/bin/bash
-# makes datafusion-server container with and without plugin feature
+# makes datafusion-server containers with and without plugin feature
 
 CONTAINER_NAME="datafusion-server"
-ARCHIVE_PATH=./
+CONTAINER_VER=$(grep '^version' ./Cargo.toml | head -1 | awk -F '"' '{print $2}')
 
-CONTAINER_VER=$(sed -En '
-  /^\[package]/,/^$/{
-    s/version[ \t]*=[ \t]*//p
-  }' < ./bin/Cargo.toml
-)
-CONTAINER_VER=${CONTAINER_VER//\"/}
+ARCHIVE_PATH=./
 
 echo "Building $CONTAINER_NAME:$CONTAINER_VER"
 docker build -t "$CONTAINER_NAME:$CONTAINER_VER" -f ./bin/Dockerfile .
