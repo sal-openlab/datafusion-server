@@ -76,7 +76,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.9.1
+    datafusion-server:0.9.2
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -104,17 +104,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.9.1"
+datafusion-server = "0.9.2"
 ```
 
 #### Example of src/main.rs
 
 ```rust
-use clap::Parser;
 use std::path::PathBuf;
 
+use clap::Parser;
+use datafusion_server::settings::Settings;
+
 #[derive(Parser)]
-#[clap(author, version, about = "datafusion-server", long_about = None)]
+#[clap(author, version, about = "Arrow and other large datasets web server", long_about = None)]
 struct Args {
     #[clap(
     long,
@@ -127,9 +129,11 @@ struct Args {
     config: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    datafusion_server::execute(&args.config);
+    let settings = Settings::new_with_file(&args.config)?;
+    datafusion_server::execute(settings)?;
+    Ok(())
 }
 ```
 
@@ -175,7 +179,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.9.1", features = ["plugin"] }
+datafusion-server = { version = "0.9.2", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -201,7 +205,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.9.1", features = ["plugin"] }
+datafusion-server = { version = "0.9.2", features = ["plugin"] }
 ```
 
 #### Build for release

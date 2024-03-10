@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.2 (2024-03-10)
+
+* Changes argument of entry function from config file path to `struct` of `Settings`
+    + Usage example in [README.md (Example of src/main.rs)](README.md#example-of-srcmainrs)
+* Updates Python interpreter to v3.11.8 (pre-built Docker container)
+* Updates pandas for processor plugin to v2.2.1 (pre-built Docker container)
+    + Refactors Python plugin codes (example, excel, pivot-table)
+* Updates some dependent crates
+
 ## 0.9.1 (2024-02-23)
 
 * Updates latest crates dependencies

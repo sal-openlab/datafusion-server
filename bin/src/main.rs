@@ -1,7 +1,9 @@
 // main.rs: datafusion-server main
 
-use clap::Parser;
 use std::path::PathBuf;
+
+use clap::Parser;
+use datafusion_server::settings::Settings;
 
 #[derive(Parser)]
 #[clap(author, version, about = "Arrow and other large datasets web server", long_about = None)]
@@ -17,7 +19,9 @@ struct Args {
     config: PathBuf,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    datafusion_server::execute(&args.config);
+    let settings = Settings::new_with_file(&args.config)?;
+    datafusion_server::execute(settings)?;
+    Ok(())
 }

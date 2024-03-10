@@ -4,16 +4,18 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> October 16, 2022
 //
 
+use std::sync::Arc;
+
+use log::Level;
+
+use context::session_manager::SessionContextManager;
+use plugin::plugin_manager::{PLUGIN_MANAGER, PluginManager};
+use server::http;
+use settings::{LAZY_SETTINGS, Settings};
+use statistics::{LAZY_STATISTICS, Statistics};
+
 use crate::context::session_manager::SessionManager;
 use crate::server::signal_handler;
-use context::session_manager::SessionContextManager;
-use log::Level;
-use plugin::plugin_manager::{PluginManager, PLUGIN_MANAGER};
-use server::http;
-use settings::{Settings, LAZY_SETTINGS};
-use statistics::{Statistics, LAZY_STATISTICS};
-use std::path::Path;
-use std::sync::Arc;
 
 mod context;
 mod data_source;
@@ -21,32 +23,42 @@ mod plugin;
 mod request;
 mod response;
 mod server;
-mod settings;
+pub mod settings;
 mod statistics;
 
-#[allow(clippy::missing_panics_doc)] // TODO: to be made documentation
+/// ## Errors
+/// Initializing errors belows:
+/// * Configuration
+/// * Statistics Manager
+/// * Logging System
+/// * DataFusion Session Manager
+/// * Python Plugin Manager
+/// * HTTP socket binding
+///
+/// ## Panics
+/// * Unknown errors
 #[tokio::main]
-pub async fn execute(config_file: &Path) {
+pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     LAZY_SETTINGS
-        .set(Settings::new(config_file).expect("Can not parse arguments"))
-        .expect("Can not initialize configurations");
+        .set(settings)
+        .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;
+
     LAZY_STATISTICS
         .set(Statistics::new())
-        .expect("Can not register statistics manager");
+        .map_err(|_| anyhow::anyhow!("Can not initialize statistics"))?;
 
-    simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info))
-        .expect("Can not initialize logger subsystem");
+    simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info))?;
 
-    let plugin_mgr = PluginManager::new().expect("Can not initialize plugin subsystem");
+    let plugin_mgr = PluginManager::new()?;
+
     PLUGIN_MANAGER
         .set(plugin_mgr)
-        .expect("Can not register plugin manager");
+        .map_err(|_| anyhow::anyhow!("Can not initialize plugin manager"))?;
 
     let session_mgr = Arc::new(tokio::sync::Mutex::new(SessionContextManager::new()));
 
-    let (http_server, addr) = http::create_server::<SessionContextManager>(session_mgr.clone())
-        .await
-        .expect("Can not bind to port, may be already used.");
+    let (http_server, addr) =
+        http::create_server::<SessionContextManager>(session_mgr.clone()).await?;
 
     tokio::spawn(async move {
         cleanup_worker(session_mgr).await;
@@ -57,6 +69,7 @@ pub async fn execute(config_file: &Path) {
         env!("CARGO_PKG_VERSION"),
         addr
     );
+
     log::debug!("with config: {:?}", Settings::global());
 
     if let Err(err) = http_server
@@ -64,9 +77,12 @@ pub async fn execute(config_file: &Path) {
         .await
     {
         log::error!("Server error: {:?}", err);
+        return Err(anyhow::anyhow!("Can not initialize http server: {:?}", err));
     }
 
     log::info!("Server stopped");
+
+    Ok(())
 }
 
 async fn cleanup_worker(session_mgr: Arc<tokio::sync::Mutex<SessionContextManager>>) {
