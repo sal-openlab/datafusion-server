@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """ datafusion-server data source connector plugin - excel
 """
+from __future__ import annotations
 
 import os
+import logging
 import pyarrow as pa
 import pandas as pd
 
@@ -16,16 +18,21 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
     :param kwargs: option parameters
     :return: results to datafusion-server encoded by Arrow record batch
     """
+    init_logging(kwargs.get("system_config"))
 
-    system_config = kwargs.get("system_config")
-
-    if is_debug(system_config):
-        print(">> Python received arguments:", response_format, authority, path, schema, kwargs)
+    logging.info("Starting: datasource-plugin-excel")
+    logging.debug(
+        "response_format = %s, authority = %s, path = %s, kwargs = %s",
+        response_format,
+        authority,
+        path,
+        kwargs,
+    )
 
     if response_format != "arrow":
         raise ValueError("Unsupported format: " + response_format)
 
-    file = os.path.join(system_config["data_dir"], authority)
+    file = os.path.join(kwargs.get("system_config")["data_dir"], authority)
     sheet = path.lstrip("/")
     skip_rows = valid_int(kwargs.get("skipRows"))
     num_rows = valid_int(kwargs.get("nRows"))
@@ -37,18 +44,22 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
         file, sheet, skiprows=skip_rows, nrows=num_rows, header=header_row
     )
 
-    if is_debug(system_config):
-        print(df)
+    logging.debug("Parsed dataframe >>\n%s", df)
+    logging.info("Successfully completed: datasource-plugin-excel")
 
     return pa.RecordBatch.from_pandas(df)
 
 
-def is_debug(system_config) -> bool:
-    return (
-        True
-        if system_config["log_level"] == "trace"
-        or system_config["log_level"] == "debug"
-        else False
+def init_logging(system_config):
+    logging.basicConfig(
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=(
+            logging.DEBUG
+            if system_config["log_level"] == "trace"
+            or system_config["log_level"] == "debug"
+            else logging.INFO
+        ),
     )
 
 

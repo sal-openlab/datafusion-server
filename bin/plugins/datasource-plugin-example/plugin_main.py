@@ -12,7 +12,7 @@ http://localhost:4000/dataframe/query
     {
       "format": "arrow",
       "name": "hello",
-      "location": "simple://hello.world",
+      "location": "example://hello.world",
       "pluginOptions": {
         "foo": {
           "bar": [1, 2, 3],
@@ -79,10 +79,16 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
     :param kwargs: option parameters or None
     :return: results to datafusion-server encoded by UTF-8 string
     """
-    print(">> Python received arguments:")
-    print("format, authority, path:", response_format, authority, path)
-    print("schema:", schema)
-    print("kwargs:", kwargs)
+    init_logging(kwargs.get("system_config"))
+
+    logging.info("Starting: datasource-plugin-example")
+    logging.debug(
+        "response_format = %s, authority = %s, path = %s, kwargs = %s",
+        response_format,
+        authority,
+        path,
+        kwargs,
+    )
 
     if response_format == "json":
         return '[\n{"foo":"hello - json","bar":12345},\n{"foo":"world","bar":67890}\n]\n'
@@ -112,3 +118,16 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
 
     else:
         raise ValueError("Unsupported format: " + response_format)
+
+
+def init_logging(system_config):
+    logging.basicConfig(
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=(
+            logging.DEBUG
+            if system_config["log_level"] == "trace"
+            or system_config["log_level"] == "debug"
+            else logging.INFO
+        ),
+    )

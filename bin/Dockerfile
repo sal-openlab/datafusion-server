@@ -1,6 +1,6 @@
 FROM rust:1.76 as builder
 
-ENV PYTHON_VERSION=3.11.7
+ENV PYTHON_VERSION=3.11.8
 ENV PYTHON_HOME=/opt/python
 ENV PYO3_PYTHON=$PYTHON_HOME/bin/python3
 ENV LANG=C.UTF-8
@@ -25,10 +25,8 @@ RUN curl -O https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_
  && echo "$PYTHON_HOME/lib" > /etc/ld.so.conf.d/python.conf \
  && ldconfig \
  && PATH=$PYTHON_HOME/bin:$PATH \
- && pip3 install --no-cache-dir requests==2.31.0 \
- && pip3 install --no-cache-dir pyarrow==14.0.1 \
- && pip3 install --no-cache-dir pandas==2.1.3 \
- && pip3 install --no-cache-dir openpyxl==3.1.2 \
+ && pip3 install --no-cache-dir "requests==2.31.0" \
+ && pip3 install --no-cache-dir "pandas[performance,excel,pyarrow]==2.2.1" \
  && find $PYTHON_HOME -depth \
       \( \
           \( -type d -a \( -name test -o -name tests -o -name idle_test \) \) \
