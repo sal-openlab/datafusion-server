@@ -3,6 +3,7 @@
 [![crates.io](https://img.shields.io/crates/v/datafusion-server?color=blue)](https://crates.io/crates/datafusion-server)
 [![license](https://img.shields.io/github/license/sal-openlab/datafusion-server?color=blue)](./LICENSE)
 [![build](https://img.shields.io/github/actions/workflow/status/sal-openlab/datafusion-server/push-trigger.yml?logo=github)](https://github.com/sal-openlab/datafusion-server/actions?query=workflow%3Apush-trigger)
+[![pages](https://img.shields.io/github/actions/workflow/status/sal-openlab/datafusion-server/doc-trigger.yml?logo=github&label=docs)](https://sal-openlab.github.io/datafusion-server/)
 
 Multiple session, variety of data sources query server implemented by Rust.
 

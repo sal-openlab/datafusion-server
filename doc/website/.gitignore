@@ -1,0 +1,4 @@
+public/
+resources/
+themes/hugo-geekdoc/
+.hugo_build.lock
