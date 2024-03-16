@@ -1,5 +1,5 @@
 ---
-weight: 70
+weight: 100
 title: Using Python Plugin Modules
 ---
 
