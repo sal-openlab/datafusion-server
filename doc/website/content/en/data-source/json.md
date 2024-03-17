@@ -5,6 +5,6 @@ weight: 30
 
 {{< toc >}}
 
-## Local file JSON
+## Local JSON File
 
 ## JSON from REST API

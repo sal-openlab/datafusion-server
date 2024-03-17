@@ -79,7 +79,7 @@ Details of each key in the `schema` array:
 | `dataType` | Specifies the type of data that a column can hold, such as String, Integer, Float, Boolean, etc. Each data type determines the nature of the data, how much space it occupies, and how the system processes it. | True |
 | `nullable` | Indicates whether the column allows null values or not. If true, the column can contain null values; if false, it cannot. If omitted, it as `false`. | False |
 
-#### Suported Data Types
+#### Supported Data Types
 
 Although `dataType` can be set to data types supported by Apache Arrow, not all are applicable. Below is a list of data types supported by DataFusion Server.
 

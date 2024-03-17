@@ -1,8 +1,7 @@
 ---
 weight: 80
-title: Session Context (TBD)
+title: Session Context
 ---
 
-* What's Session Context
-* Creating Session
-* Destruct Session
+* [What's Session Context]({{< ref "/session-context/what-session" >}})
+* [Operations]({{< ref "/session-context/operation" >}})
