@@ -294,10 +294,9 @@ paths:
       parameters:
         - name: keepAlive
           in: query
-          description: Sets the session keep alive time in seconds
+          description: Sets the session keep alive time in seconds, default is `3600`.
           schema:
             type: number
-          default: 3600
           example: 1800
       responses:
         '200':
@@ -609,7 +608,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/sessionQuery'
+              oneOf:
+                - $ref: '#/components/schemas/queryLang'
+                - $ref: '#/components/schemas/sessionQueryWithFormat'
       responses:
         '200':
           description: Successful operation
@@ -981,7 +982,7 @@ components:
               type: string
               default: ','
               description: Column delimiter, only accets single character (CSV only)
-    sessionQuery:
+    sessionQueryWithFormat:
       type: object
       properties:
         query:

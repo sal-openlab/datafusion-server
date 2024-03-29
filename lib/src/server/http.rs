@@ -32,7 +32,13 @@ pub async fn create_server<S: SessionManager>(
             .allow_credentials(false),
     );
 
-    let sock_addr = SocketAddr::from(([0, 0, 0, 0], Settings::global().server.port));
+    let sock_addr = format!(
+        "{}:{}",
+        Settings::global().server.address,
+        Settings::global().server.port,
+    )
+    .parse::<SocketAddr>()?;
+
     let listener = tokio::net::TcpListener::bind(sock_addr).await?;
 
     Ok((axum::serve(listener, app), sock_addr))

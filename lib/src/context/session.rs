@@ -4,6 +4,8 @@
 
 #[cfg(feature = "plugin")]
 use crate::data_source::connector_plugin;
+#[cfg(feature = "flight")]
+use crate::data_source::flight_stream;
 use crate::data_source::{
     csv_file, json_file, json_rest, location_uri, nd_json_file, nd_json_rest, parquet, writer,
 };
@@ -16,8 +18,8 @@ use crate::response::http_error::ResponseError;
 use crate::settings::Settings;
 use axum::async_trait;
 use chrono::{DateTime, Utc};
-use datafusion::arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch};
 use datafusion::{
+    arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
     execution::context,
     logical_expr::{col, JoinType},
 };
@@ -68,6 +70,7 @@ pub trait Session: Send + Sync + 'static {
     async fn ttl(&self) -> i64;
     async fn touch(&self);
     async fn expired(&self) -> bool;
+    async fn schema_ref(&self, name: &str) -> Option<SchemaRef>;
     async fn data_source_names(&self) -> Vec<String>;
     async fn data_source(
         &self,
@@ -81,6 +84,11 @@ pub trait Session: Send + Sync + 'static {
     async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_json_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_json_rest(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    #[cfg(feature = "flight")]
+    async fn append_from_flight_stream(
+        &self,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
     #[cfg(feature = "plugin")]
     async fn append_from_connector_plugin(
         &self,
@@ -120,6 +128,15 @@ impl Session for ConcurrentSessionContext {
 
     async fn expired(&self) -> bool {
         self.ttl().await <= 0
+    }
+
+    async fn schema_ref(&self, name: &str) -> Option<SchemaRef> {
+        let session = &mut self.read().await;
+        if let Ok(provider) = session.df_ctx.table_provider(name).await {
+            Some(provider.schema())
+        } else {
+            None
+        }
     }
 
     async fn data_source_names(&self) -> Vec<String> {
@@ -164,7 +181,7 @@ impl Session for ConcurrentSessionContext {
                 record_batches.len()
             );
 
-            self.touch().await; // Important that extends the expire of session TTL here.
+            self.touch().await; // Important that extends the expiry of session TTL here.
             {
                 let session = &mut self.write().await;
 
@@ -286,6 +303,24 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
+    #[cfg(feature = "flight")]
+    async fn append_from_flight_stream(
+        &self,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        let options = match &data_source.options {
+            Some(o) => o.clone(),
+            None => DataSourceOption::new(),
+        };
+
+        let record_batches =
+            flight_stream::to_record_batch(&data_source.location, &options).await?;
+
+        Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
     #[cfg(feature = "plugin")]
     async fn append_from_connector_plugin(
         &self,
@@ -383,6 +418,12 @@ impl Session for ConcurrentSessionContext {
                         &data_frame.collect().await?,
                         file_path.to_str().unwrap(),
                     )?;
+                }
+                #[cfg(feature = "flight")]
+                DataSourceFormat::Flight => {
+                    return Err(ResponseError::unsupported_type(
+                        "Not supported format 'flight' to save local file system",
+                    ));
                 }
                 DataSourceFormat::Arrow => {
                     return Err(ResponseError::unsupported_type(

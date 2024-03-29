@@ -4,15 +4,18 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> October 16, 2022
 //
 
+use std::future::IntoFuture;
 use std::sync::Arc;
 
 use log::Level;
 
 use context::session_manager::SessionContextManager;
-use plugin::plugin_manager::{PLUGIN_MANAGER, PluginManager};
+use plugin::plugin_manager::{PluginManager, PLUGIN_MANAGER};
+#[cfg(feature = "flight")]
+use server::flight;
 use server::http;
-use settings::{LAZY_SETTINGS, Settings};
-use statistics::{LAZY_STATISTICS, Statistics};
+use settings::{Settings, LAZY_SETTINGS};
+use statistics::{Statistics, LAZY_STATISTICS};
 
 use crate::context::session_manager::SessionManager;
 use crate::server::signal_handler;
@@ -32,8 +35,9 @@ mod statistics;
 /// * Statistics Manager
 /// * Logging System
 /// * DataFusion Session Manager
-/// * Python Plugin Manager
+/// * Python Plugin Manager (feature = "plugin" only)
 /// * HTTP socket binding
+/// * gRPC socket binding (feature = "flight" only)
 ///
 /// ## Panics
 /// * Unknown errors
@@ -57,30 +61,50 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
 
     let session_mgr = Arc::new(tokio::sync::Mutex::new(SessionContextManager::new()));
 
-    let (http_server, addr) =
+    let (http_server, http_addr) =
         http::create_server::<SessionContextManager>(session_mgr.clone()).await?;
 
-    tokio::spawn(async move {
-        cleanup_worker(session_mgr).await;
-    });
+    #[cfg(feature = "flight")]
+    let (flight_server, flight_addr) =
+        flight::create_server::<SessionContextManager>(&session_mgr.clone())?;
 
-    log::info!(
-        "datafusion-server v{} started, listen on {:?}",
-        env!("CARGO_PKG_VERSION"),
-        addr
-    );
-
+    log::info!("datafusion-server v{} started", env!("CARGO_PKG_VERSION"));
+    log::info!("http service listening on {http_addr:?}");
+    #[cfg(feature = "flight")]
+    log::info!("flight gRPC service listening on {flight_addr:?}");
     log::debug!("with config: {:?}", Settings::global());
 
-    if let Err(err) = http_server
-        .with_graceful_shutdown(signal_handler::register_shutdown_signal())
-        .await
-    {
-        log::error!("Server error: {:?}", err);
-        return Err(anyhow::anyhow!("Can not initialize http server: {:?}", err));
+    let http_service =
+        http_server.with_graceful_shutdown(signal_handler::register_shutdown_signal());
+
+    #[cfg(feature = "flight")]
+    let flight_service = tonic::transport::Server::builder()
+        .add_service(flight_server)
+        .serve(flight_addr);
+
+    #[cfg(feature = "flight")]
+    tokio::select! {
+        http_result = http_service.into_future() => if let Err(e) = http_result {
+            log::error!("Can not initialize http server: {:?}", e);
+            return Err(anyhow::anyhow!("http server initialization error: {:?}", e));
+        },
+        flight_result = flight_service => if let Err(e) = flight_result {
+            log::error!("Can not initialize flight gRPC server: {:?}", e);
+            return Err(anyhow::anyhow!("flight server initialization error: {:?}", e));
+        },
+        _ = cleanup_worker(session_mgr) => {},
     }
 
-    log::info!("Server stopped");
+    #[cfg(not(feature = "flight"))]
+    tokio::select! {
+        http_result = http_service.into_future() => if let Err(e) = http_result {
+            log::error!("Can not initialize http server: {:?}", e);
+            return Err(anyhow::anyhow!("http server initialization error: {:?}", e));
+        },
+        _ = cleanup_worker(session_mgr) => {},
+    }
+
+    log::info!("Server terminated");
 
     Ok(())
 }

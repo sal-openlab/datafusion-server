@@ -1,4 +1,4 @@
-FROM rust:1.76 as builder
+FROM rust:1.77 as builder
 
 ENV PYTHON_VERSION=3.11.8
 ENV PYTHON_HOME=/opt/python
@@ -41,7 +41,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release --features=plugin
+ && cargo build --release --features=plugin,flight
 
 FROM debian:bookworm-slim
 

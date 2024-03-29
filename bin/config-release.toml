@@ -2,6 +2,7 @@
 
 [server]
 port = 4000
+flight_grpc_port = 50051 # only for enables `flight` feature
 base_url = "/"
 data_dir = "/var/datafusion-server/data"
 plugin_dir = "/usr/local/datafusion-server/plugins"

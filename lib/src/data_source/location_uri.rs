@@ -22,6 +22,8 @@ pub enum SupportedScheme {
     Http,
     Https,
     File,
+    #[cfg(feature = "flight")]
+    Flight,
     #[cfg(feature = "plugin")]
     WillPlugin,
 }
@@ -37,6 +39,8 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
         "http" => Ok(SupportedScheme::Http),
         "https" => Ok(SupportedScheme::Https),
         "file" => Ok(SupportedScheme::File),
+        #[cfg(feature = "flight")]
+        "flight" => Ok(SupportedScheme::Flight),
         #[cfg(feature = "plugin")]
         _ => Ok(SupportedScheme::WillPlugin),
         #[cfg(not(feature = "plugin"))]
@@ -69,7 +73,7 @@ pub fn to_parts(uri: &str) -> anyhow::Result<Parts> {
 pub fn to_map(query: &str) -> HashMap<String, String> {
     let mut map = HashMap::<String, String>::new();
     if !query.is_empty() {
-        for kv in query.to_string().split('&') {
+        for kv in query.split('&') {
             let kv = kv.to_string();
             let s: Vec<&str> = kv.split('=').collect();
             map.insert(

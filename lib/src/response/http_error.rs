@@ -202,6 +202,15 @@ impl ResponseError {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn connection_by_peer(message: impl Into<String>) -> Self {
+        Self {
+            code: http::StatusCode::EXPECTATION_FAILED,
+            error: "peer_connection_error".to_string(),
+            message: message.into(),
+        }
+    }
+
     #[cfg(feature = "plugin")]
     pub fn python_interpreter_error(message: impl Into<String>) -> Self {
         Self {

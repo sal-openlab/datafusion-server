@@ -5,8 +5,8 @@
 use std::path::Path;
 
 use config::{
-    {Config, ConfigBuilder, ConfigError, File},
     builder::DefaultState,
+    {Config, ConfigBuilder, ConfigError, File},
 };
 use log::Level;
 use once_cell::sync::OnceCell;
@@ -14,7 +14,9 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
+    pub address: String,
     pub port: u16,
+    pub flight_grpc_port: u16,
     pub base_url: String,
     pub data_dir: String,
     pub plugin_dir: String,
@@ -73,7 +75,11 @@ impl Settings {
 
     fn defaults() -> ConfigBuilder<DefaultState> {
         Config::builder()
+            .set_default("server.address", "0.0.0.0")
+            .unwrap()
             .set_default("server.port", 4000)
+            .unwrap()
+            .set_default("server.flight_grpc_port", 50051)
             .unwrap()
             .set_default("server.base_url", "/")
             .unwrap()

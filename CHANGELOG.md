@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.0 (2024-03-29)
+
+* Initially supported Arrow Flight gRPC feature
+* Query or query and response format schema can be specified for request body of endpoint `/:session/query`
+* Updates latest crates dependencies
+    + Tokio v1.37.0, axum v0.7.5, reqwest v0.12.2 and other crates
+
 ## 0.9.2 (2024-03-10)
 
 * Changes argument of entry function from config file path to `struct` of `Settings`

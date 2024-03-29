@@ -4,8 +4,8 @@
 
 use serde::Deserialize;
 
-use crate::data_source::{location_uri, schema};
 use crate::data_source::location_uri::SupportedScheme;
+use crate::data_source::{location_uri, schema};
 use crate::response::http_error::ResponseError;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -53,7 +53,7 @@ impl PluginOption {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 pub enum DataSourceFormat {
     #[serde(rename = "csv")]
     Csv,
@@ -65,6 +65,9 @@ pub enum DataSourceFormat {
     Parquet,
     #[serde(rename = "arrow")]
     Arrow,
+    #[cfg(feature = "flight")]
+    #[serde(rename = "flight")]
+    Flight,
 }
 
 impl DataSourceFormat {
@@ -76,6 +79,8 @@ impl DataSourceFormat {
             DataSourceFormat::NdJson => "ndJson",
             DataSourceFormat::Parquet => "parquet",
             DataSourceFormat::Arrow => "arrow",
+            #[cfg(feature = "flight")]
+            DataSourceFormat::Flight => "flight",
         }
     }
 }
@@ -129,6 +134,17 @@ impl DataSource {
                         "Not supported data source format, 'arrow' only use for in-memory connector",
                     ));
                 }
+            }
+            #[cfg(feature = "flight")]
+            DataSourceFormat::Flight => {
+                match scheme {
+                    SupportedScheme::Flight | SupportedScheme::Http | SupportedScheme::Https => {}
+                    _ => {
+                        return Err(ResponseError::unsupported_type(
+                            "Not supported data source, Flight only 'flight', 'http', 'https' schemes",
+                        ));
+                    }
+                };
             }
         }
 
@@ -304,8 +320,15 @@ pub struct DataFrameQuery {
 }
 
 #[derive(Deserialize, Clone, Debug)]
-pub struct SessionQuery {
+pub struct QueryWithResponseFormat {
     #[serde(rename = "query")]
     pub query_lang: QueryLanguage,
     pub response: Option<QueryResponse>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
+#[serde(untagged)]
+pub enum SessionQuery {
+    Query(QueryLanguage),
+    QueryWithFormat(QueryWithResponseFormat),
 }

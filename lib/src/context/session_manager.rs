@@ -11,6 +11,7 @@ use crate::response::{handler, http_error::ResponseError};
 use crate::PluginManager;
 use axum::async_trait;
 use axum::http::uri;
+use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::execution::context::SessionConfig;
 use std::cmp;
@@ -43,6 +44,7 @@ pub trait SessionManager: Send + Sync + 'static {
     async fn cleanup(&self);
     async fn session_ids(&self) -> Vec<String>;
     async fn session(&self, session_id: &str) -> Result<handler::session::Session, ResponseError>;
+    async fn schema_ref(&self, session_id: &str, name: &str) -> Option<SchemaRef>;
     async fn data_source_names(&self, session_id: &str) -> Result<Vec<String>, ResponseError>;
     async fn data_source(
         &self,
@@ -90,6 +92,13 @@ pub trait SessionManager: Send + Sync + 'static {
     ) -> Result<(), ResponseError>;
 
     async fn append_json_rest(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
+    #[cfg(feature = "flight")]
+    async fn append_flight_stream(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -160,11 +169,11 @@ impl SessionManager for SessionContextManager {
     }
 
     async fn destroy_session(&self, session_id: &str) -> Result<(), ResponseError> {
-        if !(self.contexts.read().await).contains_key(session_id) {
+        if !self.contexts.read().await.contains_key(session_id) {
             return Err(ResponseError::session_not_found(session_id));
         }
 
-        (self.contexts.write().await).remove(session_id);
+        self.contexts.write().await.remove(session_id);
         Ok(())
     }
 
@@ -172,7 +181,7 @@ impl SessionManager for SessionContextManager {
         let mut expired_ids: Vec<String> = vec![];
 
         for session_id in self.session_ids().await {
-            if let Some(context) = (self.contexts.read().await).get(&session_id) {
+            if let Some(context) = self.contexts.read().await.get(&session_id) {
                 if context.expired().await {
                     expired_ids.push(session_id.clone());
                 }
@@ -181,19 +190,21 @@ impl SessionManager for SessionContextManager {
 
         for session_id in expired_ids {
             log::info!("Session {} has been expired", session_id);
-            (self.contexts.write().await).remove(&session_id);
+            self.contexts.write().await.remove(&session_id);
         }
     }
 
     async fn session_ids(&self) -> Vec<String> {
-        (self.contexts.read().await)
+        self.contexts
+            .read()
+            .await
             .keys()
             .cloned()
             .collect::<Vec<String>>()
     }
 
     async fn session(&self, session_id: &str) -> Result<handler::session::Session, ResponseError> {
-        match (self.contexts.read().await).get(session_id) {
+        match self.contexts.read().await.get(session_id) {
             Some(context) => Ok(handler::session::Session {
                 id: context.id().await.clone(),
                 created: context
@@ -206,8 +217,15 @@ impl SessionManager for SessionContextManager {
         }
     }
 
+    async fn schema_ref(&self, session_id: &str, name: &str) -> Option<SchemaRef> {
+        match self.contexts.read().await.get(session_id) {
+            Some(context) => context.schema_ref(name).await,
+            None => None,
+        }
+    }
+
     async fn data_source_names(&self, session_id: &str) -> Result<Vec<String>, ResponseError> {
-        match (self.contexts.read().await).get(session_id) {
+        match self.contexts.read().await.get(session_id) {
             Some(context) => Ok(context.data_source_names().await),
             None => Err(ResponseError::session_not_found(session_id)),
         }
@@ -218,7 +236,7 @@ impl SessionManager for SessionContextManager {
         session_id: &str,
         name: &str,
     ) -> Result<handler::data_source::DataSourceDetail, ResponseError> {
-        match (self.contexts.read().await).get(session_id) {
+        match self.contexts.read().await.get(session_id) {
             Some(context) => Ok({
                 let (data_source, schema) = context.data_source(name).await?;
                 handler::data_source::DataSourceDetail {
@@ -294,6 +312,10 @@ impl SessionManager for SessionContextManager {
                     return Err(ResponseError::request_validation(
                         "Invalid data source scheme 'arrow', use 'csv', 'json', 'ndJson' and 'parquet'.",
                     ));
+                }
+                #[cfg(feature = "flight")]
+                DataSourceFormat::Flight => {
+                    self.append_flight_stream(session_id, data_source).await?;
                 }
             }
         }
@@ -400,6 +422,18 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_json_rest(data_source)
+            .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "flight")]
+    async fn append_flight_stream(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_flight_stream(data_source)
             .await?;
         Ok(())
     }

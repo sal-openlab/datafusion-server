@@ -7,7 +7,7 @@ weight: 20
 
 ## Create A New Session Context
 
-To create a session context with the default keep-alive (`session.keep_alive` in setting), simply send a request to the `/session/create` endpoint by method `GET`.
+To create a session context with the default keep-alive (`session.keep_alive` in setting), simply send a request to the `/session/create` endpoint by the `GET` method.
 
 ```shell
 curl http://127.0.0.1:4000/session/create
@@ -33,7 +33,7 @@ The TTL is reset each time there is some access to the context. If left idle unt
 
 ## Inspecting A Existing Session Context
 
-To check the current state of a session context, issue a request to the `/session/:id` endpoint by method `GET`.
+To check the current state of a session context, issue a request to the `/session/:id` endpoint by the `GET` method.
 
 ```shell
 curl http://127.0.0.1:4000/session/281b509a-bc80-4afa-8b06-181d191c555b
@@ -51,7 +51,7 @@ You will see the TTL value decreasing.
 
 ## Delete A Existing Session Context
 
-To delete a session context, send a request to the `/session/:id` endpoint by method `DELETE`.
+To delete a session context, send a request to the `/session/:id` endpoint by the `DELETE` method.
 
 ```shell
 curl -X DELETE http://127.0.0.1:4000/session/281b509a-bc80-4afa-8b06-181d191c555b
@@ -59,7 +59,7 @@ curl -X DELETE http://127.0.0.1:4000/session/281b509a-bc80-4afa-8b06-181d191c555
 
 ## Adding Tables from Data Sources
 
-To load a table or tables into the context from data sources, request to the `/session/:id/datasource` endpoint by `POST`.
+To load a table or tables into the context from data sources, request to the `/session/:id/datasource` endpoint by the `POST` method.
 
 ```shell
 curl -X POST http://127.0.0.1:4000/session/b5307f5a-39a6-46e8-84c8-d441fef86897/datasource \
@@ -71,7 +71,7 @@ curl -X POST http://127.0.0.1:4000/session/b5307f5a-39a6-46e8-84c8-d441fef86897/
     "name": "store",
     "location": "file:///superstore.csv",
     "options": {
-      "inferSchema": 1000,
+      "inferSchemaRows": 1000,
       "hasHeader": true
     }
   },
@@ -246,11 +246,11 @@ Here, we are requesting detailed information about the `store` table loaded from
 }
 ```
 
-If the inferred data types are not as intended, you should either increase the `inferSchemaRows` value or define the schema using `schema`. For example, `Int64` might be too large for "Postal Code" column.
+If the inferred data types are not as intended, you should either increase the `options.inferSchemaRows` value or define the schema using `schema`. For example, `Int64` might be too large for "Postal Code" column.
 
 ## Remove A Table From Context
 
-To remove a table from the context, send a request to the `/session/:id/datasource/:name` endpoint by the `DELETE` method.
+To remove a table from the context, send a request to the `/session/:id/datasource/:table` endpoint by the `DELETE` method.
 
 ```shell
 curl -X DELETE http://127.0.0.1:4000/session/b5307f5a-39a6-46e8-84c8-d441fef86897/datasource/store
@@ -260,7 +260,7 @@ curl -X DELETE http://127.0.0.1:4000/session/b5307f5a-39a6-46e8-84c8-d441fef8689
 
 Reloading a table according to the data source definition can be useful, for example, when the data source points to a file that is updated in real-time, or when the data source is obtained from a REST API.
 
-A refresh request is made to the `/session/:id/datasource/:name/refresh` endpoint by the `GET` method.
+A refresh request is made to the `/session/:id/datasource/:table/refresh` endpoint by the `GET` method.
 
 
 ```shell
@@ -269,4 +269,27 @@ curl http://127.0.0.1:4000/session/b5307f5a-39a6-46e8-84c8-d441fef86897/datasour
 
 However, there are caveats to refreshing. It cannot be used on tables for which data source definitions have not been made, such as tables created within the context using DDL like `CREATE TABLE table1`.
 
-## TBD...
+## Save A Existing Table To Filesystem
+
+Tables loaded from any data source within the context can be saved in any format under the `server.data_dir` directory.
+
+A request to save a table is made to the endpoint `/session/:id/datasource/save` using the `POST` method.
+
+
+```shell
+curl -X POST http://127.0.0.1:4000/session/74c54d62-0b59-4e82-82fd-892673ac7712/datasource/save \
+     -H 'Content-Type: application/json' \
+     -d $'
+[
+  {
+    "format": "json",
+    "name": "store",
+    "location": "file:///superstore.json",
+    "options": {
+      "overwrite": true
+    }
+  }
+]'
+```
+
+If `options.overwrite` is set to `true`, it will overwrite the file if it already exists. If it is `false`, an error will be returned without overwriting. The `options` itself is optional, and if omitted, it is considered to be `false`.

@@ -23,7 +23,10 @@ pub enum DataType {
     Float16,
     Float32,
     Float64,
-    Float,     // alias as Float64
+    Float, // alias as Float64
+    Decimal128,
+    Decimal256,
+    Decimal,   // alias as Decimal256
     Timestamp, // counting the milliseconds from 00:00:00 on 1 January 1970 as UTC
     TimestampSecond,
     TimestampMicro,
@@ -68,6 +71,14 @@ impl Field {
             DataType::Float16 => arrow::datatypes::DataType::Float16,
             DataType::Float32 => arrow::datatypes::DataType::Float32,
             DataType::Float64 | DataType::Float => arrow::datatypes::DataType::Float64,
+            DataType::Decimal128 => arrow::datatypes::DataType::Decimal128(
+                arrow::datatypes::DECIMAL128_MAX_PRECISION,
+                arrow::datatypes::DECIMAL128_MAX_SCALE,
+            ),
+            DataType::Decimal | DataType::Decimal256 => arrow::datatypes::DataType::Decimal256(
+                arrow::datatypes::DECIMAL256_MAX_PRECISION,
+                arrow::datatypes::DECIMAL256_MAX_SCALE,
+            ),
             DataType::Timestamp => {
                 arrow::datatypes::DataType::Timestamp(TimeUnit::Millisecond, None)
             }
@@ -105,6 +116,14 @@ impl Field {
             arrow::datatypes::DataType::Float16 => DataType::Float16,
             arrow::datatypes::DataType::Float32 => DataType::Float32,
             arrow::datatypes::DataType::Float64 => DataType::Float64,
+            arrow::datatypes::DataType::Decimal128(
+                arrow::datatypes::DECIMAL128_MAX_PRECISION,
+                arrow::datatypes::DECIMAL128_MAX_SCALE,
+            ) => DataType::Decimal128,
+            arrow::datatypes::DataType::Decimal256(
+                arrow::datatypes::DECIMAL256_MAX_PRECISION,
+                arrow::datatypes::DECIMAL256_MAX_SCALE,
+            ) => DataType::Decimal256,
             arrow::datatypes::DataType::Timestamp(TimeUnit::Millisecond, None) => {
                 DataType::Timestamp
             }

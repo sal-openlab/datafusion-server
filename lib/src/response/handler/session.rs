@@ -15,11 +15,14 @@ use serde::Serialize;
 
 use crate::context::session_manager::SessionManager;
 #[cfg(feature = "plugin")]
-use crate::PluginManager;
-use crate::request::{body::SessionQuery, header};
-#[cfg(feature = "plugin")]
 use crate::request::body::PluginOption;
+use crate::request::{
+    body::{QueryLanguage, QueryResponse, SessionQuery},
+    header,
+};
 use crate::response::{http_error::ResponseError, http_response};
+#[cfg(feature = "plugin")]
+use crate::PluginManager;
 
 #[derive(Serialize)]
 pub struct Session {
@@ -100,20 +103,34 @@ pub async fn query<E: SessionManager>(
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing session query responder");
 
+    let query_lang: QueryLanguage;
+    let response_format: Option<QueryResponse>;
+
+    match payload {
+        SessionQuery::Query(query) => {
+            query_lang = query;
+            response_format = None;
+        }
+        SessionQuery::QueryWithFormat(query_with_format) => {
+            query_lang = query_with_format.query_lang;
+            response_format = query_with_format.response;
+        }
+    }
+
     #[cfg(feature = "plugin")]
-        let mut record_batches: Vec<RecordBatch>;
+    let mut record_batches: Vec<RecordBatch>;
     #[cfg(not(feature = "plugin"))]
-        let record_batches: Vec<RecordBatch>;
+    let record_batches: Vec<RecordBatch>;
     {
         record_batches = session_mgr
             .lock()
             .await
-            .execute_sql(&session_id, &payload.query_lang.sql)
+            .execute_sql(&session_id, &query_lang.sql)
             .await?;
     }
 
     #[cfg(feature = "plugin")]
-    if let Some(processors) = payload.query_lang.post_processors {
+    if let Some(processors) = query_lang.post_processors {
         for processor in processors {
             if let Some(module) = processor.module {
                 let plugin_options = match &processor.plugin_options {
@@ -136,7 +153,7 @@ pub async fn query<E: SessionManager>(
 
     Ok(http_response::stream_responder(
         &record_batches,
-        &payload.response,
+        &response_format,
         &accept_header,
     ))
 }

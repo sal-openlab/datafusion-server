@@ -49,6 +49,15 @@ docker run -d --rm \
     ghcr.io/sal-openlab/datafusion-server/datafusion-server-without-plugin:latest
 ```
 
+If you are only using sample data in a container, omit the `-v ./data:/var/xapi-server/data`.
+
+```shell
+docker run -d --rm \
+    -p 4000:4000 \
+    --name datafusion-server \
+    ghcr.io/sal-openlab/datafusion-server/datafusion-server:latest
+```
+
 ### Checking running logs and server statistics
 
 Inspecting container logs.
@@ -127,3 +136,39 @@ This will build two containers: a full-feature container and a compact container
 
 If the `--no-export` option is added to the `make-containers.sh` script, container image creation will not be performed.
 
+### Executing container
+
+Full-featured built container:
+
+```shell
+docker run -d --rm \
+    -p 4000:4000 \
+    -v ./data:/var/datafusion-server/data \
+    --name datafusion-server \
+    datafusion-server:x.y.z
+```
+
+or without Python plugin container:
+
+```shell
+docker run -d --rm \
+    -p 4000:4000 \
+    -v ./data:/var/datafusion-server/data \
+    --name datafusion-server \
+    datafusion-server-without-plugin:x.y.z
+```
+
+If you are only using sample data in a container, omit the `-v ./data:/var/xapi-server/data`.
+
+```shell
+docker run -d --rm \
+    -p 4000:4000 \
+    --name datafusion-server \
+    datafusion-server:x.y.z
+```
+
+docker run -d --rm \
+    -p 4000:4000 \
+    -p 50051:50051 \
+    --name datafusion-server \
+    datafusion-server:0.9.3

@@ -82,7 +82,9 @@ level = "debug"
 
 | Parameter           | Description                  | Default    |
 | -- | -- | -- |
-| `server.port`       | Listening port               | `4000`     |
+| `server.address`    | Acceptable host address      | `0.0.0.0`  |
+| `server.port`       | Listening port for HTTP      | `4000`     |
+| `server.flight_grpc_port` | Listening port for Flight gRPC | `50051` |
 | `server.base_url`   | URL prefix                   | `/`        |
 | `server.data_dir`   | Static data source directory | `./data`   |
 | `server.plugin_dir` | Python plugin directory      | `./plugin` |
