@@ -37,12 +37,12 @@ futures-util = { version = "0.3.30", default-features = false, features = ["allo
 futures = "0.3.30"
 tokio = { version = "1.37.0", features = ["full"] }
 hyper = { version = "1.2.0", features = ["full"] }
-tonic = { version = "0.10.2", optional = true }
+tonic = { version = "0.11.0", optional = true }
 reqwest = { version = "0.12.2", features = ["default-tls", "cookies", "json", "stream"] }
 tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["cors"] }
 axum = "0.7.5"
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
-datafusion = { version = "36.0.0" }
-arrow-flight = { version = "50.0.0", optional = true }
+datafusion = { version = "37.0.0" }
+arrow-flight = { version = "51.0.0", optional = true }
 pyo3 = { version = "0.20.3", optional = true }

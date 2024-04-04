@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.1 (2024-04-05)
+
+* Updates to DataFusion v35 and Arrow v51
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/36.0.0.md
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5100-2024-03-15
+* And other related crates
+    + Tonic v0.11.0
+
 ## 0.10.0 (2024-03-29)
 
 * Initially supported Arrow Flight gRPC feature

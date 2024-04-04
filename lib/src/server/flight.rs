@@ -7,7 +7,7 @@ use arrow_flight::flight_service_server::FlightServiceServer;
 use arrow_flight::{
     flight_descriptor::DescriptorType, flight_service_server::FlightService, Action, ActionType,
     Criteria, Empty, FlightData, FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse,
-    PutResult, SchemaAsIpc, SchemaResult, Ticket,
+    PollInfo, PutResult, SchemaAsIpc, SchemaResult, Ticket,
 };
 use datafusion::arrow::{
     error::ArrowError,
@@ -81,6 +81,13 @@ impl FlightService for DataFusionServerFlightService {
         &self,
         _request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
+        Err(Status::unimplemented("Not yet implemented"))
+    }
+
+    async fn poll_flight_info(
+        &self,
+        _request: Request<FlightDescriptor>,
+    ) -> Result<Response<PollInfo>, Status> {
         Err(Status::unimplemented("Not yet implemented"))
     }
 

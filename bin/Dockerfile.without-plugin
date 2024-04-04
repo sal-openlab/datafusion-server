@@ -7,7 +7,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release
+ && cargo build --release --features=flight
 
 FROM alpine:latest
 

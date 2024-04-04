@@ -19,4 +19,4 @@ flight = ["datafusion-server/flight"]
 
 [dependencies]
 datafusion-server = { path = "../lib" }
-clap = { version = "4.5.3", features = ["derive"] }
+clap = { version = "4.5.4", features = ["derive"] }
