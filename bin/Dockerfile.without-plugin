@@ -9,13 +9,16 @@ COPY ./Cargo.toml ./
 RUN cd bin \
  && cargo build --release --features=flight
 
-FROM alpine:latest
+FROM debian:bookworm-slim
 
-COPY --from=builder /usr/src/datafusion-server/bin/target/release/datafusion-server /usr/local/datafusion-server/bin/
+COPY --from=builder /usr/src/datafusion-server/bin/target/release/datafusion-server /usr/local/bin/datafusion-server
 COPY ./bin/data /var/datafusion-server/data
 COPY ./bin/config-release.toml /etc/datafusion-server-config.toml
 
-RUN apk add --no-cache tini
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates dumb-init \
+ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
-ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["/usr/local/datafusion-server/bin/datafusion-server", "-f", "/etc/datafusion-server-config.toml"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["datafusion-server", "-f", "/etc/datafusion-server-config.toml"]
