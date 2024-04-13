@@ -9,20 +9,16 @@ use axum::{
     extract::{self, Path, Query},
     response::IntoResponse,
 };
-use axum_extra::TypedHeader;
+use axum_extra::{either::Either, TypedHeader};
 use datafusion::arrow::record_batch::RecordBatch;
 use serde::Serialize;
 
 use crate::context::session_manager::SessionManager;
 #[cfg(feature = "plugin")]
-use crate::request::body::PluginOption;
-use crate::request::{
-    body::{QueryLanguage, QueryResponse, SessionQuery},
-    header,
-};
-use crate::response::{http_error::ResponseError, http_response};
-#[cfg(feature = "plugin")]
-use crate::PluginManager;
+use crate::plugin::exec_processor;
+use crate::request::body::ResponseFormat;
+use crate::request::{body::SessionQuery, header};
+use crate::response::{http_error::ResponseError, http_response, record_batch_stream};
 
 #[derive(Serialize)]
 pub struct Session {
@@ -55,16 +51,7 @@ pub async fn create<E: SessionManager>(
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing create session handler");
 
-    let keep_alive = match params.get("keepAlive") {
-        Some(v) => {
-            if v.parse::<i64>().is_ok() {
-                Some(v.parse::<i64>().unwrap())
-            } else {
-                None
-            }
-        }
-        None => None,
-    };
+    let keep_alive = params.get("keepAlive").and_then(|v| v.parse::<i64>().ok());
 
     let session_mgr = session_mgr.lock().await;
     let new_session_id = session_mgr.create_new_session(None, keep_alive).await;
@@ -103,57 +90,56 @@ pub async fn query<E: SessionManager>(
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing session query responder");
 
-    let query_lang: QueryLanguage;
-    let response_format: Option<QueryResponse>;
-
-    match payload {
-        SessionQuery::Query(query) => {
-            query_lang = query;
-            response_format = None;
-        }
-        SessionQuery::QueryWithFormat(query_with_format) => {
-            query_lang = query_with_format.query_lang;
-            response_format = query_with_format.response;
-        }
-    }
+    let (query_lang, format, options) = match payload {
+        SessionQuery::Query(query) => (
+            query,
+            http_response::response_format(&None, &accept_header)?,
+            None,
+        ),
+        SessionQuery::QueryWithFormat(query_with_format) => (
+            query_with_format.query_lang,
+            http_response::response_format(&query_with_format.response, &accept_header)?,
+            query_with_format
+                .response
+                .and_then(|response| response.options),
+        ),
+    };
 
     #[cfg(feature = "plugin")]
-    let mut record_batches: Vec<RecordBatch>;
+    let buffered = query_lang.post_processors.is_some();
     #[cfg(not(feature = "plugin"))]
-    let record_batches: Vec<RecordBatch>;
-    {
-        record_batches = session_mgr
+    let buffered = true;
+
+    if buffered || format != ResponseFormat::Arrow {
+        #[cfg(feature = "plugin")]
+        let mut record_batches: Vec<RecordBatch>;
+        #[cfg(not(feature = "plugin"))]
+        let record_batches: Vec<RecordBatch>;
+        {
+            record_batches = session_mgr
+                .lock()
+                .await
+                .execute_sql(&session_id, &query_lang.sql)
+                .await?;
+        }
+
+        #[cfg(feature = "plugin")]
+        if let Some(processors) = query_lang.post_processors {
+            record_batches = exec_processor::post_processors(processors, record_batches)?;
+        }
+
+        Ok(Either::E1(http_response::buffered_stream_responder(
+            &record_batches,
+            &format,
+            &options,
+        )))
+    } else {
+        let batch_stream = session_mgr
             .lock()
             .await
-            .execute_sql(&session_id, &query_lang.sql)
+            .execute_sql_stream(&session_id, &query_lang.sql)
             .await?;
+
+        Ok(Either::E2(record_batch_stream::to_response(batch_stream)?))
     }
-
-    #[cfg(feature = "plugin")]
-    if let Some(processors) = query_lang.post_processors {
-        for processor in processors {
-            if let Some(module) = processor.module {
-                let plugin_options = match &processor.plugin_options {
-                    Some(options) => options.clone(),
-                    None => PluginOption::new(),
-                };
-
-                record_batches = PluginManager::global().py_processor_exec(
-                    &record_batches,
-                    &module,
-                    &plugin_options.options,
-                )?;
-            } else {
-                return Err(ResponseError::request_validation(
-                    "Must be defined processor module",
-                ));
-            }
-        }
-    }
-
-    Ok(http_response::stream_responder(
-        &record_batches,
-        &response_format,
-        &accept_header,
-    ))
 }

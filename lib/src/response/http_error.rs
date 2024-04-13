@@ -2,8 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 1, 2023
 //
 
-use axum::http;
-use axum::http::Response;
+use axum::http::{self, Response};
 use datafusion::{arrow, error::DataFusionError, parquet};
 use serde::Serializer;
 use serde_derive::Serialize;
@@ -74,6 +73,16 @@ impl From<anyhow::Error> for ResponseError {
     fn from(e: anyhow::Error) -> Self {
         ResponseError {
             error: "uncategorized_error".to_string(),
+            message: e.to_string(),
+            code: http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl From<http::Error> for ResponseError {
+    fn from(e: http::Error) -> Self {
+        ResponseError {
+            error: "axum_http_error".to_string(),
             message: e.to_string(),
             code: http::StatusCode::INTERNAL_SERVER_ERROR,
         }

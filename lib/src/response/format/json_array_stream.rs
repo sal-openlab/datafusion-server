@@ -4,7 +4,7 @@
 
 use datafusion::arrow::{error::ArrowError, json::ArrayWriter, record_batch::RecordBatch};
 
-pub fn make_stream(record_batches: &[RecordBatch]) -> Result<Vec<u8>, ArrowError> {
+pub fn make_buffered_stream(record_batches: &[RecordBatch]) -> Result<Vec<u8>, ArrowError> {
     let mut buf = Vec::new();
     let mut writer = ArrayWriter::new(&mut buf);
 

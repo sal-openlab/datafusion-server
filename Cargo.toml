@@ -1,16 +1,16 @@
 [workspace]
 members = ["lib"]
-exclude = ["bin"]
+exclude = ["bin", "example"]
 resolver = "2"
 
 [workspace.package]
-version = "0.10.1"
+version = "0.10.2"
 license = "MIT"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
-keywords = ["http", "sql", "arrow", "datafusion"]
+keywords = ["web", "sql", "arrow", "flight", "datafusion"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.77"
+rust-version = "1.74"
 homepage = "https://github.com/sal-openlab/datafusion-server"
 repository = "https://github.com/sal-openlab/datafusion-server.git"
 

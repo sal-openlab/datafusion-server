@@ -3,21 +3,40 @@
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use arrow_flight::flight_service_server::FlightServiceServer;
 use arrow_flight::{
-    flight_descriptor::DescriptorType, flight_service_server::FlightService, Action, ActionType,
-    Criteria, Empty, FlightData, FlightDescriptor, FlightInfo, HandshakeRequest, HandshakeResponse,
-    PollInfo, PutResult, SchemaAsIpc, SchemaResult, Ticket,
+    flight_descriptor::DescriptorType, flight_service_server::FlightService,
+    flight_service_server::FlightServiceServer, Action, ActionType, Criteria, Empty, FlightData,
+    FlightDescriptor, FlightEndpoint, FlightInfo, HandshakeRequest, HandshakeResponse, PollInfo,
+    PutResult, SchemaAsIpc, SchemaResult, Ticket,
 };
-use datafusion::arrow::{
-    error::ArrowError,
-    ipc::writer::{DictionaryTracker, IpcDataGenerator, IpcWriteOptions},
+use datafusion::{
+    arrow::{
+        datatypes::Schema,
+        error::ArrowError,
+        ipc::writer::{DictionaryTracker, IpcDataGenerator, IpcWriteOptions},
+    },
+    physical_plan::SendableRecordBatchStream,
 };
-use futures::stream::BoxStream;
+use futures::{stream::BoxStream, StreamExt, TryStreamExt};
 use tonic::{Request, Response, Status, Streaming};
 
 use crate::context::session_manager::SessionManager;
+use crate::response::receiver_stream;
 use crate::settings::Settings;
+
+macro_rules! process_descriptor {
+    ($descriptor:expr, $process_path:expr, $process_cmd:expr) => {
+        if let Ok(desc_type) = DescriptorType::try_from($descriptor.r#type) {
+            match desc_type {
+                DescriptorType::Path => $process_path,
+                DescriptorType::Cmd => $process_cmd,
+                DescriptorType::Unknown => Err(Status::invalid_argument("Invalid descriptor type")),
+            }
+        } else {
+            Err(Status::invalid_argument("Invalid descriptor type"))
+        }
+    };
+}
 
 #[derive(Clone)]
 pub struct DataFusionServerFlightService {
@@ -29,29 +48,90 @@ impl DataFusionServerFlightService {
         Self { session_mgr }
     }
 
-    async fn ipc_schema_result(
+    fn resolve_descriptor(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+        Ok(process_descriptor!(
+            descriptor,
+            {
+                let (session_id, table_name) = split_descriptor_path(descriptor)?;
+                let sql = format!("SELECT * FROM {table_name}");
+                Ok((session_id, sql))
+            },
+            {
+                let (session_id, cmd) = split_descriptor_cmd(descriptor)?;
+                Ok((session_id, cmd))
+            }
+        )?)
+    }
+
+    async fn ipc_schema_result(&self, session_id: &str, sql: &str) -> Result<SchemaResult, Status> {
+        let schema = Self::schema_from_logical_plan(self, session_id, sql).await?;
+        let schema_result = SchemaAsIpc::new(&schema, &IpcWriteOptions::default())
+            .try_into()
+            .map_err(|e: ArrowError| Status::internal(e.to_string()))?;
+
+        Ok(schema_result)
+    }
+
+    async fn schema_from_logical_plan(
         &self,
         session_id: &str,
-        table_name: &str,
-        options: IpcWriteOptions,
-    ) -> Result<SchemaResult, Status> {
-        if let Some(schema) = self
-            .session_mgr
-            .lock()
-            .await
-            .schema_ref(session_id, table_name)
-            .await
-        {
-            let schema_result = SchemaAsIpc::new(schema.as_ref(), &options)
-                .try_into()
-                .map_err(|e: ArrowError| Status::internal(e.to_string()))?;
+        sql: &str,
+    ) -> Result<Schema, Status> {
+        Ok(Schema::from(
+            self.session_mgr
+                .lock()
+                .await
+                .execute_logical_plan(session_id, sql)
+                .await
+                .map_err(from_http_response_err)?
+                .schema(),
+        ))
+    }
 
-            Ok(schema_result)
-        } else {
-            Err(Status::not_found(format!(
-                "Not found table '{table_name}' in session '{session_id}'"
-            )))
+    async fn send_record_batch_stream(
+        mut batch_stream: SendableRecordBatchStream,
+        tx: tokio::sync::mpsc::Sender<Result<FlightData, Status>>,
+    ) -> Result<(), Status> {
+        let options = IpcWriteOptions::default();
+        let generator = IpcDataGenerator::default();
+        let mut dictionary_tracker = DictionaryTracker::new(false);
+
+        let flight_data_schema = FlightData::new().with_data_header(bytes::Bytes::from(
+            generator
+                .schema_to_bytes(batch_stream.schema().as_ref(), &options)
+                .ipc_message,
+        ));
+
+        tx.send(Ok(flight_data_schema))
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        while let Some(batch_result) = batch_stream.next().await {
+            log::trace!("batch_stream.next(): {:#?}", batch_result);
+
+            match batch_result {
+                Ok(batch) => {
+                    let (encoded_dictionaries, encoded_message) = generator
+                        .encoded_batch(&batch, &mut dictionary_tracker, &options)
+                        .map_err(|e| Status::internal(e.to_string()))?;
+
+                    for dict in encoded_dictionaries {
+                        tx.send(Ok(dict.into()))
+                            .await
+                            .map_err(|e| Status::internal(e.to_string()))?;
+                    }
+
+                    tx.send(Ok(encoded_message.into()))
+                        .await
+                        .map_err(|e| Status::internal(e.to_string()))?;
+                }
+                Err(e) => {
+                    return Err(Status::internal(e.to_string()));
+                }
+            }
         }
+
+        Ok(())
     }
 }
 
@@ -79,9 +159,21 @@ impl FlightService for DataFusionServerFlightService {
 
     async fn get_flight_info(
         &self,
-        _request: Request<FlightDescriptor>,
+        request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        let descriptor = request.into_inner();
+        let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
+        let schema = Self::schema_from_logical_plan(self, &session_id, &sql).await?;
+
+        Ok(Response::new(
+            FlightInfo::new()
+                .try_with_schema(&schema)
+                .map_err(|e| Status::internal(e.to_string()))?
+                .with_endpoint(
+                    FlightEndpoint::new().with_ticket(Ticket::new(format!("{session_id}/{sql}"))),
+                )
+                .with_descriptor(descriptor),
+        ))
     }
 
     async fn poll_flight_info(
@@ -96,29 +188,11 @@ impl FlightService for DataFusionServerFlightService {
         request: Request<FlightDescriptor>,
     ) -> Result<Response<SchemaResult>, Status> {
         let descriptor = request.into_inner();
+        let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
 
-        if let Ok(desc_type) = DescriptorType::try_from(descriptor.r#type) {
-            match desc_type {
-                DescriptorType::Path => {
-                    let (session_id, table_name) =
-                        extract_ticket(descriptor.path.first().map(String::as_str))?;
-                    let schema_result = Self::ipc_schema_result(
-                        self,
-                        &session_id,
-                        &table_name,
-                        IpcWriteOptions::default(),
-                    )
-                    .await?;
-                    Ok(Response::new(schema_result))
-                }
-                DescriptorType::Cmd => Err(Status::invalid_argument(
-                    "Currently unsupported Flight with command, like a SQL",
-                )),
-                DescriptorType::Unknown => Err(Status::invalid_argument("Invalid descriptor type")),
-            }
-        } else {
-            Err(Status::invalid_argument("Invalid descriptor type"))
-        }
+        Ok(Response::new(
+            Self::ipc_schema_result(self, &session_id, &sql).await?,
+        ))
     }
 
     type DoGetStream = BoxedStream<FlightData>;
@@ -129,41 +203,40 @@ impl FlightService for DataFusionServerFlightService {
     ) -> Result<Response<Self::DoGetStream>, Status> {
         let ticket = request.into_inner();
 
-        if let Ok(ticket) = std::str::from_utf8(&ticket.ticket) {
-            log::info!("Call do_get: {ticket}");
+        if let Ok(ticket_str) = std::str::from_utf8(&ticket.ticket) {
+            log::info!("Call do_get: {ticket_str}");
 
-            let (session_id, table_name) = extract_ticket(Some(ticket))?;
+            let (session_id, ticket_value) = split_descriptor_value(Some(ticket_str))?;
+            let sql = if ticket_value.chars().any(char::is_whitespace) {
+                ticket_value // May be SQL statement
+            } else {
+                format!("SELECT * FROM {ticket_value}")
+            };
 
-            let batches = self
+            let batch_stream = self
                 .session_mgr
                 .lock()
                 .await
-                .execute_sql(&session_id, &format!("SELECT * FROM {table_name}"))
+                .execute_sql_stream(&session_id, &sql)
                 .await
                 .map_err(from_http_response_err)?;
 
-            let mut flights = vec![FlightData::from(SchemaAsIpc::new(
-                &batches[0].schema().clone(),
-                &IpcWriteOptions::default(),
-            ))];
+            let (tx, rx) = tokio::sync::mpsc::channel(32);
 
-            let encoder = IpcDataGenerator::default();
-            let mut tracker = DictionaryTracker::new(false);
+            tokio::spawn(async move {
+                if let Err(e) = Self::send_record_batch_stream(batch_stream, tx).await {
+                    log::error!("Error converting and sending batches: {}", e);
+                }
+            });
 
-            for batch in batches {
-                let (flight_dictionaries, flight_batch) = encoder
-                    .encoded_batch(&batch, &mut tracker, &IpcWriteOptions::default())
-                    .map_err(|e| from_arrow_err(&e))?;
-                flights.extend(flight_dictionaries.into_iter().map(Into::into));
-                flights.push(flight_batch.into());
-            }
+            let flight_data_stream = receiver_stream::Receive::new(rx)
+                .map_err(|_| Status::internal("Channel receive error"));
 
-            let output = futures::stream::iter(flights.into_iter().map(Ok));
-            Ok(Response::new(Box::pin(output) as Self::DoGetStream))
+            Ok(Response::new(
+                Box::pin(flight_data_stream) as Self::DoGetStream
+            ))
         } else {
-            Err(Status::invalid_argument(format!(
-                "Invalid ticket {ticket:?}"
-            )))
+            Err(Status::invalid_argument("Invalid ticket"))
         }
     }
 
@@ -204,26 +277,32 @@ impl FlightService for DataFusionServerFlightService {
     }
 }
 
-pub fn extract_ticket(path: Option<&str>) -> Result<(String, String), Status> {
-    if path.is_none() {
+fn split_descriptor_path(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+    split_descriptor_value(descriptor.path.first().map(String::as_str))
+}
+
+fn split_descriptor_cmd(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+    split_descriptor_value(Some(std::str::from_utf8(descriptor.cmd.as_ref()).map_err(
+        |e| Status::invalid_argument(format!("Descriptor `cmd` is not utf-8 encoded string: {e}",)),
+    )?))
+}
+
+pub fn split_descriptor_value(value: Option<&str>) -> Result<(String, String), Status> {
+    if value.is_none() {
         return Err(Status::invalid_argument(
             "Invalid path, descriptor not found",
         ));
     }
 
-    let parts: Vec<&str> = path.unwrap().splitn(2, '/').collect();
+    let parts: Vec<&str> = value.unwrap().splitn(2, '/').collect();
 
     if parts.len() < 2 {
         return Err(Status::invalid_argument(
-            "Invalid path, must be included 'id/value'",
+            "Invalid descriptor format, must be included 'id/value'",
         ));
     }
 
     Ok((parts[0].to_string(), parts[1].to_string()))
-}
-
-fn from_arrow_err(e: &ArrowError) -> Status {
-    Status::internal(format!("{e:?}"))
 }
 
 fn from_http_response_err(e: crate::response::http_error::ResponseError) -> Status {

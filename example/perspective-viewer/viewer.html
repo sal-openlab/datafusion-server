@@ -1,0 +1,76 @@
+<!--
+  Example of visualizing Apache Arrow data.
+  Perspective Viewer is a library designed for fast visualization of large datasets.
+  Please refer to the following for more details: https://perspective.finos.org/
+-->
+
+<!DOCTYPE html>
+<html lang='en'>
+  <head>
+    <title>DataFusion Server - Perspective Viewer Example</title>
+    <meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no' />
+    <script type='module' src='https://cdn.jsdelivr.net/npm/@finos/perspective@2.10.0/dist/cdn/perspective.js'></script>
+    <script type='module' src='https://cdn.jsdelivr.net/npm/@finos/perspective-viewer@2.10.0/dist/cdn/perspective-viewer.js'></script>
+    <script type='module' src='https://cdn.jsdelivr.net/npm/@finos/perspective-viewer-datagrid@2.10.0/dist/cdn/perspective-viewer-datagrid.js'></script>
+    <script type='module' src='https://cdn.jsdelivr.net/npm/@finos/perspective-viewer-d3fc@2.10.0/dist/cdn/perspective-viewer-d3fc.js'></script>
+    <link rel='stylesheet' crossorigin='anonymous' href='https://cdn.jsdelivr.net/npm/@finos/perspective-viewer/dist/css/themes.css' />
+
+    <script type='module'>
+      import perspective from 'https://cdn.jsdelivr.net/npm/@finos/perspective@2.10.0/dist/cdn/perspective.js';
+
+      const worker = perspective.worker();
+      const viewer = document.getElementsByTagName('perspective-viewer')[0];
+
+      async function load() {
+        try {
+          const response = await fetch(
+              'http://127.0.0.1:4000/dataframe/query',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/vnd.apache.arrow.stream'
+                },
+                body: JSON.stringify({
+                  dataSources: [
+                    {
+                      format: 'csv',
+                      name: 'store',
+                      location: 'file:///superstore.csv'
+                    }
+                  ],
+                  query: {
+                    sql: 'SELECT * FROM store'
+                  }
+                })
+              }
+          );
+
+          const table = await worker.table(await response.arrayBuffer());
+          viewer.load(table);
+        } catch (err) {
+          window.alert('Can not initialize perspective viewer: ' + err);
+          return;
+        }
+
+        viewer.toggleConfig(); // open the settings pane
+      }
+
+      window.addEventListener('DOMContentLoaded', load);
+    </script>
+
+    <style>
+      perspective-viewer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <perspective-viewer editable> </perspective-viewer>
+  </body>
+</html>

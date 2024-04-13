@@ -92,7 +92,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
             log::error!("Can not initialize flight gRPC server: {:?}", e);
             return Err(anyhow::anyhow!("flight server initialization error: {:?}", e));
         },
-        _ = cleanup_worker(session_mgr) => {},
+        () = cleanup_worker(session_mgr) => {},
     }
 
     #[cfg(not(feature = "flight"))]
@@ -101,7 +101,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
             log::error!("Can not initialize http server: {:?}", e);
             return Err(anyhow::anyhow!("http server initialization error: {:?}", e));
         },
-        _ = cleanup_worker(session_mgr) => {},
+        () = cleanup_worker(session_mgr) => {},
     }
 
     log::info!("Server terminated");

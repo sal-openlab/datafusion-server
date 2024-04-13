@@ -4,7 +4,7 @@
 
 use datafusion::arrow::{error::ArrowError, ipc::writer::StreamWriter, record_batch::RecordBatch};
 
-pub fn make_stream(batches: &[RecordBatch]) -> Result<Vec<u8>, ArrowError> {
+pub fn make_buffered_stream(batches: &[RecordBatch]) -> Result<Vec<u8>, ArrowError> {
     let mut buf = Vec::new();
 
     if !batches.is_empty() {

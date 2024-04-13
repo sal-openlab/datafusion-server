@@ -23,7 +23,9 @@ pub enum SupportedScheme {
     Https,
     File,
     #[cfg(feature = "flight")]
-    Flight,
+    Grpc,
+    #[cfg(feature = "flight")]
+    GrpcTls,
     #[cfg(feature = "plugin")]
     WillPlugin,
 }
@@ -40,7 +42,9 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
         "https" => Ok(SupportedScheme::Https),
         "file" => Ok(SupportedScheme::File),
         #[cfg(feature = "flight")]
-        "flight" => Ok(SupportedScheme::Flight),
+        "grpc" => Ok(SupportedScheme::Grpc),
+        #[cfg(feature = "flight")]
+        "grpc+tls" => Ok(SupportedScheme::GrpcTls),
         #[cfg(feature = "plugin")]
         _ => Ok(SupportedScheme::WillPlugin),
         #[cfg(not(feature = "plugin"))]

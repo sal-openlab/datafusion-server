@@ -9,11 +9,13 @@ use crate::request::body::{
 };
 use crate::response::{handler, http_error::ResponseError};
 use crate::PluginManager;
-use axum::async_trait;
-use axum::http::uri;
-use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::execution::context::SessionConfig;
+use axum::{async_trait, http::uri};
+use datafusion::{
+    arrow::{datatypes::SchemaRef, record_batch::RecordBatch},
+    dataframe::DataFrame,
+    execution::context::SessionConfig,
+    physical_plan::SendableRecordBatchStream,
+};
 use std::cmp;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -129,11 +131,23 @@ pub trait SessionManager: Send + Sync + 'static {
         merge_processors: &'a [MergeProcessor],
     ) -> Result<(), ResponseError>;
 
+    async fn execute_logical_plan(
+        &self,
+        session_id: &str,
+        sql: &str,
+    ) -> Result<DataFrame, ResponseError>;
+
     async fn execute_sql(
         &self,
         session_id: &str,
         sql: &str,
     ) -> Result<Vec<RecordBatch>, ResponseError>;
+
+    async fn execute_sql_stream(
+        &self,
+        session_id: &str,
+        sql: &str,
+    ) -> Result<SendableRecordBatchStream, ResponseError>;
 }
 
 macro_rules! context {
@@ -515,11 +529,36 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
+    #[inline]
+    async fn execute_logical_plan(
+        &self,
+        session_id: &str,
+        sql: &str,
+    ) -> Result<DataFrame, ResponseError> {
+        Ok(context!(self, session_id)?
+            .execute_logical_plan(sql)
+            .await?)
+    }
+
     async fn execute_sql(
         &self,
         session_id: &str,
         sql: &str,
     ) -> Result<Vec<RecordBatch>, ResponseError> {
-        Ok(context!(self, session_id)?.execute_sql(sql).await?)
+        Ok(Self::execute_logical_plan(self, session_id, sql)
+            .await?
+            .collect()
+            .await?)
+    }
+
+    async fn execute_sql_stream(
+        &self,
+        session_id: &str,
+        sql: &str,
+    ) -> Result<SendableRecordBatchStream, ResponseError> {
+        Ok(Self::execute_logical_plan(self, session_id, sql)
+            .await?
+            .execute_stream()
+            .await?)
     }
 }

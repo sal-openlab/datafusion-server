@@ -137,14 +137,17 @@ impl DataSource {
             }
             #[cfg(feature = "flight")]
             DataSourceFormat::Flight => {
-                match scheme {
-                    SupportedScheme::Flight | SupportedScheme::Http | SupportedScheme::Https => {}
-                    _ => {
-                        return Err(ResponseError::unsupported_type(
-                            "Not supported data source, Flight only 'flight', 'http', 'https' schemes",
-                        ));
-                    }
-                };
+                if !matches!(
+                    scheme,
+                    SupportedScheme::Grpc
+                        | SupportedScheme::GrpcTls
+                        | SupportedScheme::Http
+                        | SupportedScheme::Https
+                ) {
+                    return Err(ResponseError::unsupported_type(
+                        "Data source flight only supported 'http', 'https', 'grpc', 'grpc+tls' schemes",
+                    ));
+                }
             }
         }
 
@@ -277,7 +280,7 @@ impl ResponseFormatOption {
     }
 }
 
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Deserialize, Clone, Debug, PartialEq)]
 pub enum ResponseFormat {
     #[serde(rename = "arrow")]
     Arrow,

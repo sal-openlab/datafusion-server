@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.2 (2024-04-13)
+
+* Substantially reduced memory consumption during query execution given these conditions:
+    + API endpoints are `/session/:id/query` and `/dataframe/query`, or Arrow Flight `do_get()` method
+    + The response format is `arrow` (`application/vnd.apache.arrow.stream`)
+    + No post-processor (`query.postProcessors` in request body) is specified
+* Implements and refactored Arrow Flight gRPC methods:
+    + `get_flight_info()`, `get_schema()`, `do_get()`
+* Fixed an issue where the post-processor was not working at the `/dataframe/query` endpoint
+* Published example code demonstrating how to use it:
+    + Data visualization on the web using [Perspective Viewer](https://perspective.finos.org/), Can quickly and easily
+      visualize Arrow responses from DataFusion Server
+        - Located at `example/perspective-viewer` directory, Simply show `viewer.html` in a web browser
+    + Arrow Flight command-line client
+        - Located at `example/flight-client` directory, `cargo run` to show usages guide
+* Lowered the MSRV to 1.74 and tested all features
+
 ## 0.10.1 (2024-04-05)
 
 * Updates to DataFusion v35 and Arrow v51

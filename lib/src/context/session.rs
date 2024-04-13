@@ -20,6 +20,7 @@ use axum::async_trait;
 use chrono::{DateTime, Utc};
 use datafusion::{
     arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
+    dataframe::DataFrame,
     execution::context,
     logical_expr::{col, JoinType},
 };
@@ -101,7 +102,7 @@ pub trait Session: Send + Sync + 'static {
         &self,
         merge_processor: &MergeProcessor,
     ) -> Result<(), ResponseError>;
-    async fn execute_sql(&self, sql: &str) -> Result<Vec<RecordBatch>, ResponseError>;
+    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, ResponseError>;
 }
 
 #[async_trait]
@@ -562,11 +563,9 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    async fn execute_sql(&self, sql: &str) -> Result<Vec<RecordBatch>, ResponseError> {
+    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, ResponseError> {
         self.touch().await;
-
         let context = &self.read().await.df_ctx;
-        let data_frame = context.sql(sql).await?;
-        Ok(data_frame.collect().await?)
+        Ok(context.sql(sql).await?)
     }
 }

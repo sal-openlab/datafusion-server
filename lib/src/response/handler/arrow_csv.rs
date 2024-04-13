@@ -40,7 +40,7 @@ pub async fn csv_responder(
     let record_batches = csv_file::to_record_batch(file_path.to_str().unwrap(), &schema, &options)?;
 
     Ok(http_response::from_byte_stream(
-        arrow_stream::make_stream(&record_batches)
+        arrow_stream::make_buffered_stream(&record_batches)
             .map_err(ResponseError::arrow_stream_serialization)?,
         "application/vnd.apache.arrow.stream",
     ))

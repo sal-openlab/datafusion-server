@@ -7,7 +7,7 @@ use std::sync::Arc;
 use crate::data_source::location_uri;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
-use crate::server::flight::extract_ticket;
+use crate::server::flight::split_descriptor_value;
 use arrow_flight::{
     flight_service_client::FlightServiceClient, utils::flight_data_to_arrow_batch, Ticket,
 };
@@ -15,14 +15,14 @@ use datafusion::arrow::{datatypes::Schema, record_batch::RecordBatch};
 
 pub async fn to_record_batch(
     uri: &str,
-    _options: &DataSourceOption,
+    #[allow(unused_variables)] options: &DataSourceOption, // TODO: Define the options specifications for `flight`
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let uri_parts =
         location_uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
     let uri_scheme = &uri_parts.scheme.as_ref().unwrap().to_string();
     let authority = &uri_parts.authority.as_ref().unwrap().to_string();
     let ticket = if let Some(pq) = &uri_parts.path_and_query {
-        extract_ticket(Some(pq.path().trim_start_matches('/')))
+        split_descriptor_value(Some(pq.path().trim_start_matches('/')))
             .map_err(|e| ResponseError::request_validation(format!("Unrecognized ticket: {e:?}")))?
     } else {
         return Err(ResponseError::request_validation(
@@ -53,6 +53,7 @@ pub async fn to_record_batch(
         .await
         .map_err(|e| from_tonic_err(&e))?
         .unwrap();
+
     let schema = Arc::new(Schema::try_from(&flight_data)?);
 
     let mut record_batches: Vec<RecordBatch> = vec![];

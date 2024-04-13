@@ -66,7 +66,7 @@ If you are only using sample data in a container, omit the `-v ./data:/var/xapi-
 
 ### Pre-require
 
-* Docker-ce/ee v20+
+* Docker CE / EE v20+
 
 ### Build two containers, datafusion-server and datafusion-server-without-plugin
 
@@ -82,7 +82,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.10.1
+    datafusion-server:0.10.2
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -91,26 +91,26 @@ If you are only using sample data in a container, omit the `-v ./bin/data:/var/x
 
 ### Pre-require
 
-* Rust Toolchain 1.76+ (Edition 2021) from https://www.rust-lang.org
+* Rust Toolchain 1.74+ (Edition 2021) from https://www.rust-lang.org
 * _or_ the Rust official container from https://hub.docker.com/_/rust
 
 ### How to run
 
 ```sh
-$ cargo init server-executer
-$ cd server-executer
+$ cargo init server-executor
+$ cd server-executor
 ```
 
 #### Example of Cargo.toml
 
 ```toml
 [package]
-name = "server-executer"
+name = "server-executor"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.10.1"
+datafusion-server = "0.10.2"
 ```
 
 #### Example of src/main.rs
@@ -185,7 +185,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.10.1", features = ["plugin"] }
+datafusion-server = { version = "0.10.2", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -200,7 +200,7 @@ $ cargo run
 
 ```toml
 [package]
-name = "server-executer"
+name = "server-executor"
 version = "0.1.0"
 edition = "2021"
 
@@ -211,7 +211,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.10.1", features = ["plugin"] }
+datafusion-server = { version = "0.10.2", features = ["plugin"] }
 ```
 
 #### Build for release
@@ -270,23 +270,21 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
 ```sh
 $ curl -X "POST" "http://localhost:4000/dataframe/query" \
      -H 'Content-Type: application/json' \
+     -H 'Accept: text/csv' \
      -d $'
 {
   "dataSources": [
     {
       "format": "json",
-      "name": "entry",
-      "location": "https://api.publicapis.org/entries",
+      "name": "population",
+      "location": "https://datausa.io/api/data?drilldowns=State&measures=Population",
       "options": {
-        "jsonPath": "$.entries[*]"
+        "jsonPath": "$.data[*]"
       }
     }
   ],
   "query": {
-    "sql": "SELECT * FROM entry WHERE \"Category\"='Animals'"
-  },
-  "response": {
-    "format": "json"
+    "sql": "SELECT * FROM population WHERE \"ID Year\">=2020"
   }
 }'
 ```
@@ -296,6 +294,7 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
 ```sh
 $ curl -X "POST" "http://localhost:4000/dataframe/query" \
      -H 'Content-Type: application/json' \
+     -H 'Accept: application/json' \
      -d $'
 {
   "dataSources": [
@@ -310,9 +309,6 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
   ],
   "query": {
     "sql": "SELECT * FROM example"
-  },
-  "response": {
-    "format": "json"
   }
 }'
 ```

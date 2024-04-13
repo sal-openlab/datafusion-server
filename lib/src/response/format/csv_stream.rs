@@ -6,7 +6,7 @@ use crate::request::body::ResponseFormatOption;
 use datafusion::arrow::record_batch::RecordBatchWriter;
 use datafusion::arrow::{csv::WriterBuilder, error::ArrowError, record_batch::RecordBatch};
 
-pub fn make_stream(
+pub fn make_buffered_stream(
     record_batches: &[RecordBatch],
     options: &ResponseFormatOption,
 ) -> Result<Vec<u8>, ArrowError> {

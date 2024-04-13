@@ -16,44 +16,50 @@ use crate::response::{
     http_error::ResponseError,
 };
 
-pub fn stream_responder(
+pub fn buffered_stream_responder(
     record_batches: &[RecordBatch],
-    query_response: &Option<QueryResponse>,
-    accept_header: &Option<TypedHeader<crate::request::header::Accept>>,
+    format: &ResponseFormat,
+    options: &Option<ResponseFormatOption>,
 ) -> Result<impl IntoResponse, ResponseError> {
-    let response = if let Some(response) = &query_response {
-        response.clone()
-    } else if let Some(accept) = &accept_header {
-        QueryResponse::new_with_format(crate::request::header::response_format(accept)?)
-    } else {
-        QueryResponse::new()
-    };
-
-    Ok(match response.format {
+    Ok(match format {
         ResponseFormat::Arrow => from_byte_stream(
-            arrow_stream::make_stream(record_batches)
+            arrow_stream::make_buffered_stream(record_batches)
                 .map_err(ResponseError::arrow_stream_serialization)?,
             "application/vnd.apache.arrow.stream",
         ),
         ResponseFormat::Json => from_byte_stream(
-            json_array_stream::make_stream(record_batches)
+            json_array_stream::make_buffered_stream(record_batches)
                 .map_err(ResponseError::json_stream_serialization)?,
             "application/json",
         ),
         ResponseFormat::Csv => {
-            let options = if let Some(options) = &response.options {
+            let options = if let Some(options) = options {
                 options.clone()
             } else {
                 ResponseFormatOption::new()
             };
 
             from_byte_stream(
-                csv_stream::make_stream(record_batches, &options)
+                csv_stream::make_buffered_stream(record_batches, &options)
                     .map_err(ResponseError::json_stream_serialization)?,
                 "text/csv; charset=utf-8",
             )
         }
     })
+}
+
+pub fn response_format(
+    query_response: &Option<QueryResponse>,
+    accept_header: &Option<TypedHeader<crate::request::header::Accept>>,
+) -> Result<ResponseFormat, ResponseError> {
+    Ok(if let Some(response) = &query_response {
+        response.clone()
+    } else if let Some(accept) = &accept_header {
+        QueryResponse::new_with_format(crate::request::header::response_format(accept)?)
+    } else {
+        QueryResponse::new()
+    }
+    .format)
 }
 
 #[inline]
