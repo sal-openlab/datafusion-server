@@ -52,7 +52,7 @@ pub fn to_record_batch(
                 let json_text = &py_result.to_string();
 
                 let schema_ref = SchemaRef::new(if let Some(schema) = schema {
-                    schema.to_datafusion_schema()
+                    schema.to_arrow_schema()
                 } else {
                     infer_schema::from_raw_json(json_text, options)?
                 });

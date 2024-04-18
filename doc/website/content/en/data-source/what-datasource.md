@@ -19,6 +19,7 @@ The DataFusion Server supports the following standard data sources in the follow
 * ndJSON (new-line delimited JSON)
 * CSV
 * Parquet
+* Avro
 
 For JSON format, it supports files stored on the local file system or JSON that can be obtained from the REST API.
 

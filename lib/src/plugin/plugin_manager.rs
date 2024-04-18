@@ -88,7 +88,7 @@ impl PluginManager {
                 .into();
 
             let arrow_schema = if let Some(schema) = &datasource_schema {
-                Some(schema.to_datafusion_schema().to_pyarrow(py)?)
+                Some(schema.to_arrow_schema().to_pyarrow(py)?)
             } else {
                 None
             };

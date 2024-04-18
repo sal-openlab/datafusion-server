@@ -34,7 +34,7 @@ pub fn to_record_batch(
     let json_rows = finder.as_array().unwrap(); // safe because before checked
 
     let df_schema = if let Some(schema) = schema {
-        schema.to_datafusion_schema()
+        schema.to_arrow_schema()
     } else {
         infer_schema::from_json_value(json_rows, options)?
     };

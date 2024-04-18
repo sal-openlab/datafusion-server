@@ -21,7 +21,7 @@ pub fn to_record_batch(
     let mut file_reader = BufReader::new(File::open(file_path)?);
 
     let builder = json::ReaderBuilder::new(SchemaRef::new(if let Some(schema) = schema {
-        schema.to_datafusion_schema()
+        schema.to_arrow_schema()
     } else {
         let (inferred_schema, _) =
             infer_json_schema_from_seekable(&mut file_reader, options.infer_schema_rows)?;

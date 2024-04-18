@@ -63,6 +63,9 @@ pub enum DataSourceFormat {
     NdJson,
     #[serde(rename = "parquet")]
     Parquet,
+    #[cfg(feature = "avro")]
+    #[serde(rename = "avro")]
+    Avro,
     #[serde(rename = "arrow")]
     Arrow,
     #[cfg(feature = "flight")]
@@ -79,6 +82,8 @@ impl DataSourceFormat {
             DataSourceFormat::NdJson => "ndJson",
             DataSourceFormat::Parquet => "parquet",
             DataSourceFormat::Arrow => "arrow",
+            #[cfg(feature = "avro")]
+            DataSourceFormat::Avro => "avro",
             #[cfg(feature = "flight")]
             DataSourceFormat::Flight => "flight",
         }
@@ -133,6 +138,15 @@ impl DataSource {
                     return Err(ResponseError::unsupported_type(
                         "Not supported data source format, 'arrow' only use for in-memory connector",
                     ));
+                }
+            }
+            #[cfg(feature = "avro")]
+            DataSourceFormat::Avro => {
+                if scheme != SupportedScheme::File {
+                    return Err(ResponseError::unsupported_type(format!(
+                        "Not supported data source, Avro with remote location '{}'",
+                        self.location
+                    )));
                 }
             }
             #[cfg(feature = "flight")]

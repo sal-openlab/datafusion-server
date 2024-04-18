@@ -41,7 +41,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release --features=plugin,flight
+ && cargo build --release --features=plugin,flight,avro
 
 FROM debian:bookworm-slim
 

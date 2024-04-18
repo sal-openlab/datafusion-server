@@ -99,6 +99,13 @@ pub trait SessionManager: Send + Sync + 'static {
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
 
+    #[cfg(feature = "avro")]
+    async fn append_avro_file(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
     #[cfg(feature = "flight")]
     async fn append_flight_stream(
         &self,
@@ -260,7 +267,7 @@ impl SessionManager for SessionContextManager {
                     } else {
                         None
                     },
-                    schema: DataSourceSchema::from_datafusion_schema(&schema),
+                    schema: DataSourceSchema::from_arrow_schema(&schema),
                 }
             }),
             None => Err(ResponseError::session_not_found(session_id)),
@@ -326,6 +333,10 @@ impl SessionManager for SessionContextManager {
                     return Err(ResponseError::request_validation(
                         "Invalid data source scheme 'arrow', use 'csv', 'json', 'ndJson' and 'parquet'.",
                     ));
+                }
+                #[cfg(feature = "avro")]
+                DataSourceFormat::Avro => {
+                    self.append_avro_file(session_id, data_source).await?;
                 }
                 #[cfg(feature = "flight")]
                 DataSourceFormat::Flight => {
@@ -436,6 +447,18 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_json_rest(data_source)
+            .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "avro")]
+    async fn append_avro_file(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_avro_file(data_source)
             .await?;
         Ok(())
     }

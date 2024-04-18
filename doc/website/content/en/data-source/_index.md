@@ -7,3 +7,7 @@ title: Data Source Definition
 * [Definition Basics]({{< ref "/data-source/definition-basics" >}})
 * Specific Formats
   + [JSON]({{< ref "/data-source/json" >}})
+  + [ndJSON]({{< ref "/data-source/ndjson" >}})
+  + [CSV]({{< ref "/data-source/csv" >}})
+  + [Parquet]({{< ref "/data-source/parquet" >}})
+  + [Avro]({{< ref "/data-source/avro" >}})

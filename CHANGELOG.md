@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.0 (2024-04-18)
+
+* Supports complex data types, such as  `List`, `Map`, `Struct` and others
+    + Please refer to
+      the [Documentation](https://sal-openlab.github.io/datafusion-server/data-source/definition-basics/#complex-data-types)
+      for details
+* [Breaking] The specifications for the following data type definitions have been changed due to the expansion of
+  complex data types
+    + Timestamp, TimestampSecond, TimestampMicro, TimestampNano
+    + Duration, DurationSecond, DurationMicro, DurationNano
+* Avro data source format supported
+
+```sh
+$ curl -X "POST" "http://127.0.0.1:4000/dataframe/query" \
+     -H 'Content-Type: application/json' \
+     -H 'Accept: text/csv' \
+     -d $'{
+  "dataSources": [
+    {
+      "format": "avro",
+      "name": "popular_names",
+      "location": "file:///popular-names.avro"
+    }
+  ]
+  "query": {
+    "sql": "SELECT * FROM popular_names"
+  }
+}'
+```
+
+In this version, only read is supported, and save at the `/session/:id/datasource/save` endpoint is not possible.
+
 ## 0.10.2 (2024-04-13)
 
 * Substantially reduced memory consumption during query execution given these conditions:

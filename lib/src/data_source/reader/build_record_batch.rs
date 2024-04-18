@@ -24,7 +24,7 @@ pub fn from_json(
     log::debug!("number of parsed JSON objects: {}", json_rows.len());
 
     let df_schema = if schema.is_some() {
-        schema.clone().unwrap().to_datafusion_schema()
+        schema.clone().unwrap().to_arrow_schema()
     } else {
         infer_schema::from_json_value(json_rows, options)?
     };

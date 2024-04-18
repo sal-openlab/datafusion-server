@@ -18,6 +18,8 @@ use crate::response::http_error::ResponseError;
 use crate::settings::Settings;
 use axum::async_trait;
 use chrono::{DateTime, Utc};
+#[cfg(feature = "avro")]
+use datafusion::datasource::file_format::options::AvroReadOptions;
 use datafusion::{
     arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
     dataframe::DataFrame,
@@ -25,7 +27,6 @@ use datafusion::{
     logical_expr::{col, JoinType},
 };
 use std::collections::HashMap;
-use std::path::PathBuf;
 use tokio::sync::RwLock;
 
 #[allow(clippy::module_name_repetitions)]
@@ -77,6 +78,7 @@ pub trait Session: Send + Sync + 'static {
         &self,
         name: &str,
     ) -> Result<(Option<DataSource>, SchemaRef), ResponseError>;
+    async fn exists_data_source(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn register_record_batch(
         &self,
         data_source: &DataSource,
@@ -85,6 +87,8 @@ pub trait Session: Send + Sync + 'static {
     async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_json_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_json_rest(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    #[cfg(feature = "avro")]
+    async fn append_from_avro_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     #[cfg(feature = "flight")]
     async fn append_from_flight_stream(
         &self,
@@ -171,73 +175,86 @@ impl Session for ConcurrentSessionContext {
         Ok((session.data_source_map.get(name).cloned(), schema))
     }
 
-    async fn register_record_batch(
-        &self,
-        data_source: &DataSource,
-        record_batches: &[RecordBatch],
-    ) -> Result<(), ResponseError> {
-        if !record_batches.is_empty() {
-            log::debug!(
-                "register record batch to session context: number of record batches {}",
-                record_batches.len()
-            );
+    async fn exists_data_source(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        let session = &mut self.write().await;
 
-            self.touch().await; // Important that extends the expiry of session TTL here.
-            {
-                let session = &mut self.write().await;
+        if session
+            .df_ctx
+            .table_provider(&data_source.name)
+            .await
+            .is_ok()
+        {
+            log::debug!("Duplicated data source '{}' in context", data_source.name);
 
-                if session
-                    .df_ctx
-                    .table_provider(&data_source.name)
-                    .await
-                    .is_ok()
-                {
-                    let options = match &data_source.options {
-                        Some(options) => options.clone(),
-                        None => DataSourceOption::new(),
-                    };
+            let options = match &data_source.options {
+                Some(options) => options.clone(),
+                None => DataSourceOption::new(),
+            };
 
-                    if !options.overwrite.unwrap_or(false) {
-                        return Err(ResponseError::request_validation(format!(
-                            "Duplicate data source name '{}'",
-                            data_source.name
-                        )));
-                    }
-
-                    session.df_ctx.deregister_table(&data_source.name)?;
-                    session.data_source_map.remove(&data_source.name);
-                }
-
-                let record_batch =
-                    compute::concat_batches(&record_batches[0].schema(), record_batches)?;
-
-                session
-                    .df_ctx
-                    .register_batch(&data_source.name, record_batch)?;
-
-                session
-                    .data_source_map
-                    .insert(data_source.name.clone(), data_source.clone());
+            if !options.overwrite.unwrap_or(false) {
+                return Err(ResponseError::request_validation(format!(
+                    "Duplicated data source '{}'",
+                    data_source.name
+                )));
             }
 
-            log::debug!("data source registered to context");
+            log::debug!("Removing data source '{}' from context", data_source.name);
+
+            session.df_ctx.deregister_table(&data_source.name)?;
+            session.data_source_map.remove(&data_source.name);
         }
 
         Ok(())
     }
 
+    async fn register_record_batch(
+        &self,
+        data_source: &DataSource,
+        record_batches: &[RecordBatch],
+    ) -> Result<(), ResponseError> {
+        if record_batches.is_empty() {
+            log::debug!("Can not register empty record batch, require schema information");
+            return Err(ResponseError::request_validation("empty record batch"));
+        }
+
+        log::debug!(
+            "Register record batch to session context: number of record batches {}",
+            record_batches.len()
+        );
+
+        self.exists_data_source(data_source).await?;
+
+        self.touch().await; // Important that extends the expiry of session TTL here.
+        {
+            let session = &mut self.write().await;
+
+            let record_batch =
+                compute::concat_batches(&record_batches[0].schema(), record_batches)?;
+
+            session
+                .df_ctx
+                .register_batch(&data_source.name, record_batch)?;
+
+            session
+                .data_source_map
+                .insert(data_source.name.clone(), data_source.clone());
+        }
+
+        log::debug!("Registered data source '{}' to context", data_source.name);
+
+        Ok(())
+    }
+
     async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let mut file_path = PathBuf::from(&Settings::global().server.data_dir);
-        file_path.push(location_uri::to_file_path_and_name(&data_source.location)?);
-        log::debug!("Open CSV file {:?}", file_path.to_str().unwrap());
+        let file_path = create_data_file_path(&data_source.location)?;
+        log::debug!("Reading CSV file {file_path:?}");
 
         let options = match &data_source.options {
             Some(options) => options.clone(),
             None => DataSourceOption::new(),
         };
 
-        let record_batches =
-            csv_file::to_record_batch(file_path.to_str().unwrap(), &data_source.schema, &options)?;
+        let record_batches = csv_file::to_record_batch(&file_path, &data_source.schema, &options)?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 
@@ -245,9 +262,8 @@ impl Session for ConcurrentSessionContext {
     }
 
     async fn append_from_json_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let mut file_path = PathBuf::from(&Settings::global().server.data_dir);
-        file_path.push(location_uri::to_file_path_and_name(&data_source.location)?);
-        log::debug!("Open JSON file {:?}", file_path.to_str().unwrap());
+        let file_path = create_data_file_path(&data_source.location)?;
+        log::debug!("Reading JSON file {file_path:?}");
 
         let options = match &data_source.options {
             Some(o) => o.clone(),
@@ -255,16 +271,12 @@ impl Session for ConcurrentSessionContext {
         };
 
         let record_batches = match &data_source.format {
-            DataSourceFormat::Json => json_file::to_record_batch(
-                file_path.to_str().unwrap(),
-                &data_source.schema,
-                &options,
-            )?,
-            DataSourceFormat::NdJson => nd_json_file::to_record_batch(
-                file_path.to_str().unwrap(),
-                &data_source.schema,
-                &options,
-            )?,
+            DataSourceFormat::Json => {
+                json_file::to_record_batch(&file_path, &data_source.schema, &options)?
+            }
+            DataSourceFormat::NdJson => {
+                nd_json_file::to_record_batch(&file_path, &data_source.schema, &options)?
+            }
             _ => {
                 return Err(ResponseError::internal_server_error(
                     "Unrecognized data source format configuration",
@@ -300,6 +312,28 @@ impl Session for ConcurrentSessionContext {
         };
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "avro")]
+    async fn append_from_avro_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        let file_path = create_data_file_path(&data_source.location)?;
+        log::debug!("Reading Avro file {file_path:?}");
+
+        self.exists_data_source(data_source).await?;
+
+        self.touch().await;
+        {
+            let session = &mut self.write().await;
+            session
+                .df_ctx
+                .register_avro(&data_source.name, &file_path, AvroReadOptions::default())
+                .await?;
+            session
+                .data_source_map
+                .insert(data_source.name.clone(), data_source.clone());
+        }
 
         Ok(())
     }
@@ -353,22 +387,17 @@ impl Session for ConcurrentSessionContext {
     }
 
     async fn append_from_parquet(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let mut file_path = PathBuf::from(&Settings::global().server.data_dir);
-        file_path.push(location_uri::to_file_path_and_name(&data_source.location)?);
-        log::debug!("Open parquet {:?}", file_path.to_str().unwrap());
+        let file_path = create_data_file_path(&data_source.location)?;
+        log::debug!("Reading Parquet file {file_path:?}");
 
-        Self::register_record_batch(
-            self,
-            data_source,
-            &parquet::to_record_batch(file_path.to_str().unwrap())?,
-        )
-        .await?;
+        Self::register_record_batch(self, data_source, &parquet::to_record_batch(&file_path)?)
+            .await?;
 
         Ok(())
     }
 
     async fn save_to_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let mut file_path = PathBuf::from(&Settings::global().server.data_dir);
+        let mut file_path = std::path::PathBuf::from(&Settings::global().server.data_dir);
         file_path.push(location_uri::to_file_path_and_name(&data_source.location)?);
 
         let options = match &data_source.options {
@@ -419,6 +448,12 @@ impl Session for ConcurrentSessionContext {
                         &data_frame.collect().await?,
                         file_path.to_str().unwrap(),
                     )?;
+                }
+                #[cfg(feature = "avro")]
+                DataSourceFormat::Avro => {
+                    return Err(ResponseError::unsupported_type(
+                        "Save feature currently not supported 'Avro'",
+                    ));
                 }
                 #[cfg(feature = "flight")]
                 DataSourceFormat::Flight => {
@@ -567,5 +602,16 @@ impl Session for ConcurrentSessionContext {
         self.touch().await;
         let context = &self.read().await.df_ctx;
         Ok(context.sql(sql).await?)
+    }
+}
+
+fn create_data_file_path(file: &str) -> Result<String, ResponseError> {
+    let mut file_path = std::path::PathBuf::from(&Settings::global().server.data_dir);
+    file_path.push(location_uri::to_file_path_and_name(file)?);
+    match file_path.to_str() {
+        Some(v) => Ok(v.to_owned()),
+        None => Err(ResponseError::unsupported_format(format!(
+            "Can not decode file path string {file:?}"
+        ))),
     }
 }

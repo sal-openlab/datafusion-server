@@ -16,6 +16,7 @@ codegen-units = 1
 [features]
 plugin = ["datafusion-server/plugin"]
 flight = ["datafusion-server/flight"]
+avro = ["datafusion-server/avro"]
 
 [dependencies]
 datafusion-server = { path = "../lib" }
