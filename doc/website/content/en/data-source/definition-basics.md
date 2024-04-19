@@ -148,7 +148,7 @@ A simple data type, such as `Int64`, is defined as follows.
 
 Complex data types have different definitions individually. Let's look at each one by one.
 
-##### Decimal
+##### Decimal128, Decimal256
 
 First, here are examples of `Decimal128` and `Decimal256`.
 
@@ -243,6 +243,8 @@ https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Dura
 }
 ```
 
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Interval
+
 ##### List, LargeList
 
 `List` and `LargeList` differ only in the maximum number of array elements they can hold.
@@ -296,12 +298,12 @@ A `Struct` is a composite of any combination of fields.
         "Struct": [
           {
             "name": "name",
-            "data_type": "String",
+            "dataType": "String",
             "nullable": false
           },
           {
             "name": "age",
-            "data_type": "UInt8",
+            "dataType": "UInt8",
             "nullable": true
           }
         ]
@@ -312,6 +314,8 @@ A `Struct` is a composite of any combination of fields.
 }
 ```
 
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Struct
+
 ##### Map
 
 A `Map` is a key-value store. Any data type can be specified for `key` and `value`, and nesting is also possible here.
@@ -321,7 +325,7 @@ A `Map` is a key-value store. Any data type can be specified for `key` and `valu
   "schema": [
     {
       "name": "revenue_by_area",
-      "data_type": {
+      "dataType": {
         "Map": {
           "key": "String",
           "value": "Int64",
@@ -347,7 +351,7 @@ https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Map
   "schema": [
     {
       "name": "age_or_name",
-      "data_type": {
+      "dataType": {
         "Union": {
           "types": [
             {"id": 1, "type": "Int32"},
