@@ -2,8 +2,8 @@
 
 ## 0.11.1 (2024-04-23)
 
-* Updates to DataFusion v37.0.1
-    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/37.0.1.md
+* Updates to DataFusion v37.1.0
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/37.1.0.md
 
 ## 0.11.0 (2024-04-18)
 
