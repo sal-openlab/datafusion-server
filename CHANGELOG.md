@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1 (2024-04-23)
+
+* Updates to DataFusion v37.0.1
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/37.0.1.md
+
 ## 0.11.0 (2024-04-18)
 
 * Supports complex data types, such as  `List`, `Map`, `Struct` and others
