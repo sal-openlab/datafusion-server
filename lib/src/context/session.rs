@@ -2,20 +2,8 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 14, 2023
 //
 
-#[cfg(feature = "plugin")]
-use crate::data_source::connector_plugin;
-#[cfg(feature = "flight")]
-use crate::data_source::flight_stream;
-use crate::data_source::{
-    csv_file, json_file, json_rest, location_uri, nd_json_file, nd_json_rest, parquet, writer,
-};
-#[cfg(feature = "plugin")]
-use crate::request::body::PluginOption;
-use crate::request::body::{
-    DataSource, DataSourceFormat, DataSourceOption, MergeDirection, MergeOption, MergeProcessor,
-};
-use crate::response::http_error::ResponseError;
-use crate::settings::Settings;
+use std::collections::HashMap;
+
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 #[cfg(feature = "avro")]
@@ -26,8 +14,20 @@ use datafusion::{
     execution::context,
     logical_expr::{col, JoinType},
 };
-use std::collections::HashMap;
 use tokio::sync::RwLock;
+
+#[cfg(feature = "plugin")]
+use crate::data_source::connector_plugin;
+#[cfg(feature = "flight")]
+use crate::data_source::flight_stream;
+use crate::data_source::{csv, json, location_uri, nd_json_file, nd_json_rest, parquet, writer};
+#[cfg(feature = "plugin")]
+use crate::request::body::PluginOption;
+use crate::request::body::{
+    DataSource, DataSourceFormat, DataSourceOption, MergeDirection, MergeOption, MergeProcessor,
+};
+use crate::response::http_error::ResponseError;
+use crate::settings::Settings;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SessionContext {
@@ -85,8 +85,18 @@ pub trait Session: Send + Sync + 'static {
         record_batches: &[RecordBatch],
     ) -> Result<(), ResponseError>;
     async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    async fn append_from_csv_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError>;
     async fn append_from_json_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_json_rest(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    async fn append_from_json_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError>;
     #[cfg(feature = "avro")]
     async fn append_from_avro_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     #[cfg(feature = "flight")]
@@ -99,7 +109,13 @@ pub trait Session: Send + Sync + 'static {
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
-    async fn append_from_parquet(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    async fn append_from_parquet_file(&self, data_source: &DataSource)
+        -> Result<(), ResponseError>;
+    async fn append_from_parquet_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError>;
     async fn save_to_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn remove_data_source(&self, name: &str) -> Result<(), ResponseError>;
     async fn execute_merge_processor(
@@ -188,7 +204,7 @@ impl Session for ConcurrentSessionContext {
 
             let options = match &data_source.options {
                 Some(options) => options.clone(),
-                None => DataSourceOption::new(),
+                None => DataSourceOption::new_with_default(),
             };
 
             if !options.overwrite.unwrap_or(false) {
@@ -251,12 +267,31 @@ impl Session for ConcurrentSessionContext {
 
         let options = match &data_source.options {
             Some(options) => options.clone(),
-            None => DataSourceOption::new(),
+            None => DataSourceOption::new_with_default(),
         };
 
-        let record_batches = csv_file::to_record_batch(&file_path, &data_source.schema, &options)?;
+        let record_batches =
+            csv::from_file_to_record_batch(&file_path, &data_source.schema, &options)?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
+    async fn append_from_csv_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        let data_source = DataSource::new(DataSourceFormat::Csv, name, None);
+        let options = DataSourceOption::new_with_default().with_infer_schema_rows(1000);
+
+        Self::register_record_batch(
+            self,
+            &data_source,
+            &csv::from_bytes_to_record_batch(data, &options)?,
+        )
+        .await?;
 
         Ok(())
     }
@@ -267,12 +302,12 @@ impl Session for ConcurrentSessionContext {
 
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new(),
+            None => DataSourceOption::new_with_default(),
         };
 
         let record_batches = match &data_source.format {
             DataSourceFormat::Json => {
-                json_file::to_record_batch(&file_path, &data_source.schema, &options)?
+                json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?
             }
             DataSourceFormat::NdJson => {
                 nd_json_file::to_record_batch(&file_path, &data_source.schema, &options)?
@@ -292,13 +327,17 @@ impl Session for ConcurrentSessionContext {
     async fn append_from_json_rest(&self, data_source: &DataSource) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new(),
+            None => DataSourceOption::new_with_default(),
         };
 
         let record_batches = match &data_source.format {
             DataSourceFormat::Json => {
-                json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
-                    .await?
+                json::from_response_to_record_batch(
+                    &data_source.location,
+                    &data_source.schema,
+                    &options,
+                )
+                .await?
             }
             DataSourceFormat::NdJson => {
                 nd_json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
@@ -312,6 +351,24 @@ impl Session for ConcurrentSessionContext {
         };
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
+    async fn append_from_json_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        let data_source = DataSource::new(DataSourceFormat::Json, name, None);
+        let options = DataSourceOption::new_with_default();
+
+        Self::register_record_batch(
+            self,
+            &data_source,
+            &json::from_bytes_to_record_batch(data, &options)?,
+        )
+        .await?;
 
         Ok(())
     }
@@ -345,7 +402,7 @@ impl Session for ConcurrentSessionContext {
     ) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new(),
+            None => DataSourceOption::new_with_default(),
         };
 
         let record_batches =
@@ -364,7 +421,7 @@ impl Session for ConcurrentSessionContext {
         {
             let options = match &data_source.options {
                 Some(o) => o.clone(),
-                None => DataSourceOption::new(),
+                None => DataSourceOption::new_with_default(),
             };
 
             let plugin_options = match &data_source.plugin_options {
@@ -386,12 +443,36 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    async fn append_from_parquet(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+    async fn append_from_parquet_file(
+        &self,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
         let file_path = create_data_file_path(&data_source.location)?;
         log::debug!("Reading Parquet file {file_path:?}");
 
-        Self::register_record_batch(self, data_source, &parquet::to_record_batch(&file_path)?)
-            .await?;
+        Self::register_record_batch(
+            self,
+            data_source,
+            &parquet::from_file_to_record_batch(&file_path)?,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    async fn append_from_parquet_bytes(
+        &self,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        let data_source = DataSource::new(DataSourceFormat::Parquet, name, None);
+
+        Self::register_record_batch(
+            self,
+            &data_source,
+            &parquet::from_bytes_to_record_batch(data)?,
+        )
+        .await?;
 
         Ok(())
     }
@@ -402,7 +483,7 @@ impl Session for ConcurrentSessionContext {
 
         let options = match &data_source.options {
             Some(options) => options.clone(),
-            None => DataSourceOption::new(),
+            None => DataSourceOption::new_with_default(),
         };
 
         if !options.overwrite.unwrap_or(false) && file_path.exists() {

@@ -2,22 +2,40 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
+use std::fs::File;
+use std::io::{Read, Seek};
+use std::sync::Arc;
+
+use datafusion::arrow::datatypes::SchemaRef;
+use datafusion::arrow::error::ArrowError;
+use datafusion::arrow::{csv, record_batch::RecordBatch};
+
 use crate::data_source::schema::DataSourceSchema;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
-use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::arrow::{csv, record_batch::RecordBatch};
-use std::fs::File;
-use std::io::Seek;
-use std::sync::Arc;
 
-pub fn to_record_batch(
+pub fn from_file_to_record_batch(
     file_path: &str,
     schema: &Option<DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
-    let mut file = File::open(file_path)?;
+    let file = File::open(file_path)?;
+    to_record_batch(file, schema, options)
+}
 
+pub fn from_bytes_to_record_batch(
+    data: bytes::Bytes,
+    options: &DataSourceOption,
+) -> Result<Vec<RecordBatch>, ResponseError> {
+    let cursor = std::io::Cursor::new(data);
+    to_record_batch(cursor, &None, options)
+}
+
+fn to_record_batch<R: Read + Seek>(
+    mut reader: R,
+    schema: &Option<DataSourceSchema>,
+    options: &DataSourceOption,
+) -> Result<Vec<RecordBatch>, ResponseError> {
     let has_header = options.has_header.unwrap_or(true);
     let delimiter = options.delimiter.unwrap_or(',') as u8;
 
@@ -28,8 +46,8 @@ pub fn to_record_batch(
             .with_header(has_header)
             .with_delimiter(delimiter);
         let (schema, _) =
-            format.infer_schema(&mut file, Some(options.infer_schema_rows.unwrap_or(100)))?;
-        file.rewind()?;
+            format.infer_schema(&mut reader, Some(options.infer_schema_rows.unwrap_or(100)))?;
+        reader.rewind()?;
         Arc::new(schema)
     };
 
@@ -38,16 +56,10 @@ pub fn to_record_batch(
         .with_delimiter(delimiter);
 
     let reader = builder
-        .build(file)
+        .build(reader)
         .map_err(ResponseError::record_batch_creation)?;
 
-    let mut record_batches = Vec::<RecordBatch>::new();
+    let batches: Result<Vec<RecordBatch>, ArrowError> = reader.collect();
 
-    for record_batch in reader {
-        record_batches.push(record_batch?);
-    }
-
-    log::debug!("created number of record batches {}", record_batches.len());
-
-    Ok(record_batches)
+    Ok(batches?)
 }

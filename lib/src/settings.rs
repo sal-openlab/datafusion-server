@@ -24,7 +24,8 @@ pub struct Server {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Session {
-    pub default_keep_alive: i64, // in seconds
+    pub default_keep_alive: i64,  // in seconds
+    pub upload_limit_size: usize, // in MB
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -88,6 +89,8 @@ impl Settings {
             .set_default("server.plugin_dir", "plugin")
             .unwrap()
             .set_default("session.default_keep_alive", 3600)
+            .unwrap()
+            .set_default("session.upload_limit_size", 20) // 20MB
             .unwrap()
             .set_default("log.level", "info")
             .unwrap()

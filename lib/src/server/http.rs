@@ -2,17 +2,19 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> October 16, 2022
 //
 
+use std::sync::Arc;
+
+use axum::http::{header, Method};
+use std::net::SocketAddr;
+
 use crate::context::session_manager::SessionManager;
 use crate::server::routes;
 use crate::settings::Settings;
-use axum::http::{header, Method};
-use std::net::SocketAddr;
-use std::sync::Arc;
 
 pub async fn create_server<S: SessionManager>(
     session_mgr: Arc<tokio::sync::Mutex<S>>,
 ) -> Result<(axum::serve::Serve<axum::Router, axum::Router>, SocketAddr), anyhow::Error> {
-    let app = routes::register::<S>(session_mgr).layer(
+    let app = routes::register::<S>(&session_mgr).layer(
         tower_http::cors::CorsLayer::new()
             .allow_headers(vec![
                 header::ACCEPT,

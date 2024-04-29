@@ -392,6 +392,58 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error500'
+
+  /session/{sessionId}/datasource/upload:
+    post:
+      tags:
+        - DataSource
+      summary: Upload tables to session context
+      operationId: uploadDataSource
+      parameters:
+        - name: sessionId
+          in: path
+          description: Session identifier
+          required: true
+          schema:
+            type: string
+          example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Table name
+                contentType:
+                  type: string
+                  description: application/vnd.apache.parquet, application/json or text/csv
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '204':
+          description: Successful operation (No Content)
+        '404':
+          description: Session or data source not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error404'
+        '413':
+          description: Payload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error413'
+        '500':
+          description: Can not create table from data source
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/error500'
+
   /session/{sessionId}/datasource/save:
     post:
       tags:
@@ -753,6 +805,23 @@ components:
           type: string
           description: Detailed error message
           example: 'Incorrect session identifier'
+
+    error413:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int16
+          description: HTTP response code
+          example: 413
+        error:
+          type: string
+          description: Error identifier
+          example: 'payload_too_large'
+        message:
+          type: string
+          description: Detailed error message
+          example: 'Can not read multipart chunk: Error parsing `multipart/form-data` request'
 
     error500:
       type: object

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.12.0 (2024-04-29)
+
+* Direct file uploads from the client using multipart/form-data
+    + POST `/session/:id/datasource/upload` endpoint
+    + Supported formats are `text/csv`, `application/json` and `application/vnd.apache.parquet`
+    + The maximum upload size is specified by `session.upload_limit_size` in config.toml (default is 20MB)
+
+```sh
+$ curl -X POST \
+    -F "apis=@./bin/data/public-apis.parquet;type=application/vnd.apache.parquet" \
+    -F "store=@./bin/data/superstore.csv;type=text/csv" \
+    -F "james_bond=@./bin/data/james-bond.json;type=application/json" \
+    http://127.0.0.1:4000/session/e4d8cd37-f9ee-4a5d-981b-2925167a3576/datasource/upload
+```
+
 ## 0.11.1 (2024-04-23)
 
 * Updates to DataFusion v37.1.0
@@ -18,7 +33,7 @@
 * Avro data source format supported
 
 ```sh
-$ curl -X "POST" "http://127.0.0.1:4000/dataframe/query" \
+$ curl -X POST http://127.0.0.1:4000/dataframe/query \
      -H 'Content-Type: application/json' \
      -H 'Accept: text/csv' \
      -d $'{

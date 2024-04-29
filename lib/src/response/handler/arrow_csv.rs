@@ -2,7 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> October 16, 2022
 //
 
-use crate::data_source::csv_file;
+use crate::data_source::csv;
 use crate::data_source::schema::DataSourceSchema;
 use crate::request::body::DataSourceOption;
 use crate::request::query_param;
@@ -29,7 +29,7 @@ pub async fn csv_responder(
     file_path.push(file_name);
     log::debug!("Open CSV file {:?}", file_path.to_str().unwrap());
 
-    let mut options = DataSourceOption::new();
+    let mut options = DataSourceOption::new_with_default();
     options.infer_schema_rows = Some(query_param::usize_or_default(
         params.get("inferSchemaRows"),
         100,
@@ -37,7 +37,8 @@ pub async fn csv_responder(
     options.has_header = Some(query_param::bool_or_default(params.get("hasHeader"), true));
 
     let schema: Option<DataSourceSchema> = None;
-    let record_batches = csv_file::to_record_batch(file_path.to_str().unwrap(), &schema, &options)?;
+    let record_batches =
+        csv::from_file_to_record_batch(file_path.to_str().unwrap(), &schema, &options)?;
 
     Ok(http_response::from_byte_stream(
         arrow_stream::make_buffered_stream(&record_batches)

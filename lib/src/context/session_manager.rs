@@ -87,6 +87,13 @@ pub trait SessionManager: Send + Sync + 'static {
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
 
+    async fn append_csv_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError>;
+
     async fn append_json_file(
         &self,
         session_id: &str,
@@ -97,6 +104,13 @@ pub trait SessionManager: Send + Sync + 'static {
         &self,
         session_id: &str,
         data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
+    async fn append_json_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
 
     #[cfg(feature = "avro")]
@@ -120,10 +134,17 @@ pub trait SessionManager: Send + Sync + 'static {
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
 
-    async fn append_parquet(
+    async fn append_parquet_file(
         &self,
         session_id: &str,
         data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
+    async fn append_parquet_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
 
     async fn execute_merge_processor(
@@ -318,7 +339,7 @@ impl SessionManager for SessionContextManager {
                 }
                 DataSourceFormat::Parquet => {
                     if !external_source(&scheme) {
-                        self.append_parquet(session_id, data_source).await?;
+                        self.append_parquet_file(session_id, data_source).await?;
                     }
                 }
                 DataSourceFormat::Json | DataSourceFormat::NdJson => {
@@ -429,6 +450,18 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
+    async fn append_csv_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_csv_bytes(name, data)
+            .await?;
+        Ok(())
+    }
+
     async fn append_json_file(
         &self,
         session_id: &str,
@@ -447,6 +480,18 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_json_rest(data_source)
+            .await?;
+        Ok(())
+    }
+
+    async fn append_json_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_json_bytes(name, data)
             .await?;
         Ok(())
     }
@@ -487,13 +532,25 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
-    async fn append_parquet(
+    async fn append_parquet_file(
         &self,
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
-            .append_from_parquet(data_source)
+            .append_from_parquet_file(data_source)
+            .await?;
+        Ok(())
+    }
+
+    async fn append_parquet_bytes(
+        &self,
+        session_id: &str,
+        name: &str,
+        data: bytes::Bytes,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_parquet_bytes(name, data)
             .await?;
         Ok(())
     }

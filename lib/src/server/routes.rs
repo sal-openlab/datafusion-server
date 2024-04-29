@@ -2,20 +2,24 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> October 16, 2022
 //
 
-use crate::context::session_manager::SessionManager;
-use crate::response::handler::{
-    arrow_csv, arrow_parquet, data_source, dataframe, json_csv, processor, session, sys_info,
-};
-use crate::settings::Settings;
+use std::sync::Arc;
+
 use axum::{
+    extract::DefaultBodyLimit,
     http::StatusCode,
     response::IntoResponse,
     routing::{delete, get, post},
     Router,
 };
-use std::sync::Arc;
+use tokio::sync::Mutex;
 
-pub fn register<S: SessionManager>(session_mgr: Arc<tokio::sync::Mutex<S>>) -> Router {
+use crate::context::session_manager::SessionManager;
+use crate::response::handler::{
+    arrow_csv, arrow_parquet, data_source, dataframe, json_csv, processor, session, sys_info,
+};
+use crate::settings::Settings;
+
+pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
     let arrow_route = Router::new()
         .route("/csv/:file", get(arrow_csv::csv_responder))
         .route("/parquet/:file", get(arrow_parquet::parquet_responder));
@@ -41,7 +45,14 @@ pub fn register<S: SessionManager>(session_mgr: Arc<tokio::sync::Mutex<S>>) -> R
             get(data_source::refresh),
         )
         .route("/:session_id/processor", post(processor::processing))
-        .with_state(session_mgr);
+        .with_state(session_mgr.clone());
+
+    let session_upload_route = Router::new()
+        .route("/:session_id/datasource/upload", post(data_source::upload))
+        .layer(DefaultBodyLimit::max(
+            Settings::global().session.upload_limit_size * 1024 * 1024,
+        ))
+        .with_state(session_mgr.clone());
 
     let base_url = get_base_url();
 
@@ -50,6 +61,7 @@ pub fn register<S: SessionManager>(session_mgr: Arc<tokio::sync::Mutex<S>>) -> R
         .nest(&format!("{base_url}/json"), json_route)
         .nest(&format!("{base_url}/dataframe"), df_route)
         .nest(&format!("{base_url}/session"), session_route)
+        .nest(&format!("{base_url}/session"), session_upload_route)
         .route(&format!("{base_url}/healthz"), get(hc_handler))
         .route(&format!("{base_url}/sysinfo"), get(sys_info::handler))
 }

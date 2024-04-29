@@ -24,7 +24,7 @@ pub struct DataSourceOption {
 
 impl DataSourceOption {
     /// Creates a data source config with defaults
-    pub fn new() -> Self {
+    pub fn new_with_default() -> Self {
         Self {
             has_header: Some(true),
             infer_schema_rows: Some(100),
@@ -33,6 +33,11 @@ impl DataSourceOption {
             require_normalize: Some(false),
             overwrite: Some(false),
         }
+    }
+
+    pub fn with_infer_schema_rows(mut self, rows: usize) -> Self {
+        self.infer_schema_rows = Some(rows);
+        self
     }
 }
 
@@ -103,6 +108,37 @@ pub struct DataSource {
 }
 
 impl DataSource {
+    pub fn new(format: DataSourceFormat, name: &str, location: Option<&str>) -> Self {
+        Self {
+            format,
+            name: name.to_string(),
+            location: location.unwrap_or("").to_string(),
+            schema: None,
+            options: None,
+            #[cfg(feature = "plugin")]
+            plugin_options: None,
+        }
+    }
+
+    #[allow(dead_code)] // TODO: Delete if not likely to be used in the future
+    pub fn with_schema(mut self, schema: schema::DataSourceSchema) -> Self {
+        self.schema = Some(schema);
+        self
+    }
+
+    #[allow(dead_code)] // TODO: Delete if not likely to be used in the future
+    pub fn with_options(mut self, options: DataSourceOption) -> Self {
+        self.options = Some(options);
+        self
+    }
+
+    #[allow(dead_code)] // TODO: Delete if not likely to be used in the future
+    #[cfg(feature = "plugin")]
+    pub fn with_plugin_options(mut self, options: PluginOption) -> Self {
+        self.plugin_options = Some(options);
+        self
+    }
+
     pub fn validator(&self) -> Result<(), ResponseError> {
         let uri = location_uri::to_parts(&self.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;

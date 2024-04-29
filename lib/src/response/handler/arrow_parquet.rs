@@ -18,7 +18,7 @@ pub async fn parquet_responder(
     file_path.push(file_name);
     log::debug!("Open parquet file {:?}", file_path.to_str().unwrap());
 
-    let record_batches = parquet::to_record_batch(file_path.to_str().unwrap())?;
+    let record_batches = parquet::from_file_to_record_batch(file_path.to_str().unwrap())?;
 
     Ok(http_response::from_byte_stream(
         arrow_stream::make_buffered_stream(&record_batches)

@@ -2,25 +2,41 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
-use crate::response::http_error::ResponseError;
-use datafusion::arrow::record_batch::RecordBatch;
-use datafusion::parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use std::fs::File;
 
-pub fn to_record_batch(file_path: &str) -> Result<Vec<RecordBatch>, ResponseError> {
+use datafusion::{
+    arrow::{error::ArrowError, record_batch::RecordBatch},
+    parquet::{arrow::arrow_reader::ParquetRecordBatchReaderBuilder, file::reader::ChunkReader},
+};
+
+use crate::response::http_error::ResponseError;
+
+pub fn from_file_to_record_batch(file_path: &str) -> Result<Vec<RecordBatch>, ResponseError> {
     let file = File::open(file_path)?;
     let builder = ParquetRecordBatchReaderBuilder::try_new(file)
         .map_err(ResponseError::parquet_deserialization)?;
+
+    to_record_batch(builder)
+}
+
+pub fn from_bytes_to_record_batch(data: bytes::Bytes) -> Result<Vec<RecordBatch>, ResponseError> {
+    let builder = ParquetRecordBatchReaderBuilder::try_new(data)
+        .map_err(ResponseError::parquet_deserialization)?;
+
+    to_record_batch(builder)
+}
+
+fn to_record_batch<T>(
+    builder: ParquetRecordBatchReaderBuilder<T>,
+) -> Result<Vec<RecordBatch>, ResponseError>
+where
+    T: ChunkReader + 'static,
+{
     let reader = builder
         .build()
         .map_err(ResponseError::parquet_deserialization)?;
 
-    // TODO: reader.into_iter().map(|batch| batch?).collect();
-    let mut record_batches = Vec::<RecordBatch>::new();
+    let batches: Result<Vec<RecordBatch>, ArrowError> = reader.collect();
 
-    for record_batch in reader {
-        record_batches.push(record_batch?);
-    }
-
-    Ok(record_batches)
+    Ok(batches?)
 }

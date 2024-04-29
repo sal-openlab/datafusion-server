@@ -9,6 +9,7 @@ plugin_dir = "/usr/local/datafusion-server/plugins"
 
 [session]
 default_keep_alive = 3600 # in seconds
+upload_limit_size = 20 # 20MB
 
 [log]
 # trace, debug, info, warn, error

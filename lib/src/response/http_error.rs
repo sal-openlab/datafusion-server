@@ -107,6 +107,14 @@ impl ResponseError {
         }
     }
 
+    pub fn payload_too_large(message: impl Into<String>) -> Self {
+        Self {
+            code: http::StatusCode::PAYLOAD_TOO_LARGE,
+            error: "payload_too_large".to_string(),
+            message: message.into(),
+        }
+    }
+
     pub fn unsupported_type(message: impl Into<String>) -> Self {
         Self {
             code: http::StatusCode::BAD_REQUEST,
