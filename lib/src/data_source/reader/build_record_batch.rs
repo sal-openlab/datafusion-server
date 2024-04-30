@@ -1,4 +1,4 @@
-// build_record_batch.rs - Build  RecordBatch from native JSON text
+// build_record_batch.rs - Build RecordBatch from native JSON text
 // Sasaki, Naoki <nsasaki@sal.co.jp> March 29, 2023
 //
 
@@ -29,7 +29,7 @@ pub fn from_json(
         infer_schema::from_json_value(json_rows, options)?
     };
 
-    log::debug!("detected: {:?}", df_schema);
+    log::trace!("detected: {:?}", df_schema);
 
     let mut record_batches = Vec::<RecordBatch>::new();
     {

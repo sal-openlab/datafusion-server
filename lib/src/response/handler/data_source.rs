@@ -2,7 +2,6 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 15, 2023
 //
 
-use std::str::FromStr;
 use std::sync::Arc;
 
 use axum::{extract, http::StatusCode, response::IntoResponse};
@@ -10,7 +9,10 @@ use serde::Serialize;
 
 use crate::context::session_manager::SessionManager;
 use crate::data_source::schema::DataSourceSchema;
-use crate::request::body::DataSources;
+use crate::request::{
+    body::{DataSourceFormat, DataSources},
+    format,
+};
 use crate::response::http_error::ResponseError;
 
 #[derive(Serialize)]
@@ -70,21 +72,20 @@ pub async fn upload<S: SessionManager>(
     extract::Path(session_id): extract::Path<String>,
     mut multipart: extract::Multipart,
 ) -> Result<impl IntoResponse, ResponseError> {
+    log::info!("Accessing upload tables to session context handler");
+
     while let Some(mut field) = multipart
         .next_field()
         .await
         .map_err(|e| ResponseError::request_validation(format!("Invalid multipart content: {e}")))?
     {
-        let content_type = mime::Mime::from_str(field.content_type().ok_or(
-            ResponseError::request_validation("The content-type must be specified"),
-        )?)
-        .unwrap();
+        let format = format::resolve_from(field.content_type(), field.file_name());
 
         let name = field
             .name()
             .map(String::from)
             .ok_or(ResponseError::request_validation(
-                "The name of field is must required",
+                "Field name is must required",
             ))?;
 
         let mut bytes_buffer = bytes::BytesMut::new();
@@ -97,27 +98,32 @@ pub async fn upload<S: SessionManager>(
             bytes_buffer.extend_from_slice(&chunk);
         }
 
+        log::debug!(
+            "multipart field: format={format:?}, name={name:?}, length={}",
+            bytes_buffer.len()
+        );
+
         let locked_session_mgr = session_mgr.lock().await;
 
-        match (content_type.type_(), content_type.subtype().as_str()) {
-            (mime::APPLICATION, "vnd.apache.parquet") => {
+        match format {
+            Some(DataSourceFormat::Parquet) => {
                 locked_session_mgr
                     .append_parquet_bytes(&session_id, &name, bytes_buffer.freeze())
                     .await?;
             }
-            (mime::APPLICATION, "json") => {
+            Some(DataSourceFormat::Json) => {
                 locked_session_mgr
                     .append_json_bytes(&session_id, &name, bytes_buffer.freeze())
                     .await?;
             }
-            (mime::TEXT, "csv") => {
+            Some(DataSourceFormat::Csv) => {
                 locked_session_mgr
                     .append_csv_bytes(&session_id, &name, bytes_buffer.freeze())
                     .await?;
             }
             _ => {
                 return Err(ResponseError::unsupported_format(
-                    "The content-type of the multipart field must be either \
+                    "content-type of the multipart field must be either \
                             'text/csv', 'application/json', or 'application/vnd.apache.parquet'",
                 ));
             }

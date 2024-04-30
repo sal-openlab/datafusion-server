@@ -35,7 +35,7 @@ serde_derive = "1.0.199"
 serde_json = { version = "1.0.116", features = ["preserve_order"] }
 num-traits = "0.2.18"
 chrono = { version = "0.4.38", default-features = false, features = ["std", "clock"] }
-jsonpath-rust = "0.5.0"
+jsonpath-rust = "0.5.1"
 futures-util = { version = "0.3.30", default-features = false, features = ["alloc"] }
 futures = "0.3.30"
 tokio = { version = "1.37.0", features = ["full"] }

@@ -47,11 +47,11 @@ pub async fn from_response_to_record_batch(
 }
 
 pub fn from_bytes_to_record_batch(
-    data: bytes::Bytes,
+    data: &bytes::Bytes,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     Ok(build_record_batch::from_json(
-        std::str::from_utf8(&data).map_err(|e| {
+        std::str::from_utf8(data).map_err(|e| {
             ResponseError::request_validation(format!("Collapsed bytes buffer: {e}"))
         })?,
         &None,

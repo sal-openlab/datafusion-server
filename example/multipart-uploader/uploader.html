@@ -1,0 +1,90 @@
+<!--
+  DataFusion Server
+  Example of table file upload.
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>DataFusion Server - Table File Uploader</title>
+  </head>
+  <body>
+    <h3>DataFusion Server - Table Uploader</h3>
+
+    <input type="text" id="server" placeholder="Enter the server address" value="http://127.0.0.1:4000"/>
+    <input type="text" id="session" placeholder="Enter the session ID" value="" style="width: 36ch;" />
+    <p id="url" style="font-size: small; color: grey;"></p>
+    <hr/>
+
+    <input type="text" id="nameInput" placeholder="Enter the table name"/>
+    <button onclick="addFileInput()">Append</button>
+
+    <form id="fileForm" action="" method="post" enctype="multipart/form-data">
+      <!-- selected files here -->
+    </form>
+    <button type="submit" form="fileForm">Upload to Sesssion Context</button>
+    <button onclick="clearAll()">Clear</button>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', addListeners);
+
+      function addListeners() {
+        document.querySelector("#server").addEventListener("input", serverChanged);
+        document.querySelector("#session").addEventListener("input", serverChanged);
+        serverChanged();
+      }
+
+      function serverChanged() {
+        const server = document.getElementById('server').value;
+        const session = document.getElementById('session').value;
+        const url = `${server}/session/${session}/datasource/upload`;
+        document.getElementById('fileForm').action = url;
+        document.getElementById('url').innerHTML = url;
+      }
+
+      function addFileInput() {
+        const name = document.getElementById('nameInput').value;
+
+        if (name) {
+          createDOM(name);
+          document.getElementById('nameInput').value = '';
+        } else {
+          alert('Table name must be required!');
+        }
+      }
+
+      function createDOM(name) {
+        const span = document.createElement('span');
+        const label = document.createElement('label');
+        label.innerHTML = `Table: <b>${name}</b>`;
+        span.appendChild(label);
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.name = name;
+        span.appendChild(input);
+        document.getElementById('fileForm').appendChild(span);
+      }
+
+      function clearAll() {
+        const form = document.getElementById('fileForm');
+        while (form.firstChild) form.removeChild(form.firstChild);
+        document.getElementById('nameInput').value = '';
+      }
+    </script>
+
+    <style type="text/css">
+      span {
+        display: block;
+        margin-top: 12px;
+      }
+      label {
+        display: block;
+        margin-bottom: 4px;
+      }
+      button[type="submit"] {
+        margin-top: 16px;
+      }
+    </style>
+  </body>
+</html>

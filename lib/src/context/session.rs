@@ -366,7 +366,7 @@ impl Session for ConcurrentSessionContext {
         Self::register_record_batch(
             self,
             &data_source,
-            &json::from_bytes_to_record_batch(data, &options)?,
+            &json::from_bytes_to_record_batch(&data, &options)?,
         )
         .await?;
 
