@@ -41,7 +41,9 @@ jobs:
         id: pages
         uses: actions/configure-pages@v4
       - name: Install Node.js dependencies
-        run: "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+        run: |
+          [[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true
+          npm install -g swagger-cli
       - name: Prepare Theme
         run: |
           cd doc/website
@@ -55,7 +57,12 @@ jobs:
           hugo \
             --gc \
             --minify \
-            --baseURL "${{ steps.pages.outputs.base_url }}/"          
+            --baseURL "${{ steps.pages.outputs.base_url }}/"
+      - name: Generate Swagger UI
+        uses: Legion2/swagger-ui-action@v1
+        with:
+          output: doc/website/public/api/v1
+          spec-file: doc/openapi.v1.yaml
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
