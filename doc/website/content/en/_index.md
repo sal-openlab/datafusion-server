@@ -6,3 +6,5 @@ geekdocAnchor: false
 ---
 
 {{< button size="large" relref="/introduction" >}}Getting Started{{< /button >}}
+
+[OpenAPI document](api/v1)

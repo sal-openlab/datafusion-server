@@ -66,7 +66,7 @@ Inspecting container logs.
 docker logs datafusion-server
 ```
 
-Call statistics endpoint by [cURL](https://curl.se/) with [jq](https://jqlang.github.io/jq/) formatter.
+Call statistics endpoint by [cURL](https://curl.se/) {{< icon "external-link" >}}with [jq](https://jqlang.github.io/jq/) {{< icon "external-link" >}}formatter.
 
 ```shell
 curl http://localhost:4000/sysinfo | jq
@@ -112,8 +112,8 @@ docker stop datafusion-server
 ## Building containers your self
 
 {{< hint type=note title="Supported Environments" >}}
-* Docker CE / EE [Supported platforms](https://docs.docker.com/engine/install/#supported-platforms)
-* Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) / [macOS](https://docs.docker.com/desktop/install/mac-install/) / [Linux](https://docs.docker.com/desktop/install/linux-install/)
+* Docker CE / EE [Supported platforms](https://docs.docker.com/engine/install/#supported-platforms) {{< icon "external-link" >}}
+* Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) {{< icon "external-link" >}}/ [macOS](https://docs.docker.com/desktop/install/mac-install/) {{< icon "external-link" >}}/ [Linux](https://docs.docker.com/desktop/install/linux-install/) {{< icon "external-link" >}}
 {{< /hint >}}
 
 ### Clone the source codes from GitHub
@@ -143,6 +143,7 @@ Full-featured built container:
 ```shell
 docker run -d --rm \
     -p 4000:4000 \
+    -p 50051:50051 \
     -v ./data:/var/datafusion-server/data \
     --name datafusion-server \
     datafusion-server:x.y.z
@@ -153,6 +154,7 @@ or without Python plugin container:
 ```shell
 docker run -d --rm \
     -p 4000:4000 \
+    -p 50051:50051 \
     -v ./data:/var/datafusion-server/data \
     --name datafusion-server \
     datafusion-server-without-plugin:x.y.z
@@ -163,12 +165,7 @@ If you are only using sample data in a container, omit the `-v ./data:/var/xapi-
 ```shell
 docker run -d --rm \
     -p 4000:4000 \
+    -p 50051:50051 \
     --name datafusion-server \
     datafusion-server:x.y.z
 ```
-
-docker run -d --rm \
-    -p 4000:4000 \
-    -p 50051:50051 \
-    --name datafusion-server \
-    datafusion-server:0.9.3

@@ -174,7 +174,7 @@ First, here are examples of `Decimal128` and `Decimal256`.
 
 In this example, it is possible to represent `123456.78`.
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Decimal256
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Decimal256 {{< icon "external-link" >}}
 
 ##### Timestamp
 
@@ -199,7 +199,7 @@ An example of a `Timestamp` would look as follows.
 
 The possible precisions for `unit` are `Second`, `Millisecond`, `Microsecond`, and `Nanosecond`. The `timezone` is optional, and the default value when omitted is `UTC`.
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Timestamp
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Timestamp {{< icon "external-link" >}}
 
 ##### Duration
 
@@ -221,7 +221,7 @@ The definition of `Duration` is similar to that of `Timestamp`, but conceptually
 }
 ```
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Duration
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Duration {{< icon "external-link" >}}
 
 ##### Interval
 
@@ -243,7 +243,7 @@ https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Dura
 }
 ```
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Interval
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Interval {{< icon "external-link" >}}
 
 ##### List, LargeList
 
@@ -283,7 +283,7 @@ Elements can be nested, and there is no logical upper limit to the depth of nest
 
 Nestable elements are not limited to `List`; `Map`, `Struct`, and any other combinations can also be defined.
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.List
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.List {{< icon "external-link" >}}
 
 ##### Struct
 
@@ -314,7 +314,7 @@ A `Struct` is a composite of any combination of fields.
 }
 ```
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Struct
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Struct {{< icon "external-link" >}}
 
 ##### Map
 
@@ -340,7 +340,7 @@ A `Map` is a key-value store. Any data type can be specified for `key` and `valu
 
 If `ordered` is set to `true`, the entries are stored sorted by key. `ordered` is optional, and the default value when omitted is `false`.
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Map
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Map {{< icon "external-link" >}}
 
 ##### Union
 
@@ -368,7 +368,7 @@ https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Map
 
 The `id` array is used to indicate which type of union each `Field` belongs to. The memory layout for `Union` differs depending on whether the type is `Dense` or `Sparse`. In a dense union, all elements are contiguously placed in memory, whereas in a sparse union, they are not. The `id` array serves as a mapping to show which field each piece of data belongs to.
 
-https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Union
+https://docs.rs/arrow-schema/51.0.0/arrow_schema/enum.DataType.html#variant.Union {{< icon "external-link" >}}
 
 ### About Options
 

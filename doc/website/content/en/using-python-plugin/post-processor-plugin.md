@@ -1,5 +1,5 @@
 ---
-title: Post processor plugin
+title: Post Processor Plugin
 weight: 20
 ---
 

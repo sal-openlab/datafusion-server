@@ -7,7 +7,7 @@ weight: 20
 
 ## Pre-require (MSRV)
 
-* Rust Toolchain 1.76+ (Edition 2021) from https://www.rust-lang.org
+* Rust Toolchain 1.74+ (Edition 2021) from https://www.rust-lang.org {{< icon "external-link" >}}
 
 ## Add DataFusion Server crate to your Cargo.toml
 
@@ -15,14 +15,14 @@ If you do not need the plugin feature, simply use `cargo add datafusion-server` 
 
 ```toml
 [dependencies]
-datafusion-server = "0.9.2"
+datafusion-server = "0.12.1"
 ```
 
 or enables Python plugin feature:
 
 ```toml
 [dependencies]
-datafusion-server = { version = "0.9.2", features = ["plugin"] }
+datafusion-server = { version = "0.12.1", features = ["plugin"] }
 ```
 
 ## Example of call the DataFusion Server entry function
@@ -66,13 +66,15 @@ Example configuration file (config.toml).
 
 ```toml
 [server]
-port = 4000
+port = 80
+flight_grpc_port = 50051
 base_url = "/"
 data_dir = "./data"
 plugin_dir = "./plugins"
 
 [session]
-default_keep_alive = 3600
+default_keep_alive = 3600 # 1 hour
+upload_limit_size = 2000 # 2GB
 
 [log]
 level = "debug"
@@ -89,6 +91,7 @@ level = "debug"
 | `server.data_dir`   | Static data source directory | `./data`   |
 | `server.plugin_dir` | Python plugin directory      | `./plugin` |
 | `session.default_keep_alive` | Default session timeout value in seconds | `3600` |
+| `session.upload_limit_size`  | Size limit in MB for `/session/:id/datasource/upload` endpoint | `20` |
 | `log.level` | Logging level (`trace`, `debug`, `info`, `warn`, `error`) | `info` |
 
 
