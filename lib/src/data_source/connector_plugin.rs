@@ -1,18 +1,19 @@
-// connector_plugin - Plugin to RecordBatch
+// connector_plugin - Plugin to RecordBatch, features only "plugin"
 // Sasaki, Naoki <nsasaki@sal.co.jp> February 18, 2023
 //
 
+use datafusion::arrow::record_batch::RecordBatch;
+use pyo3::types::PyBytes;
+use pyo3::{Py, PyAny, PyResult, Python};
+
 use crate::data_source::reader::build_record_batch;
-use crate::data_source::{infer_schema, location_uri, schema::DataSourceSchema, with_jsonpath};
+use crate::data_source::{
+    csv, location_uri, nd_json, parquet, schema::DataSourceSchema, with_jsonpath,
+};
 use crate::request::body::{DataSourceFormat, DataSourceOption, PluginOption};
 use crate::response::http_error::ResponseError;
-#[cfg(feature = "plugin")]
 use crate::PluginManager;
-use datafusion::arrow::{datatypes::SchemaRef, json, record_batch::RecordBatch};
-#[cfg(feature = "plugin")]
-use pyo3::{PyResult, Python};
 
-#[cfg(feature = "plugin")]
 pub fn to_record_batch(
     format: &DataSourceFormat,
     uri: &str,
@@ -43,55 +44,55 @@ pub fn to_record_batch(
         query,
     )?;
 
-    let record_batches = if options.json_path.is_none() {
-        match format {
-            DataSourceFormat::Json => {
+    Ok(match format {
+        DataSourceFormat::Arrow => Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
+            PluginManager::global().to_record_batches(py, &py_result)
+        })
+        .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?,
+        DataSourceFormat::Json => {
+            if options.json_path.is_none() {
                 build_record_batch::from_json(&py_result.to_string(), schema, options)?
-            }
-            DataSourceFormat::NdJson => {
-                let json_text = &py_result.to_string();
-
-                let schema_ref = SchemaRef::new(if let Some(schema) = schema {
-                    schema.to_arrow_schema()
-                } else {
-                    infer_schema::from_raw_json(json_text, options)?
-                });
-
-                let mut record_batches = Vec::<RecordBatch>::new();
-
-                let builder = json::ReaderBuilder::new(schema_ref);
-
-                let reader = builder
-                    .build(std::io::Cursor::new(&json_text))
-                    .map_err(ResponseError::record_batch_creation)?;
-
-                for record_batch in reader {
-                    record_batches
-                        .push(record_batch.map_err(ResponseError::record_batch_extraction)?);
-                }
-
-                record_batches
-            }
-            DataSourceFormat::Arrow => Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
-                PluginManager::global().to_record_batches(py, &py_result)
-            })
-            .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?,
-            _ => {
-                return Err(ResponseError::unsupported_type(
-                    "Currently supported only 'json', 'ndJson' or an 'arrow'",
-                ));
+            } else {
+                with_jsonpath::to_record_batch(&py_result.to_string(), schema, options)?
             }
         }
-    } else {
-        match format {
-            DataSourceFormat::Arrow => {
-                return Err(ResponseError::request_validation(
-                    "Not supported JSONPath with data source format Arrow",
-                ));
-            }
-            _ => with_jsonpath::to_record_batch(&py_result.to_string(), schema, options)?,
+        DataSourceFormat::NdJson => nd_json::from_bytes_to_record_batch(
+            bytes::Bytes::from(py_result.to_string()),
+            schema,
+            options,
+        )?,
+        DataSourceFormat::Csv => csv::from_bytes_to_record_batch(
+            bytes::Bytes::from(py_result.to_string()),
+            schema,
+            options,
+        )?,
+        DataSourceFormat::Parquet => {
+            parquet::from_bytes_to_record_batch(py_result_to_bytes(&py_result)?)?
         }
-    };
+        #[cfg(feature = "flight")]
+        DataSourceFormat::Flight => {
+            return Err(ResponseError::unsupported_type(
+                "Format of plugins are not supported 'flight'",
+            ));
+        }
+        #[cfg(feature = "avro")]
+        DataSourceFormat::Avro => {
+            return Err(ResponseError::unsupported_type(
+                "Format of plugins are not supported 'avro'",
+            ));
+        }
+    })
+}
 
-    Ok(record_batches)
+fn py_result_to_bytes(py_result: &Py<PyAny>) -> Result<bytes::Bytes, ResponseError> {
+    let mut buffer = bytes::BytesMut::new();
+    Python::with_gil(|py| -> PyResult<()> {
+        let py_bytes = py_result.downcast::<PyBytes>(py)?.as_bytes();
+        buffer.extend_from_slice(py_bytes);
+        Ok(())
+    })
+    .map_err(|e| {
+        ResponseError::python_interpreter_error(format!("Can not downcast to buffered binary: {e}"))
+    })?;
+    Ok(buffer.freeze())
 }

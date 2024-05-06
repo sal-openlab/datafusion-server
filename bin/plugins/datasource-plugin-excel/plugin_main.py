@@ -41,7 +41,12 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
     header_row = header_row if has_header else None
 
     df = pd.read_excel(
-        file, sheet, skiprows=skip_rows, nrows=num_rows, header=header_row
+        file,
+        sheet,
+        skiprows=skip_rows,
+        nrows=num_rows,
+        header=header_row,
+        dtype_backend="pyarrow",
     )
 
     logging.debug("Parsed dataframe >>\n%s", df)

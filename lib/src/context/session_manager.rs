@@ -2,6 +2,17 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 14, 2023
 //
 
+use std::cmp;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use axum::{async_trait, http::uri};
+use datafusion::{
+    arrow::record_batch::RecordBatch, dataframe::DataFrame, execution::context::SessionConfig,
+    physical_plan::SendableRecordBatchStream,
+};
+use tokio::sync::RwLock;
+
 use crate::context::session::{ConcurrentSessionContext, Session, SessionContext};
 use crate::data_source::{location_uri, location_uri::SupportedScheme, schema::DataSourceSchema};
 use crate::request::body::{
@@ -9,17 +20,6 @@ use crate::request::body::{
 };
 use crate::response::{handler, http_error::ResponseError};
 use crate::PluginManager;
-use axum::{async_trait, http::uri};
-use datafusion::{
-    arrow::{datatypes::SchemaRef, record_batch::RecordBatch},
-    dataframe::DataFrame,
-    execution::context::SessionConfig,
-    physical_plan::SendableRecordBatchStream,
-};
-use std::cmp;
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Clone)]
 pub struct SessionContextManager {
@@ -46,7 +46,6 @@ pub trait SessionManager: Send + Sync + 'static {
     async fn cleanup(&self);
     async fn session_ids(&self) -> Vec<String>;
     async fn session(&self, session_id: &str) -> Result<handler::session::Session, ResponseError>;
-    async fn schema_ref(&self, session_id: &str, name: &str) -> Option<SchemaRef>;
     async fn data_source_names(&self, session_id: &str) -> Result<Vec<String>, ResponseError>;
     async fn data_source(
         &self,
@@ -82,6 +81,12 @@ pub trait SessionManager: Send + Sync + 'static {
     async fn remove_data_source(&self, session_id: &str, name: &str) -> Result<(), ResponseError>;
 
     async fn append_csv_file(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
+    async fn append_csv_rest(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -135,6 +140,12 @@ pub trait SessionManager: Send + Sync + 'static {
     ) -> Result<(), ResponseError>;
 
     async fn append_parquet_file(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
+    async fn append_parquet_rest(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -259,13 +270,6 @@ impl SessionManager for SessionContextManager {
         }
     }
 
-    async fn schema_ref(&self, session_id: &str, name: &str) -> Option<SchemaRef> {
-        match self.contexts.read().await.get(session_id) {
-            Some(context) => context.schema_ref(name).await,
-            None => None,
-        }
-    }
-
     async fn data_source_names(&self, session_id: &str) -> Result<Vec<String>, ResponseError> {
         match self.contexts.read().await.get(session_id) {
             Some(context) => Ok(context.data_source_names().await),
@@ -300,11 +304,6 @@ impl SessionManager for SessionContextManager {
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
-        #[inline]
-        fn external_source(scheme: &SupportedScheme) -> bool {
-            *scheme != SupportedScheme::File
-        }
-
         let plugin_source = |uri: &uri::Parts| -> bool {
             let plugin_schemes = PluginManager::global().registered_schemes();
             plugin_schemes.contains(&uri.scheme.as_ref().unwrap().to_string())
@@ -312,6 +311,7 @@ impl SessionManager for SessionContextManager {
 
         let uri = location_uri::to_parts(&data_source.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
+
         let scheme = location_uri::scheme(&uri)?;
 
         data_source.validator()?;
@@ -326,24 +326,28 @@ impl SessionManager for SessionContextManager {
             )));
         }
 
-        if external_source(&scheme) && plugin_source(&uri) {
+        if !scheme.remote_source() && plugin_source(&uri) {
             #[cfg(feature = "plugin")]
             self.append_connector_plugin(session_id, data_source)
                 .await?;
         } else {
             match data_source.format {
                 DataSourceFormat::Csv => {
-                    if !external_source(&scheme) {
+                    if scheme.remote_source() {
+                        self.append_csv_rest(session_id, data_source).await?;
+                    } else {
                         self.append_csv_file(session_id, data_source).await?;
                     }
                 }
                 DataSourceFormat::Parquet => {
-                    if !external_source(&scheme) {
+                    if scheme.remote_source() {
+                        self.append_parquet_rest(session_id, data_source).await?;
+                    } else {
                         self.append_parquet_file(session_id, data_source).await?;
                     }
                 }
                 DataSourceFormat::Json | DataSourceFormat::NdJson => {
-                    if external_source(&scheme) {
+                    if scheme.remote_source() {
                         self.append_json_rest(session_id, data_source).await?;
                     } else {
                         self.append_json_file(session_id, data_source).await?;
@@ -393,7 +397,7 @@ impl SessionManager for SessionContextManager {
         if scheme != SupportedScheme::File {
             use std::str::FromStr;
             return Err(ResponseError::request_validation(format!(
-                "Unsupported scheme '{}' save feature currently supported only 'file'",
+                "Unsupported scheme '{}' save feature currently supported only from 'file'",
                 &uri.scheme
                     .unwrap_or_else(|| uri::Scheme::from_str("unknown").unwrap())
             )));
@@ -446,6 +450,17 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_csv_file(data_source)
+            .await?;
+        Ok(())
+    }
+
+    async fn append_csv_rest(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_csv_rest(data_source)
             .await?;
         Ok(())
     }
@@ -539,6 +554,17 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_parquet_file(data_source)
+            .await?;
+        Ok(())
+    }
+
+    async fn append_parquet_rest(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_parquet_rest(data_source)
             .await?;
         Ok(())
     }

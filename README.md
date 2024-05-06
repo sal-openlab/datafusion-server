@@ -15,7 +15,9 @@ Multiple session, variety of data sources query server implemented by Rust.
   the [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) gRPC feature
 
 Please see the **[Documentation](https://sal-openlab.github.io/datafusion-server/introduction/)**
-for an introductory tutorial and a full usage guide.
+for an introductory tutorial and a full usage guide. Additionally,
+[REST API documentation](https://sal-openlab.github.io/datafusion-server/api/v1/) is available according
+to the OpenAPI specification.
 
 ## License
 
@@ -82,7 +84,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.12.1
+    datafusion-server:0.13.0
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -110,7 +112,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.12.1"
+datafusion-server = "0.13.0"
 ```
 
 #### Example of src/main.rs
@@ -152,12 +154,14 @@ For details, further reading [main.rs](bin/src/main.rs) and [Config.toml](bin/Ca
 
 [server]
 port = 4000
+flight_grpc_port = 50051
 base_url = "/"
 data_dir = "./data"
 plugin_dir = "./plugins"
 
 [session]
 default_keep_alive = 3600 # in seconds
+upload_limit_size = 20 # MB
 
 [log]
 # trace, debug, info, warn, error
@@ -185,7 +189,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.12.1", features = ["plugin"] }
+datafusion-server = { version = "0.13.0", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -211,7 +215,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.12.1", features = ["plugin"] }
+datafusion-server = { version = "0.13.0", features = ["plugin"] }
 ```
 
 #### Build for release

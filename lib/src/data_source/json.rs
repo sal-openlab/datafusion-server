@@ -7,8 +7,9 @@ use std::io::{BufReader, Read};
 
 use datafusion::arrow::record_batch::RecordBatch;
 
-use crate::data_source::reader::build_record_batch;
-use crate::data_source::{schema::DataSourceSchema, with_jsonpath};
+use crate::data_source::{
+    reader::build_record_batch, schema::DataSourceSchema, transport::http, with_jsonpath,
+};
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 
@@ -33,11 +34,10 @@ pub async fn from_response_to_record_batch(
     schema: &Option<DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
-    let response = reqwest::get(uri)
-        .await
-        .map_err(ResponseError::http_request)?
-        .text()
-        .await?;
+    let response = match http::get(uri, options, http::ResponseDataType::Text).await? {
+        http::ResponseData::Text(data) => data,
+        http::ResponseData::Binary(_) => String::new(),
+    };
 
     Ok(if options.json_path.is_none() {
         build_record_batch::from_json(&response, schema, options)?

@@ -12,10 +12,10 @@ tags:
   - name: JSON
     description: Non query JSON responder
   - name: DataFrame
-    description: Query based Arrow or JSON responder
+    description: Query based Arrow, JSON and CSV responder
   - name: Session
     description: Session context
-  - name: DataSource
+  - name: Data Source
     description: Session based context query
   - name: System
     description: Other system APIs
@@ -329,7 +329,7 @@ paths:
   /session/{sessionId}/datasource:
     get:
       tags:
-        - DataSource
+        - Data Source
       summary: Data source (table) index from session context
       operationId: dataSourceIndex
       parameters:
@@ -358,7 +358,7 @@ paths:
                 $ref: '#/components/schemas/error500'
     post:
       tags:
-        - DataSource
+        - Data Source
       summary: Create tables to session context
       operationId: createDataSource
       parameters:
@@ -396,7 +396,7 @@ paths:
   /session/{sessionId}/datasource/upload:
     post:
       tags:
-        - DataSource
+        - Data Source
       summary: Upload tables to session context
       operationId: uploadDataSource
       parameters:
@@ -447,7 +447,7 @@ paths:
   /session/{sessionId}/datasource/save:
     post:
       tags:
-        - DataSource
+        - Data Source
       summary: Save data sources to local file system
       operationId: saveDataSource
       parameters:
@@ -484,7 +484,7 @@ paths:
   /session/{sessionId}/datasource/{name}:
     get:
       tags:
-        - DataSource
+        - Data Source
       summary: Data source (table) information
       operationId: dataSource
       parameters:
@@ -525,7 +525,7 @@ paths:
                 $ref: '#/components/schemas/error404'
     delete:
       tags:
-        - DataSource
+        - Data Source
       summary: Remove data source from session context
       operationId: removeDataSource
       parameters:
@@ -561,7 +561,7 @@ paths:
   /session/{sessionId}/datasource/{name}/refresh:
     get:
       tags:
-        - DataSource
+        - Data Source
       summary: Reload data source from source
       operationId: reloadDataSource
       parameters:
@@ -656,13 +656,21 @@ paths:
             type: string
           example: 29e7b63a-96e8-450a-8c23-6e43e1ec8337
       requestBody:
-        description: response is optional, default format as JSON. CSV charset only UTF-8.
+        description: Response format is optional, default format as JSON. CSV charset only UTF-8.
         content:
           application/json:
             schema:
               oneOf:
                 - $ref: '#/components/schemas/queryLang'
                 - $ref: '#/components/schemas/sessionQueryWithFormat'
+          application/sql:
+            schema:
+              type: string
+              example: |
+                SELECT t2.foo, t2.bar, t1.baz
+                FROM table1 t1, table2 t2
+                WHERE t1.id = t2.id
+                ORDER BY t1.id
       responses:
         '200':
           description: Successful operation
@@ -901,17 +909,19 @@ components:
               - Float32
               - Float64
               - Float
-              - TimestampSecond
+              - Decimal128
+              - Decimal256
               - Timestamp
-              - TimestampMicro
-              - TimestampNano
               - Date
               - Time
-              - DurationSecond
               - Duration
-              - DurationMicro
-              - DurationNano
+              - Interval
               - String
+              - List
+              - LargeList
+              - Map
+              - Struct
+              - Union
             example: String
           nullable:
             type: boolean

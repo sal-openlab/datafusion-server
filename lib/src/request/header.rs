@@ -3,8 +3,10 @@
 //
 
 use axum::http::header;
-use axum_extra::headers::{self, Header, HeaderName, HeaderValue};
-use axum_extra::TypedHeader;
+use axum_extra::{
+    headers::{self, Header, HeaderName, HeaderValue},
+    TypedHeader,
+};
 
 use crate::request::body::ResponseFormat;
 use crate::response::http_error::ResponseError;
@@ -44,7 +46,7 @@ pub fn response_format(
         .first()
         .ok_or_else(|| ResponseError::request_validation("Accept header should have a value"))?
         .to_str()
-        .map_err(|_| ResponseError::internal_server_error("Failed to access the Accept header"))?;
+        .map_err(|_| ResponseError::internal_server_error("Failed to access the accept header"))?;
 
     match media_type {
         "application/json" => Ok(ResponseFormat::Json),
@@ -54,4 +56,45 @@ pub fn response_format(
             "Unsupported response format '{media_type}'"
         ))),
     }
+}
+
+#[derive(Debug)]
+pub struct ContentType(String);
+
+impl Header for ContentType {
+    fn name() -> &'static HeaderName {
+        &header::CONTENT_TYPE
+    }
+
+    fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
+    where
+        I: Iterator<Item = &'i HeaderValue>,
+    {
+        values
+            .next()
+            .and_then(|value| value.to_str().ok())
+            .map(|value| ContentType(value.to_string()))
+            .ok_or_else(headers::Error::invalid)
+    }
+
+    fn encode<E: Extend<HeaderValue>>(&self, values: &mut E) {
+        let value = HeaderValue::from_str(&self.0).expect("Invalid content-type header");
+        values.extend(std::iter::once(value));
+    }
+}
+
+pub fn request_format(content_type: &TypedHeader<ContentType>) -> Result<String, ResponseError> {
+    let mut values: Vec<HeaderValue> = Vec::new();
+    content_type.0.encode(&mut values);
+
+    Ok(values
+        .first()
+        .ok_or_else(|| {
+            ResponseError::request_validation("content-type header should have a value")
+        })?
+        .to_str()
+        .map_err(|_| {
+            ResponseError::internal_server_error("Failed to access the content-type header")
+        })?
+        .to_string())
 }

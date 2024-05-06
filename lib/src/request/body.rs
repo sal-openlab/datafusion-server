@@ -2,6 +2,8 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
+use std::collections::HashMap;
+
 use serde::Deserialize;
 
 use crate::data_source::location_uri::SupportedScheme;
@@ -20,6 +22,8 @@ pub struct DataSourceOption {
     #[serde(rename = "requireNormalize")]
     pub require_normalize: Option<bool>,
     pub overwrite: Option<bool>,
+    // for http headers
+    pub headers: Option<HashMap<String, String>>,
 }
 
 impl DataSourceOption {
@@ -32,6 +36,7 @@ impl DataSourceOption {
             json_path: None,
             require_normalize: Some(false),
             overwrite: Some(false),
+            headers: None,
         }
     }
 
@@ -146,7 +151,7 @@ impl DataSource {
 
         match self.format {
             DataSourceFormat::Csv => {
-                if scheme != SupportedScheme::File {
+                if scheme.remote_source() {
                     return Err(ResponseError::unsupported_type(format!(
                         "Not supported data source, CSV with remote location '{}'",
                         self.location
@@ -162,7 +167,7 @@ impl DataSource {
                 }
             }
             DataSourceFormat::Parquet => {
-                if scheme != SupportedScheme::File {
+                if scheme.remote_source() {
                     return Err(ResponseError::unsupported_type(format!(
                         "Not supported data source, Parquet with remote location '{}'",
                         self.location

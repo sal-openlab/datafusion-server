@@ -30,6 +30,17 @@ pub enum SupportedScheme {
     WillPlugin,
 }
 
+impl SupportedScheme {
+    pub fn remote_source(&self) -> bool {
+        match self {
+            Self::Http | Self::Https => true,
+            #[cfg(feature = "flight")]
+            Self::Grpc | Self::GrpcTls => true,
+            _ => false,
+        }
+    }
+}
+
 #[allow(clippy::unnecessary_wraps)] // never returns `Err` while enabling plugin feature
 pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
     if parts.scheme.is_none() {

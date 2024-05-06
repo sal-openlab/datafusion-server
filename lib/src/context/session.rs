@@ -20,7 +20,7 @@ use tokio::sync::RwLock;
 use crate::data_source::connector_plugin;
 #[cfg(feature = "flight")]
 use crate::data_source::flight_stream;
-use crate::data_source::{csv, json, location_uri, nd_json_file, nd_json_rest, parquet, writer};
+use crate::data_source::{csv, json, location_uri, nd_json, parquet, writer};
 #[cfg(feature = "plugin")]
 use crate::request::body::PluginOption;
 use crate::request::body::{
@@ -72,7 +72,6 @@ pub trait Session: Send + Sync + 'static {
     async fn ttl(&self) -> i64;
     async fn touch(&self);
     async fn expired(&self) -> bool;
-    async fn schema_ref(&self, name: &str) -> Option<SchemaRef>;
     async fn data_source_names(&self) -> Vec<String>;
     async fn data_source(
         &self,
@@ -85,6 +84,7 @@ pub trait Session: Send + Sync + 'static {
         record_batches: &[RecordBatch],
     ) -> Result<(), ResponseError>;
     async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    async fn append_from_csv_rest(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_csv_bytes(
         &self,
         name: &str,
@@ -110,6 +110,8 @@ pub trait Session: Send + Sync + 'static {
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
     async fn append_from_parquet_file(&self, data_source: &DataSource)
+        -> Result<(), ResponseError>;
+    async fn append_from_parquet_rest(&self, data_source: &DataSource)
         -> Result<(), ResponseError>;
     async fn append_from_parquet_bytes(
         &self,
@@ -149,15 +151,6 @@ impl Session for ConcurrentSessionContext {
 
     async fn expired(&self) -> bool {
         self.ttl().await <= 0
-    }
-
-    async fn schema_ref(&self, name: &str) -> Option<SchemaRef> {
-        let session = &mut self.read().await;
-        if let Ok(provider) = session.df_ctx.table_provider(name).await {
-            Some(provider.schema())
-        } else {
-            None
-        }
     }
 
     async fn data_source_names(&self) -> Vec<String> {
@@ -278,6 +271,24 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
+    async fn append_from_csv_rest(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        let options = match &data_source.options {
+            Some(options) => options.clone(),
+            None => DataSourceOption::new_with_default(),
+        };
+
+        let record_batches = csv::from_response_to_record_batch(
+            &data_source.location,
+            &data_source.schema,
+            &options,
+        )
+        .await?;
+
+        Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
     async fn append_from_csv_bytes(
         &self,
         name: &str,
@@ -289,7 +300,7 @@ impl Session for ConcurrentSessionContext {
         Self::register_record_batch(
             self,
             &data_source,
-            &csv::from_bytes_to_record_batch(data, &options)?,
+            &csv::from_bytes_to_record_batch(data, &None, &options)?,
         )
         .await?;
 
@@ -310,7 +321,7 @@ impl Session for ConcurrentSessionContext {
                 json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?
             }
             DataSourceFormat::NdJson => {
-                nd_json_file::to_record_batch(&file_path, &data_source.schema, &options)?
+                nd_json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?
             }
             _ => {
                 return Err(ResponseError::internal_server_error(
@@ -340,8 +351,12 @@ impl Session for ConcurrentSessionContext {
                 .await?
             }
             DataSourceFormat::NdJson => {
-                nd_json_rest::to_record_batch(&data_source.location, &data_source.schema, &options)
-                    .await?
+                nd_json::from_response_to_record_batch(
+                    &data_source.location,
+                    &data_source.schema,
+                    &options,
+                )
+                .await?
             }
             _ => {
                 return Err(ResponseError::internal_server_error(
@@ -456,6 +471,23 @@ impl Session for ConcurrentSessionContext {
             &parquet::from_file_to_record_batch(&file_path)?,
         )
         .await?;
+
+        Ok(())
+    }
+
+    async fn append_from_parquet_rest(
+        &self,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        let options = match &data_source.options {
+            Some(options) => options.clone(),
+            None => DataSourceOption::new_with_default(),
+        };
+
+        let record_batches =
+            parquet::from_response_to_record_batch(&data_source.location, &options).await?;
+
+        Self::register_record_batch(self, data_source, &record_batches).await?;
 
         Ok(())
     }

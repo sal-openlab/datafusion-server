@@ -16,8 +16,10 @@ use serde::Serialize;
 use crate::context::session_manager::SessionManager;
 #[cfg(feature = "plugin")]
 use crate::plugin::exec_processor;
-use crate::request::body::ResponseFormat;
-use crate::request::{body::SessionQuery, header};
+use crate::request::{
+    body::{ResponseFormat, SessionQuery},
+    header,
+};
 use crate::response::{http_error::ResponseError, http_response, record_batch_stream};
 
 #[derive(Serialize)]
@@ -83,14 +85,48 @@ pub async fn detail<E: SessionManager>(
 }
 
 pub async fn query<E: SessionManager>(
+    content_type: TypedHeader<header::ContentType>,
     accept_header: Option<TypedHeader<header::Accept>>,
     Path(session_id): Path<String>,
     extract::State(session_mgr): extract::State<Arc<tokio::sync::Mutex<E>>>,
-    extract::Json(payload): extract::Json<SessionQuery>,
+    payload: bytes::Bytes,
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing session query responder");
 
-    let (query_lang, format, options) = match payload {
+    if let Ok(content_type) = header::request_format(&content_type) {
+        match &*content_type {
+            "application/json" => {
+                let body: SessionQuery = serde_json::from_slice(&payload)?;
+                Ok(Either::E1(
+                    query_by_json(accept_header, body, &session_mgr, &session_id).await?,
+                ))
+            }
+            "application/sql" => {
+                let sql = String::from_utf8(payload.to_vec()).map_err(|e| {
+                    ResponseError::request_validation(format!("Incorrect request body: {e}"))
+                })?;
+                Ok(Either::E2(
+                    query_by_sql(accept_header, &sql, &session_mgr, &session_id).await?,
+                ))
+            }
+            _ => Err(ResponseError::unsupported_format(format!(
+                "Unsupported content-type: {content_type}"
+            ))),
+        }
+    } else {
+        Err(ResponseError::unsupported_format(
+            "Incorrect content-type header",
+        ))
+    }
+}
+
+async fn query_by_json<E: SessionManager>(
+    accept_header: Option<TypedHeader<header::Accept>>,
+    body: SessionQuery,
+    session_mgr: &tokio::sync::Mutex<E>,
+    session_id: &str,
+) -> Result<impl IntoResponse, ResponseError> {
+    let (query_lang, format, options) = match body {
         SessionQuery::Query(query) => (
             query,
             http_response::response_format(&None, &accept_header)?,
@@ -112,34 +148,59 @@ pub async fn query<E: SessionManager>(
 
     if buffered || format != ResponseFormat::Arrow {
         #[cfg(feature = "plugin")]
-        let mut record_batches: Vec<RecordBatch>;
+        let mut batches: Vec<RecordBatch>;
         #[cfg(not(feature = "plugin"))]
-        let record_batches: Vec<RecordBatch>;
+        let batches: Vec<RecordBatch>;
         {
-            record_batches = session_mgr
+            batches = session_mgr
                 .lock()
                 .await
-                .execute_sql(&session_id, &query_lang.sql)
+                .execute_sql(session_id, &query_lang.sql)
                 .await?;
         }
 
         #[cfg(feature = "plugin")]
         if let Some(processors) = query_lang.post_processors {
-            record_batches = exec_processor::post_processors(processors, record_batches)?;
+            batches = exec_processor::post_processors(processors, batches)?;
         }
 
         Ok(Either::E1(http_response::buffered_stream_responder(
-            &record_batches,
-            &format,
-            &options,
-        )))
+            &batches, &format, &options,
+        )?))
     } else {
-        let batch_stream = session_mgr
+        let stream = session_mgr
             .lock()
             .await
-            .execute_sql_stream(&session_id, &query_lang.sql)
+            .execute_sql_stream(session_id, &query_lang.sql)
             .await?;
 
-        Ok(Either::E2(record_batch_stream::to_response(batch_stream)?))
+        Ok(Either::E2(record_batch_stream::to_response(stream)?))
     }
+}
+
+async fn query_by_sql<E: SessionManager>(
+    accept_header: Option<TypedHeader<header::Accept>>,
+    sql: &str,
+    session_mgr: &tokio::sync::Mutex<E>,
+    session_id: &str,
+) -> Result<impl IntoResponse, ResponseError> {
+    let format = http_response::response_format(&None, &accept_header)?;
+
+    Ok(if format == ResponseFormat::Arrow {
+        let stream = session_mgr
+            .lock()
+            .await
+            .execute_sql_stream(session_id, sql)
+            .await?;
+        Either::E1(record_batch_stream::to_response(stream)?)
+    } else {
+        let batches = session_mgr
+            .lock()
+            .await
+            .execute_sql(session_id, sql)
+            .await?;
+        Either::E2(http_response::buffered_stream_responder(
+            &batches, &format, &None,
+        )?)
+    })
 }

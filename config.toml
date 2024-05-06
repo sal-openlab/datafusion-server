@@ -2,12 +2,14 @@
 
 [server]
 port = 4000
+flight_grpc_port = 50051
 base_url = "/"
 data_dir = "./data"
 plugin_dir = "./plugins"
 
 [session]
 default_keep_alive = 3600 # in seconds
+upload_limit_size = 20 # 20MB
 
 [log]
 # trace, debug, info, warn, error

@@ -4,7 +4,7 @@ exclude = ["bin", "example"]
 resolver = "2"
 
 [workspace.package]
-version = "0.12.1"
+version = "0.13.0"
 license = "MIT"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
 keywords = ["web", "sql", "arrow", "flight", "datafusion"]

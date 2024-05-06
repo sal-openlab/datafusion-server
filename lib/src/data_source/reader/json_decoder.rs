@@ -36,7 +36,7 @@ pub struct DecoderOptions {
     batch_size: usize,
     /// Optional projection for which columns to load (case-sensitive names)
     projection: Option<Vec<String>>,
-    /// optional HashMap of column name to its format string
+    /// optional `HashMap` of column name to its format string
     format_strings: Option<HashMap<String, String>>,
 }
 

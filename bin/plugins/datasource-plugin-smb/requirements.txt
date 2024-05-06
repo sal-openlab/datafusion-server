@@ -1,0 +1,2 @@
+smbprotocol[kerberos]~=1.13.0
+pyarrow~=14.0.1

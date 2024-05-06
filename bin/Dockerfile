@@ -1,4 +1,4 @@
-FROM rust:1.77 as builder
+FROM rust:1.78 as builder
 
 ENV PYTHON_VERSION=3.11.9
 ENV PYTHON_HOME=/opt/python
@@ -26,7 +26,8 @@ RUN curl -O https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_
  && ldconfig \
  && PATH=$PYTHON_HOME/bin:$PATH \
  && pip3 install --no-cache-dir "requests==2.31.0" \
- && pip3 install --no-cache-dir "pandas[performance,excel,pyarrow]==2.2.1" \
+ && pip3 install --no-cache-dir "pandas[performance,excel,pyarrow]==2.2.2" \
+ && pip3 install --no-cache-dir "smbprotocol[kerberos]==1.13.0" \
  && find $PYTHON_HOME -depth \
       \( \
           \( -type d -a \( -name test -o -name tests -o -name idle_test \) \) \
@@ -58,7 +59,7 @@ COPY ./bin/plugins /usr/local/datafusion-server/plugins
 COPY ./bin/config-release.toml /etc/datafusion-server-config.toml
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates dumb-init \
+ && apt-get install -y --no-install-recommends ca-certificates libkrb5-dev dumb-init \
  && echo "$PYTHON_HOME/lib" > /etc/ld.so.conf.d/python.conf \
  && ldconfig \
  && apt-get autoremove -y \

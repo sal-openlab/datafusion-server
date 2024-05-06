@@ -89,6 +89,16 @@ impl From<http::Error> for ResponseError {
     }
 }
 
+impl From<serde_json::Error> for ResponseError {
+    fn from(e: serde_json::Error) -> Self {
+        ResponseError {
+            error: "json_deserialization".to_string(),
+            message: e.to_string(),
+            code: http::StatusCode::BAD_REQUEST,
+        }
+    }
+}
+
 impl axum::response::IntoResponse for ResponseError {
     fn into_response(self) -> axum::response::Response {
         let payload = serde_json::to_string(&self).unwrap();
