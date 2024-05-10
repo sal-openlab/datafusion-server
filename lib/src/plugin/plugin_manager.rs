@@ -40,12 +40,14 @@ impl PluginManager {
         Ok(Self { plugin_map })
     }
 
+    #[cfg(feature = "plugin")]
     pub fn global() -> &'static PluginManager {
         PLUGIN_MANAGER
             .get()
             .expect("Can not initialize plugin manager")
     }
 
+    #[cfg(feature = "plugin")]
     pub fn registered_schemes(&self) -> Vec<String> {
         self.plugin_map.scheme_py_map.keys().cloned().collect()
     }

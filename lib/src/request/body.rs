@@ -150,14 +150,7 @@ impl DataSource {
         let scheme = location_uri::scheme(&uri)?;
 
         match self.format {
-            DataSourceFormat::Csv => {
-                if scheme.remote_source() {
-                    return Err(ResponseError::unsupported_type(format!(
-                        "Not supported data source, CSV with remote location '{}'",
-                        self.location
-                    )));
-                }
-            }
+            DataSourceFormat::Csv => {}
             DataSourceFormat::Json => {}
             DataSourceFormat::NdJson => {
                 if self.options.is_some() && self.options.as_ref().unwrap().json_path.is_some() {
@@ -166,14 +159,7 @@ impl DataSource {
                     ));
                 }
             }
-            DataSourceFormat::Parquet => {
-                if scheme.remote_source() {
-                    return Err(ResponseError::unsupported_type(format!(
-                        "Not supported data source, Parquet with remote location '{}'",
-                        self.location
-                    )));
-                }
-            }
+            DataSourceFormat::Parquet => {}
             DataSourceFormat::Arrow => {
                 if scheme == SupportedScheme::File {
                     return Err(ResponseError::unsupported_type(

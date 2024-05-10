@@ -84,7 +84,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.13.0
+    datafusion-server:0.13.1
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -112,7 +112,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.13.0"
+datafusion-server = "0.13.1"
 ```
 
 #### Example of src/main.rs
@@ -127,12 +127,12 @@ use datafusion_server::settings::Settings;
 #[clap(author, version, about = "Arrow and other large datasets web server", long_about = None)]
 struct Args {
     #[clap(
-    long,
-    value_parser,
-    short = 'f',
-    value_name = "FILE",
-    help = "Configuration file",
-    default_value = "./config.toml"
+        long,
+        value_parser,
+        short = 'f',
+        value_name = "FILE",
+        help = "Configuration file",
+        default_value = "./config.toml"
     )]
     config: PathBuf,
 }
@@ -189,7 +189,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.13.0", features = ["plugin"] }
+datafusion-server = { version = "0.13.1", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -215,7 +215,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.13.0", features = ["plugin"] }
+datafusion-server = { version = "0.13.1", features = ["plugin"] }
 ```
 
 #### Build for release

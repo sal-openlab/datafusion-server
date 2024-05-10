@@ -2,18 +2,22 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
-use crate::response::http_error::ResponseError;
-use axum::http::uri::{InvalidUri, Parts, Uri};
 use std::collections::HashMap;
+
+use axum::http::uri::{InvalidUri, Parts, Uri};
 use thiserror::Error;
+
+#[cfg(feature = "plugin")]
+use crate::plugin::plugin_manager::PluginManager;
+use crate::response::http_error::ResponseError;
 
 #[derive(Error, Debug)]
 pub enum InvalidLocation {
-    #[error("Incorrect URI Format")]
+    #[error("Incorrect URI format")]
     IncorrectUriFormat(#[from] InvalidUri),
-
-    #[cfg(not(feature = "plugin"))]
-    #[error("Unsupported Scheme")]
+    #[error("Missing scheme")]
+    MissingScheme,
+    #[error("Unsupported scheme")]
     UnsupportedScheme,
 }
 
@@ -27,7 +31,7 @@ pub enum SupportedScheme {
     #[cfg(feature = "flight")]
     GrpcTls,
     #[cfg(feature = "plugin")]
-    WillPlugin,
+    Plugin,
 }
 
 impl SupportedScheme {
@@ -47,19 +51,31 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
         return Ok(SupportedScheme::File);
     }
 
-    let scheme = &parts.scheme;
-    match &*scheme.as_ref().unwrap().to_string() {
-        "http" => Ok(SupportedScheme::Http),
-        "https" => Ok(SupportedScheme::Https),
-        "file" => Ok(SupportedScheme::File),
-        #[cfg(feature = "flight")]
-        "grpc" => Ok(SupportedScheme::Grpc),
-        #[cfg(feature = "flight")]
-        "grpc+tls" => Ok(SupportedScheme::GrpcTls),
-        #[cfg(feature = "plugin")]
-        _ => Ok(SupportedScheme::WillPlugin),
-        #[cfg(not(feature = "plugin"))]
-        _ => Err(InvalidLocation::UnsupportedScheme.into()),
+    if let Some(scheme) = &parts.scheme {
+        match &*scheme.to_string() {
+            "http" => Ok(SupportedScheme::Http),
+            "https" => Ok(SupportedScheme::Https),
+            "file" => Ok(SupportedScheme::File),
+            #[cfg(feature = "flight")]
+            "grpc" => Ok(SupportedScheme::Grpc),
+            #[cfg(feature = "flight")]
+            "grpc+tls" => Ok(SupportedScheme::GrpcTls),
+            #[cfg(feature = "plugin")]
+            _ => {
+                if PluginManager::global()
+                    .registered_schemes()
+                    .contains(&scheme.to_string())
+                {
+                    Ok(SupportedScheme::Plugin)
+                } else {
+                    Err(InvalidLocation::UnsupportedScheme.into())
+                }
+            }
+            #[cfg(not(feature = "plugin"))]
+            _ => Err(InvalidLocation::UnsupportedScheme.into()),
+        }
+    } else {
+        Err(InvalidLocation::MissingScheme.into())
     }
 }
 

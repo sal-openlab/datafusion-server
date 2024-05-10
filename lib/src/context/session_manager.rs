@@ -19,7 +19,6 @@ use crate::request::body::{
     DataSource, DataSourceFormat, MergeDirection, MergeOption, MergeProcessor,
 };
 use crate::response::{handler, http_error::ResponseError};
-use crate::PluginManager;
 
 #[derive(Clone)]
 pub struct SessionContextManager {
@@ -304,69 +303,54 @@ impl SessionManager for SessionContextManager {
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
-        let plugin_source = |uri: &uri::Parts| -> bool {
-            let plugin_schemes = PluginManager::global().registered_schemes();
-            plugin_schemes.contains(&uri.scheme.as_ref().unwrap().to_string())
-        };
-
         let uri = location_uri::to_parts(&data_source.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
-
         let scheme = location_uri::scheme(&uri)?;
 
         data_source.validator()?;
 
         #[cfg(feature = "plugin")]
-        if scheme == SupportedScheme::WillPlugin && !plugin_source(&uri) {
-            use std::str::FromStr;
-            return Err(ResponseError::request_validation(format!(
-                "Unsupported scheme '{}'",
-                &uri.scheme
-                    .unwrap_or_else(|| uri::Scheme::from_str("unknown").unwrap())
-            )));
-        }
-
-        if !scheme.remote_source() && plugin_source(&uri) {
-            #[cfg(feature = "plugin")]
+        if scheme == SupportedScheme::Plugin {
             self.append_connector_plugin(session_id, data_source)
                 .await?;
-        } else {
-            match data_source.format {
-                DataSourceFormat::Csv => {
-                    if scheme.remote_source() {
-                        self.append_csv_rest(session_id, data_source).await?;
-                    } else {
-                        self.append_csv_file(session_id, data_source).await?;
-                    }
+            return Ok(());
+        }
+
+        match data_source.format {
+            DataSourceFormat::Csv => {
+                if scheme.remote_source() {
+                    self.append_csv_rest(session_id, data_source).await?;
+                } else {
+                    self.append_csv_file(session_id, data_source).await?;
                 }
-                DataSourceFormat::Parquet => {
-                    if scheme.remote_source() {
-                        self.append_parquet_rest(session_id, data_source).await?;
-                    } else {
-                        self.append_parquet_file(session_id, data_source).await?;
-                    }
+            }
+            DataSourceFormat::Parquet => {
+                if scheme.remote_source() {
+                    self.append_parquet_rest(session_id, data_source).await?;
+                } else {
+                    self.append_parquet_file(session_id, data_source).await?;
                 }
-                DataSourceFormat::Json | DataSourceFormat::NdJson => {
-                    if scheme.remote_source() {
-                        self.append_json_rest(session_id, data_source).await?;
-                    } else {
-                        self.append_json_file(session_id, data_source).await?;
-                    }
+            }
+            DataSourceFormat::Json | DataSourceFormat::NdJson => {
+                if scheme.remote_source() {
+                    self.append_json_rest(session_id, data_source).await?;
+                } else {
+                    self.append_json_file(session_id, data_source).await?;
                 }
-                DataSourceFormat::Arrow => {
-                    // MEMO: will not to be reached this control path
-                    return Err(ResponseError::request_validation(
+            }
+            DataSourceFormat::Arrow => {
+                // MEMO: will not to be reached this control path
+                return Err(ResponseError::request_validation(
                         "Invalid data source scheme 'arrow', use 'csv', 'json', 'ndJson' and 'parquet'.",
                     ));
-                }
-                #[cfg(feature = "avro")]
-                DataSourceFormat::Avro => {
-                    self.append_avro_file(session_id, data_source).await?;
-                }
-                #[cfg(feature = "flight")]
-                DataSourceFormat::Flight => {
-                    self.append_flight_stream(session_id, data_source).await?;
-                }
+            }
+            #[cfg(feature = "avro")]
+            DataSourceFormat::Avro => {
+                self.append_avro_file(session_id, data_source).await?;
+            }
+            #[cfg(feature = "flight")]
+            DataSourceFormat::Flight => {
+                self.append_flight_stream(session_id, data_source).await?;
             }
         }
 

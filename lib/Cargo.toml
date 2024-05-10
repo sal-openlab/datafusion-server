@@ -21,8 +21,8 @@ flight = ["arrow-flight", "tonic"]
 avro = ["datafusion/avro"]
 
 [dependencies]
-anyhow = "1.0.82"
-thiserror = "1.0.59"
+anyhow = "1.0.83"
+thiserror = "1.0.60"
 once_cell = "1.19.0"
 config = "0.14.0"
 regex = "1.10.3"
@@ -30,9 +30,9 @@ bytes = "1.6.0"
 http-body = "1.0.0"
 log = { version = "0.4.21", features = ["std"] }
 simple_logger = { version = "5.0.0", features = ["timestamps"] }
-serde = { version = "1.0.200", features = ["derive"] }
-serde_derive = "1.0.200"
-serde_json = { version = "1.0.116", features = ["preserve_order"] }
+serde = { version = "1.0.201", features = ["derive"] }
+serde_derive = "1.0.201"
+serde_json = { version = "1.0.117", features = ["preserve_order"] }
 num-traits = "0.2.19"
 chrono = { version = "0.4.38", default-features = false, features = ["std", "clock"] }
 jsonpath-rust = "0.5.1"

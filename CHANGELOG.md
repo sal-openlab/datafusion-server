@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.13.1 (2024-05-10)
+
+* Fixed an issue where locations for Parquet and CSV formats were not functioning correctly over http(s)
+
 ## 0.13.0 (2024-05-06)
 
 * Generalized the transport layer across various data source formats including data source

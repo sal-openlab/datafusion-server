@@ -13,6 +13,7 @@ use datafusion::arrow::{
 };
 
 use crate::data_source::schema::DataSourceSchema;
+use crate::data_source::transport::http;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 
@@ -30,11 +31,10 @@ pub async fn from_response_to_record_batch(
     schema: &Option<DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
-    let response = reqwest::get(uri)
-        .await
-        .map_err(ResponseError::http_request)?
-        .bytes()
-        .await?;
+    let response = match http::get(uri, options, http::ResponseDataType::Binary).await? {
+        http::ResponseData::Text(_) => bytes::Bytes::new(),
+        http::ResponseData::Binary(data) => data,
+    };
     to_record_batch(Cursor::new(response), schema, options)
 }
 
