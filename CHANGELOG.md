@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.13.2 (2024-05-11) - Quick patch to keep up with the DataFusion crate
+
+* Updates to DataFusion v38.0.0
+    + https://github.com/apache/datafusion/blob/main/dev/changelog/38.0.0.md
+* Accepts named session identifier in `/session/create` endpoint
+    + It is now possible to specify any arbitrary identifier string instead of
+      the generated UUID for the session ID
+    + If the `id` query parameter is omitted, the behavior will be the same as before
+
+```sh
+$ curl http://127.0.0.1:4000/session/create?id=example-session1
+```
+
+This allows for session access using a named identifier.
+
+```sh
+$ curl -X POST http://127.0.0.1:4000/session/example-session1/query \
+     -H 'Content-Type: application/sql'
+     ...
+```
+
 ## 0.13.1 (2024-05-10)
 
 * Fixed an issue where locations for Parquet and CSV formats were not functioning correctly over http(s)

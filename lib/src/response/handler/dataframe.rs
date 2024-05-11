@@ -31,7 +31,9 @@ pub async fn query_responder<S: SessionManager>(
         .unwrap_or(60);
 
     let session_mgr = session_mgr.lock().await;
-    let session_id = session_mgr.create_new_session(None, Some(keep_alive)).await;
+    let session_id = session_mgr
+        .create_new_session(None, Some(keep_alive), None)
+        .await?;
 
     session_mgr
         .append_data_sources(&session_id, &payload.data_sources)

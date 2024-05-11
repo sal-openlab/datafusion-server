@@ -7,25 +7,29 @@ info:
   version: 1.0.0
 
 tags:
-  - name: Arrow
-    description: Non query Arrow responder
-  - name: JSON
-    description: Non query JSON responder
   - name: DataFrame
     description: Query based Arrow, JSON and CSV responder
   - name: Session
     description: Session context
   - name: Data Source
+    description: Data sources definition for session context
+  - name: Processor
+    description: Processors for session context
+  - name: Query
     description: Session based context query
   - name: System
     description: Other system APIs
+  - name: Arrow
+    description: Non query Arrow responder (Deprecated)
+  - name: JSON
+    description: Non query JSON responder (Deprecated)
 
 paths:
   /arrow/csv/{fileName}:
     get:
       tags:
         - Arrow
-      summary: Gets CSV file into Arrow response format
+      summary: Gets CSV file into Arrow response format **(Deprecated)**
       description: Single CSV file can only provided.
       operationId: arrowCsv
       parameters:
@@ -83,7 +87,7 @@ paths:
     get:
       tags:
         - Arrow
-      summary: Gets parquet file into Arrow response format
+      summary: Gets parquet file into Arrow response format **(Deprecated)**
       description: Single parquet file can only provided.
       operationId: arrowParquet
       parameters:
@@ -111,7 +115,7 @@ paths:
     get:
       tags:
         - JSON
-      summary: Gets JSON file into Arrow response format
+      summary: Gets JSON file into Arrow response format **(Deprecated)**
       description: Single parquet file can only provided.
       operationId: jsonCsv
       parameters:
@@ -135,6 +139,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/error400'
+
   /dataframe/query:
     post:
       tags:
@@ -294,10 +299,19 @@ paths:
       parameters:
         - name: keepAlive
           in: query
-          description: Sets the session keep alive time in seconds, default is `3600`.
+          description: |
+            * Sets the session keep alive time in seconds, default is `3600`.
+            * To be changed parameter name to `keep-alive` near the future.
           schema:
             type: number
           example: 1800
+        - name: id
+          in: query
+          description: |
+            * Named session identifier, default is generated UUID.
+          schema:
+            type: string
+          example: example-session1
       responses:
         '200':
           description: Successful operation

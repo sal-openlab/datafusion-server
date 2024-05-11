@@ -48,6 +48,6 @@ axum = { version = "0.7.5", features = ["multipart"] }
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
 multer = { version = "3.1.0" }
 mime = { version = "0.3.17" }
-datafusion = { version = "37.1.0" }
+datafusion = { version = "38.0.0" }
 arrow-flight = { version = "51.0.0", optional = true }
 pyo3 = { version = "0.20.3", optional = true }

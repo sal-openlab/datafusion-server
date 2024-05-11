@@ -53,10 +53,13 @@ pub async fn create<E: SessionManager>(
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing create session handler");
 
+    let session_id = params.get("id");
     let keep_alive = params.get("keepAlive").and_then(|v| v.parse::<i64>().ok());
 
     let session_mgr = session_mgr.lock().await;
-    let new_session_id = session_mgr.create_new_session(None, keep_alive).await;
+    let new_session_id = session_mgr
+        .create_new_session(session_id, keep_alive, None)
+        .await?;
 
     Ok(axum::Json(session_mgr.session(&new_session_id).await?))
 }

@@ -38,9 +38,10 @@ impl SessionContextManager {
 pub trait SessionManager: Send + Sync + 'static {
     async fn create_new_session(
         &self,
-        config: Option<SessionConfig>,
+        id: Option<&String>,
         keep_alive: Option<i64>,
-    ) -> String;
+        config: Option<SessionConfig>,
+    ) -> Result<String, ResponseError>;
     async fn destroy_session(&self, session_id: &str) -> Result<(), ResponseError>;
     async fn cleanup(&self);
     async fn session_ids(&self) -> Vec<String>;
@@ -203,21 +204,39 @@ macro_rules! context {
 impl SessionManager for SessionContextManager {
     async fn create_new_session(
         &self,
-        config: Option<SessionConfig>,
+        id: Option<&String>,
         keep_alive: Option<i64>,
-    ) -> String {
-        let context = match config {
-            Some(config) => {
-                ConcurrentSessionContext::new(SessionContext::new_with_config(config, keep_alive))
-            }
-            None => ConcurrentSessionContext::new(SessionContext::new(keep_alive)),
+        config: Option<SessionConfig>,
+    ) -> Result<String, ResponseError> {
+        log::debug!(
+            "Creating new session: id={id:?}, keep_alive={keep_alive:?}, config={config:?}"
+        );
+
+        let context = if let Some(config) = config {
+            ConcurrentSessionContext::new(SessionContext::new_with_config(config, keep_alive))
+        } else {
+            ConcurrentSessionContext::new(SessionContext::new(keep_alive))
         };
 
-        let session_id = context.id().await;
+        let session_id = if let Some(id) = id {
+            id.clone()
+        } else {
+            context.id().await
+        };
+
+        {
+            let contexts = self.contexts.read().await;
+            if contexts.contains_key(&session_id) {
+                return Err(ResponseError::request_validation(format!(
+                    "Duplicated session id: {session_id}"
+                )));
+            }
+        }
+
         let mut contexts = self.contexts.write().await;
         contexts.insert(session_id.clone(), context);
 
-        session_id
+        Ok(session_id)
     }
 
     async fn destroy_session(&self, session_id: &str) -> Result<(), ResponseError> {
@@ -258,7 +277,7 @@ impl SessionManager for SessionContextManager {
     async fn session(&self, session_id: &str) -> Result<handler::session::Session, ResponseError> {
         match self.contexts.read().await.get(session_id) {
             Some(context) => Ok(handler::session::Session {
-                id: context.id().await.clone(),
+                id: session_id.to_string(),
                 created: context
                     .session_start_time()
                     .await

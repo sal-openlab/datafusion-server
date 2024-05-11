@@ -84,7 +84,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.13.1
+    datafusion-server:0.13.2
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -112,7 +112,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.13.1"
+datafusion-server = "0.13.2"
 ```
 
 #### Example of src/main.rs
@@ -189,7 +189,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.13.1", features = ["plugin"] }
+datafusion-server = { version = "0.13.2", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -215,7 +215,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.13.1", features = ["plugin"] }
+datafusion-server = { version = "0.13.2", features = ["plugin"] }
 ```
 
 #### Build for release
@@ -306,7 +306,7 @@ $ curl -X "POST" "http://localhost:4000/dataframe/query" \
       "format": "arrow",
       "name": "example",
       "location": "excel://example-workbook.xlsx/Sheet1",
-      "options": {
+      "pluginOptions": {
         "skipRows": 2
       }
     }
