@@ -1,4 +1,4 @@
-// write/json_file.rs - Native JSON file writer
+// local_fs/json_file.rs - Native JSON file writer
 // Sasaki, Naoki <nsasaki@sal.co.jp> May 4, 2023
 //
 

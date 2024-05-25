@@ -6,9 +6,9 @@ use datafusion::arrow::record_batch::RecordBatch;
 use pyo3::types::PyBytes;
 use pyo3::{Py, PyAny, PyResult, Python};
 
-use crate::data_source::reader::build_record_batch;
+use crate::data_source::decoder::build_record_batch;
 use crate::data_source::{
-    csv, location_uri, nd_json, parquet, schema::DataSourceSchema, with_jsonpath,
+    csv, location, nd_json, parquet, schema::DataSourceSchema, with_jsonpath,
 };
 use crate::request::body::{DataSourceFormat, DataSourceOption, PluginOption};
 use crate::response::http_error::ResponseError;
@@ -22,13 +22,13 @@ pub fn to_record_batch(
     plugin_options: &PluginOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let uri_parts =
-        location_uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
+        location::uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
     let uri_scheme = &uri_parts.scheme.as_ref().unwrap().to_string();
     let authority = &uri_parts.authority.as_ref().unwrap().to_string();
     let (path, query) = if let Some(pq) = &uri_parts.path_and_query {
         (
             Some(pq.path()),
-            Some(location_uri::to_map(pq.query().unwrap_or(""))),
+            Some(location::uri::to_map(pq.query().unwrap_or(""))),
         )
     } else {
         (None, None)

@@ -1,4 +1,4 @@
-// context/location_uri - Location of data sources
+// data_source/location/uri.rs - Location of data sources
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
@@ -26,6 +26,8 @@ pub enum SupportedScheme {
     Http,
     Https,
     File,
+    S3,
+    GS,
     #[cfg(feature = "flight")]
     Grpc,
     #[cfg(feature = "flight")]
@@ -35,6 +37,10 @@ pub enum SupportedScheme {
 }
 
 impl SupportedScheme {
+    pub fn handle_object_store(&self) -> bool {
+        matches!(self, Self::File | Self::S3 | Self::GS)
+    }
+
     pub fn remote_source(&self) -> bool {
         match self {
             Self::Http | Self::Https => true,
@@ -56,6 +62,8 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
             "http" => Ok(SupportedScheme::Http),
             "https" => Ok(SupportedScheme::Https),
             "file" => Ok(SupportedScheme::File),
+            "s3" => Ok(SupportedScheme::S3),
+            "gs" => Ok(SupportedScheme::GS),
             #[cfg(feature = "flight")]
             "grpc" => Ok(SupportedScheme::Grpc),
             #[cfg(feature = "flight")]
@@ -94,7 +102,7 @@ pub fn to_file_path_and_name(uri: &str) -> anyhow::Result<String> {
 
 pub fn to_parts(uri: &str) -> anyhow::Result<Parts> {
     let parts = uri
-        .replacen("file:///", "file://_/", 1)
+        .replacen("file:///", "file://./", 1)
         .parse::<Uri>()?
         .into_parts();
     Ok(parts)
@@ -122,24 +130,32 @@ pub fn to_map(query: &str) -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::data_source::location_uri;
+    use crate::data_source::location;
 
     #[test]
     fn valid_full_qualified_uri() {
         let s = "http://authority:8080/path/foo";
-        let uri = location_uri::to_parts(s).unwrap();
+        let uri = location::uri::to_parts(s).unwrap();
         assert_eq!(uri.authority.unwrap().as_str(), "authority:8080");
         assert_eq!(uri.path_and_query.unwrap().as_str(), "/path/foo");
     }
 
     #[test]
+    fn valid_s3_bucket() {
+        let s = "s3://bucket/path/to/file.csv";
+        let uri = location::uri::to_parts(s).unwrap();
+        assert_eq!(uri.authority.unwrap().as_str(), "bucket");
+        assert_eq!(uri.path_and_query.unwrap().as_str(), "/path/to/file.csv");
+    }
+
+    #[test]
     fn valid_full_qualified_uri_with_query() {
         let s = "http://authority:8080/path?foo=bar&baz";
-        let uri = location_uri::to_parts(s).unwrap();
+        let uri = location::uri::to_parts(s).unwrap();
         let pq = uri.path_and_query.unwrap();
         assert_eq!(pq.path(), "/path");
         assert_eq!(pq.query().unwrap(), "foo=bar&baz");
-        let q = location_uri::to_map(pq.query().unwrap());
+        let q = location::uri::to_map(pq.query().unwrap());
         assert_eq!(q.get("foo").unwrap(), "bar");
         assert_eq!(q.get("baz").unwrap(), "true");
     }
@@ -147,42 +163,49 @@ mod tests {
     #[test]
     fn valid_full_qualified_uri_without_query() {
         let s = "http://authority:8080/path/foo";
-        let uri = location_uri::to_parts(s).unwrap();
+        let uri = location::uri::to_parts(s).unwrap();
         let pq = uri.path_and_query.unwrap();
         assert_eq!(pq.query(), None);
-        let q = location_uri::to_map(pq.query().unwrap_or(""));
+        let q = location::uri::to_map(pq.query().unwrap_or(""));
         assert_eq!(q.len(), 0);
     }
 
     #[test]
     fn valid_file_uri() {
         let s = "file:///file.json";
-        let uri = location_uri::to_parts(s).unwrap();
-        let method = location_uri::scheme(&uri).unwrap();
-        assert_eq!(method, location_uri::SupportedScheme::File);
+        let uri = location::uri::to_parts(s).unwrap();
+        let scheme = location::uri::scheme(&uri).unwrap();
+        assert_eq!(scheme, location::uri::SupportedScheme::File);
         assert_eq!(uri.path_and_query.unwrap().as_str(), "/file.json");
     }
 
     #[test]
     fn valid_file_with_path_uri() {
         let s = "file:///path/file.json";
-        let uri = location_uri::to_file_path_and_name(s).unwrap();
+        let uri = location::uri::to_file_path_and_name(s).unwrap();
         assert_eq!(uri.as_str(), "path/file.json");
     }
 
     #[test]
     fn valid_method_with_file_only() {
         let s = "file:///file.json";
-        let uri = location_uri::to_file_path_and_name(s).unwrap();
+        let uri = location::uri::to_file_path_and_name(s).unwrap();
         assert_eq!(uri.as_str(), "file.json");
     }
 
     #[test]
+    fn no_supported_relative_file_path() {
+        let s = "file://file.json";
+        let uri = location::uri::to_file_path_and_name(s).unwrap();
+        assert_eq!(uri.as_str(), "");
+    }
+
+    #[test]
     fn valid_file_only_uri() {
-        let s = "/filename.json"; // can be omitted `file://` in this case
-        let uri = location_uri::to_parts(s).unwrap();
-        let method = location_uri::scheme(&uri).unwrap();
-        assert_eq!(method, location_uri::SupportedScheme::File);
-        assert_eq!(uri.path_and_query.unwrap().as_str(), "/filename.json");
+        let s = "/file.json"; // can be omitted `file://` in this case
+        let uri = location::uri::to_parts(s).unwrap();
+        let scheme = location::uri::scheme(&uri).unwrap();
+        assert_eq!(scheme, location::uri::SupportedScheme::File);
+        assert_eq!(uri.path_and_query.unwrap().as_str(), "/file.json");
     }
 }

@@ -102,10 +102,13 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
                     [
                         pa.field("foo", pa.string()),
                         pa.field("bar", pa.int64()),
-                        pa.field("col_vector", pa.list_(pa.int32())),
+                        pa.field("col_list", pa.list_(pa.int32())),
                         pa.field(
-                            "col_map",
-                            pa.map_(pa.string(), pa.float32()),
+                            "col_struct",
+                            pa.struct([
+                                pa.field("key1", pa.string()),
+                                pa.field("key2", pa.float32()),
+                            ]),
                         ),
                     ]
                 )
@@ -115,14 +118,20 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
         # prepares columnar data
         foo = pa.array(["hello - arrow", "world"])
         bar = pa.array([12345, 67890])
-        col_vector = pa.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
-        col_map = pa.array(
-            [[{"key": "key1", "value": 123.4}], [{"key": "key2", "value": 567.8}]],
-            type=pa.map_(pa.string(), pa.float32())
-        )
+        col_list = pa.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
+
+        data = [
+            {"key1": "value1", "key2": 1.1},
+            {"key1": "value2", "key2": 2.2},
+        ]
+
+        col_struct = pa.array(data, type=pa.struct([
+            pa.field("key1", pa.string()),
+            pa.field("key2", pa.float32())
+        ]))
 
         # creates RecordBatch and return
-        return pa.record_batch([foo, bar, col_vector, col_map], schema=schema)
+        return pa.record_batch([foo, bar, col_list, col_struct], schema=schema)
 
     else:
         raise ValueError("Unsupported format: " + response_format)

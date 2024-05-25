@@ -11,3 +11,4 @@ title: Data Source Definition
   + [CSV]({{< ref "/data-source/csv" >}})
   + [Parquet]({{< ref "/data-source/parquet" >}})
   + [Avro]({{< ref "/data-source/avro" >}})
+* [Object Stores]({{< ref "/data-source/object-store" >}})

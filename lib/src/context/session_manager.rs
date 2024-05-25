@@ -6,7 +6,7 @@ use std::cmp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::{async_trait, http::uri};
+use axum::{async_trait, http};
 use datafusion::{
     arrow::record_batch::RecordBatch, dataframe::DataFrame, execution::context::SessionConfig,
     physical_plan::SendableRecordBatchStream,
@@ -14,7 +14,7 @@ use datafusion::{
 use tokio::sync::RwLock;
 
 use crate::context::session::{ConcurrentSessionContext, Session, SessionContext};
-use crate::data_source::{location_uri, location_uri::SupportedScheme, schema::DataSourceSchema};
+use crate::data_source::{location, schema::DataSourceSchema};
 use crate::request::body::{
     DataSource, DataSourceFormat, MergeDirection, MergeOption, MergeProcessor,
 };
@@ -80,7 +80,7 @@ pub trait SessionManager: Send + Sync + 'static {
     async fn refresh_data_source(&self, session_id: &str, name: &str) -> Result<(), ResponseError>;
     async fn remove_data_source(&self, session_id: &str, name: &str) -> Result<(), ResponseError>;
 
-    async fn append_csv_file(
+    async fn append_from_object_store(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -118,13 +118,6 @@ pub trait SessionManager: Send + Sync + 'static {
         data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
 
-    #[cfg(feature = "avro")]
-    async fn append_avro_file(
-        &self,
-        session_id: &str,
-        data_source: &DataSource,
-    ) -> Result<(), ResponseError>;
-
     #[cfg(feature = "flight")]
     async fn append_flight_stream(
         &self,
@@ -134,12 +127,6 @@ pub trait SessionManager: Send + Sync + 'static {
 
     #[cfg(feature = "plugin")]
     async fn append_connector_plugin(
-        &self,
-        session_id: &str,
-        data_source: &DataSource,
-    ) -> Result<(), ResponseError>;
-
-    async fn append_parquet_file(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -213,9 +200,9 @@ impl SessionManager for SessionContextManager {
         );
 
         let context = if let Some(config) = config {
-            ConcurrentSessionContext::new(SessionContext::new_with_config(config, keep_alive))
+            ConcurrentSessionContext::new(SessionContext::new_with_config(config, keep_alive)?)
         } else {
-            ConcurrentSessionContext::new(SessionContext::new(keep_alive))
+            ConcurrentSessionContext::new(SessionContext::new(keep_alive)?)
         };
 
         let session_id = if let Some(id) = id {
@@ -322,14 +309,14 @@ impl SessionManager for SessionContextManager {
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
-        let uri = location_uri::to_parts(&data_source.location)
+        let uri = location::uri::to_parts(&data_source.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
-        let scheme = location_uri::scheme(&uri)?;
+        let scheme = location::uri::scheme(&uri)?;
 
         data_source.validator()?;
 
         #[cfg(feature = "plugin")]
-        if scheme == SupportedScheme::Plugin {
+        if scheme == location::uri::SupportedScheme::Plugin {
             self.append_connector_plugin(session_id, data_source)
                 .await?;
             return Ok(());
@@ -337,20 +324,37 @@ impl SessionManager for SessionContextManager {
 
         match data_source.format {
             DataSourceFormat::Csv => {
-                if scheme.remote_source() {
-                    self.append_csv_rest(session_id, data_source).await?;
+                if scheme.handle_object_store() {
+                    self.append_from_object_store(session_id, data_source)
+                        .await?;
                 } else {
-                    self.append_csv_file(session_id, data_source).await?;
+                    self.append_csv_rest(session_id, data_source).await?;
+                }
+            }
+            DataSourceFormat::NdJson => {
+                if scheme.handle_object_store() {
+                    self.append_from_object_store(session_id, data_source)
+                        .await?;
+                } else {
+                    self.append_json_rest(session_id, data_source).await?;
                 }
             }
             DataSourceFormat::Parquet => {
-                if scheme.remote_source() {
-                    self.append_parquet_rest(session_id, data_source).await?;
+                if scheme.handle_object_store() {
+                    self.append_from_object_store(session_id, data_source)
+                        .await?;
                 } else {
-                    self.append_parquet_file(session_id, data_source).await?;
+                    self.append_parquet_rest(session_id, data_source).await?;
                 }
             }
-            DataSourceFormat::Json | DataSourceFormat::NdJson => {
+            #[cfg(feature = "avro")]
+            DataSourceFormat::Avro => {
+                if scheme.handle_object_store() {
+                    self.append_from_object_store(session_id, data_source)
+                        .await?;
+                }
+            }
+            DataSourceFormat::Json => {
                 if scheme.remote_source() {
                     self.append_json_rest(session_id, data_source).await?;
                 } else {
@@ -362,10 +366,6 @@ impl SessionManager for SessionContextManager {
                 return Err(ResponseError::request_validation(
                         "Invalid data source scheme 'arrow', use 'csv', 'json', 'ndJson' and 'parquet'.",
                     ));
-            }
-            #[cfg(feature = "avro")]
-            DataSourceFormat::Avro => {
-                self.append_avro_file(session_id, data_source).await?;
             }
             #[cfg(feature = "flight")]
             DataSourceFormat::Flight => {
@@ -393,22 +393,26 @@ impl SessionManager for SessionContextManager {
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
-        let uri = location_uri::to_parts(&data_source.location)
+        let uri = location::uri::to_parts(&data_source.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
-        let scheme = location_uri::scheme(&uri)?;
+        let scheme = location::uri::scheme(&uri)?;
 
-        if scheme != SupportedScheme::File {
+        if data_source.format == DataSourceFormat::Json {
+            context!(self, session_id)?
+                .save_to_file(data_source)
+                .await?;
+        } else if scheme.handle_object_store() {
+            context!(self, session_id)?
+                .save_to_object_store(data_source)
+                .await?;
+        } else {
             use std::str::FromStr;
             return Err(ResponseError::request_validation(format!(
-                "Unsupported scheme '{}' save feature currently supported only from 'file'",
+                "Unsupported scheme '{}' to save feature",
                 &uri.scheme
-                    .unwrap_or_else(|| uri::Scheme::from_str("unknown").unwrap())
+                    .unwrap_or_else(|| http::uri::Scheme::from_str("unknown").unwrap())
             )));
         }
-
-        context!(self, session_id)?
-            .save_to_file(data_source)
-            .await?;
 
         Ok(())
     }
@@ -446,13 +450,13 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
-    async fn append_csv_file(
+    async fn append_from_object_store(
         &self,
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
-            .append_from_csv_file(data_source)
+            .append_from_object_store(data_source)
             .await?;
         Ok(())
     }
@@ -514,18 +518,6 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
-    #[cfg(feature = "avro")]
-    async fn append_avro_file(
-        &self,
-        session_id: &str,
-        data_source: &DataSource,
-    ) -> Result<(), ResponseError> {
-        context!(self, session_id)?
-            .append_from_avro_file(data_source)
-            .await?;
-        Ok(())
-    }
-
     #[cfg(feature = "flight")]
     async fn append_flight_stream(
         &self,
@@ -546,17 +538,6 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_connector_plugin(data_source)
-            .await?;
-        Ok(())
-    }
-
-    async fn append_parquet_file(
-        &self,
-        session_id: &str,
-        data_source: &DataSource,
-    ) -> Result<(), ResponseError> {
-        context!(self, session_id)?
-            .append_from_parquet_file(data_source)
             .await?;
         Ok(())
     }

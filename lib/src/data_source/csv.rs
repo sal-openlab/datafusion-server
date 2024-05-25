@@ -13,6 +13,9 @@ use crate::data_source::transport::http;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 
+#[deprecated(
+    note = "Only used in deprecated endpoints `/arrow/csv/:file` and `/json/csv/:file`, To be removed soon."
+)]
 pub fn from_file_to_record_batch(
     file_path: &str,
     schema: &Option<DataSourceSchema>,

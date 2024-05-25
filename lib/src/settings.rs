@@ -48,10 +48,34 @@ impl Log {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct StorageAws {
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub bucket: String,
+    pub region: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct StorageGcs {
+    pub service_account_key: String,
+    pub bucket: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Storage {
+    Aws(StorageAws),
+    Gcs(StorageGcs),
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct Settings {
     pub server: Server,
     pub session: Session,
     pub log: Log,
+    pub storages: Option<Vec<Storage>>,
 }
 
 pub static LAZY_SETTINGS: OnceCell<Settings> = OnceCell::new();

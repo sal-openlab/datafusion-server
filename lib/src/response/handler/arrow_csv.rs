@@ -29,7 +29,7 @@ pub async fn csv_responder(
     file_path.push(file_name);
     log::debug!("Open CSV file {:?}", file_path.to_str().unwrap());
 
-    let mut options = DataSourceOption::new_with_default();
+    let mut options = DataSourceOption::default();
     options.infer_schema_rows = Some(query_param::usize_or_default(
         params.get("inferSchemaRows"),
         100,

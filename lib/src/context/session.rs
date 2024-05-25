@@ -6,8 +6,6 @@ use std::collections::HashMap;
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
-#[cfg(feature = "avro")]
-use datafusion::datasource::file_format::options::AvroReadOptions;
 use datafusion::{
     arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
     dataframe::DataFrame,
@@ -20,7 +18,7 @@ use tokio::sync::RwLock;
 use crate::data_source::connector_plugin;
 #[cfg(feature = "flight")]
 use crate::data_source::flight_stream;
-use crate::data_source::{csv, json, location_uri, nd_json, parquet, writer};
+use crate::data_source::{csv, json, local_fs, location, nd_json, object_store, parquet};
 #[cfg(feature = "plugin")]
 use crate::request::body::PluginOption;
 use crate::request::body::{
@@ -38,12 +36,18 @@ pub struct SessionContext {
 }
 
 impl SessionContext {
-    pub fn new(keep_alive: Option<i64>) -> Self {
+    pub fn new(keep_alive: Option<i64>) -> Result<Self, ResponseError> {
         Self::new_with_config(context::SessionConfig::default(), keep_alive)
     }
 
-    pub fn new_with_config(config: context::SessionConfig, keep_alive: Option<i64>) -> Self {
+    pub fn new_with_config(
+        config: context::SessionConfig,
+        keep_alive: Option<i64>,
+    ) -> Result<Self, ResponseError> {
         let df_ctx = context::SessionContext::new_with_config(config);
+
+        object_store::registry::register(&df_ctx)?;
+
         let last_accessed_at = Utc::now();
         let data_source_map = HashMap::<String, DataSource>::new();
 
@@ -53,12 +57,12 @@ impl SessionContext {
             Settings::global().session.default_keep_alive
         } * 1000;
 
-        Self {
+        Ok(Self {
             df_ctx,
             last_accessed_at,
             keep_alive,
             data_source_map,
-        }
+        })
     }
 }
 
@@ -83,7 +87,8 @@ pub trait Session: Send + Sync + 'static {
         data_source: &DataSource,
         record_batches: &[RecordBatch],
     ) -> Result<(), ResponseError>;
-    async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
+    async fn append_from_object_store(&self, data_source: &DataSource)
+        -> Result<(), ResponseError>;
     async fn append_from_csv_rest(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn append_from_csv_bytes(
         &self,
@@ -97,8 +102,6 @@ pub trait Session: Send + Sync + 'static {
         name: &str,
         data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
-    #[cfg(feature = "avro")]
-    async fn append_from_avro_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     #[cfg(feature = "flight")]
     async fn append_from_flight_stream(
         &self,
@@ -109,8 +112,6 @@ pub trait Session: Send + Sync + 'static {
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
-    async fn append_from_parquet_file(&self, data_source: &DataSource)
-        -> Result<(), ResponseError>;
     async fn append_from_parquet_rest(&self, data_source: &DataSource)
         -> Result<(), ResponseError>;
     async fn append_from_parquet_bytes(
@@ -118,6 +119,7 @@ pub trait Session: Send + Sync + 'static {
         name: &str,
         data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
+    async fn save_to_object_store(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn save_to_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn remove_data_source(&self, name: &str) -> Result<(), ResponseError>;
     async fn execute_merge_processor(
@@ -197,7 +199,7 @@ impl Session for ConcurrentSessionContext {
 
             let options = match &data_source.options {
                 Some(options) => options.clone(),
-                None => DataSourceOption::new_with_default(),
+                None => DataSourceOption::default(),
             };
 
             if !options.overwrite.unwrap_or(false) {
@@ -254,19 +256,22 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    async fn append_from_csv_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let file_path = create_data_file_path(&data_source.location)?;
-        log::debug!("Reading CSV file {file_path:?}");
+    async fn append_from_object_store(
+        &self,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        self.exists_data_source(data_source).await?;
 
-        let options = match &data_source.options {
-            Some(options) => options.clone(),
-            None => DataSourceOption::new_with_default(),
-        };
+        self.touch().await;
+        {
+            let session = &mut self.write().await;
 
-        let record_batches =
-            csv::from_file_to_record_batch(&file_path, &data_source.schema, &options)?;
+            object_store::reader::register(&session.df_ctx, data_source).await?;
 
-        Self::register_record_batch(self, data_source, &record_batches).await?;
+            session
+                .data_source_map
+                .insert(data_source.name.clone(), data_source.clone());
+        }
 
         Ok(())
     }
@@ -274,7 +279,7 @@ impl Session for ConcurrentSessionContext {
     async fn append_from_csv_rest(&self, data_source: &DataSource) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(options) => options.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
         let record_batches = csv::from_response_to_record_batch(
@@ -295,7 +300,7 @@ impl Session for ConcurrentSessionContext {
         data: bytes::Bytes,
     ) -> Result<(), ResponseError> {
         let data_source = DataSource::new(DataSourceFormat::Csv, name, None);
-        let options = DataSourceOption::new_with_default().with_infer_schema_rows(1000);
+        let options = DataSourceOption::default().with_infer_schema_rows(1000);
 
         Self::register_record_batch(
             self,
@@ -308,27 +313,16 @@ impl Session for ConcurrentSessionContext {
     }
 
     async fn append_from_json_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let file_path = create_data_file_path(&data_source.location)?;
+        let file_path = location::file::create_data_file_path(&data_source.location)?;
         log::debug!("Reading JSON file {file_path:?}");
 
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
-        let record_batches = match &data_source.format {
-            DataSourceFormat::Json => {
-                json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?
-            }
-            DataSourceFormat::NdJson => {
-                nd_json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?
-            }
-            _ => {
-                return Err(ResponseError::internal_server_error(
-                    "Unrecognized data source format configuration",
-                ));
-            }
-        };
+        let record_batches =
+            json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 
@@ -338,7 +332,7 @@ impl Session for ConcurrentSessionContext {
     async fn append_from_json_rest(&self, data_source: &DataSource) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
         let record_batches = match &data_source.format {
@@ -376,7 +370,7 @@ impl Session for ConcurrentSessionContext {
         data: bytes::Bytes,
     ) -> Result<(), ResponseError> {
         let data_source = DataSource::new(DataSourceFormat::Json, name, None);
-        let options = DataSourceOption::new_with_default();
+        let options = DataSourceOption::default();
 
         Self::register_record_batch(
             self,
@@ -388,28 +382,6 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    #[cfg(feature = "avro")]
-    async fn append_from_avro_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
-        let file_path = create_data_file_path(&data_source.location)?;
-        log::debug!("Reading Avro file {file_path:?}");
-
-        self.exists_data_source(data_source).await?;
-
-        self.touch().await;
-        {
-            let session = &mut self.write().await;
-            session
-                .df_ctx
-                .register_avro(&data_source.name, &file_path, AvroReadOptions::default())
-                .await?;
-            session
-                .data_source_map
-                .insert(data_source.name.clone(), data_source.clone());
-        }
-
-        Ok(())
-    }
-
     #[cfg(feature = "flight")]
     async fn append_from_flight_stream(
         &self,
@@ -417,7 +389,7 @@ impl Session for ConcurrentSessionContext {
     ) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(o) => o.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
         let record_batches =
@@ -436,7 +408,7 @@ impl Session for ConcurrentSessionContext {
         {
             let options = match &data_source.options {
                 Some(o) => o.clone(),
-                None => DataSourceOption::new_with_default(),
+                None => DataSourceOption::default(),
             };
 
             let plugin_options = match &data_source.plugin_options {
@@ -458,30 +430,13 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    async fn append_from_parquet_file(
-        &self,
-        data_source: &DataSource,
-    ) -> Result<(), ResponseError> {
-        let file_path = create_data_file_path(&data_source.location)?;
-        log::debug!("Reading Parquet file {file_path:?}");
-
-        Self::register_record_batch(
-            self,
-            data_source,
-            &parquet::from_file_to_record_batch(&file_path)?,
-        )
-        .await?;
-
-        Ok(())
-    }
-
     async fn append_from_parquet_rest(
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
         let options = match &data_source.options {
             Some(options) => options.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
         let record_batches =
@@ -509,13 +464,26 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
+    async fn save_to_object_store(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        self.touch().await;
+        let session = &mut self.read().await;
+        object_store::writer::write(&session.df_ctx, data_source).await?;
+        Ok(())
+    }
+
     async fn save_to_file(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        assert_ne!(
+            data_source.format,
+            DataSourceFormat::Json,
+            "Can use only for JSON format by `save_to_file()`"
+        );
+
         let mut file_path = std::path::PathBuf::from(&Settings::global().server.data_dir);
-        file_path.push(location_uri::to_file_path_and_name(&data_source.location)?);
+        file_path.push(location::uri::to_file_path_and_name(&data_source.location)?);
 
         let options = match &data_source.options {
             Some(options) => options.clone(),
-            None => DataSourceOption::new_with_default(),
+            None => DataSourceOption::default(),
         };
 
         if !options.overwrite.unwrap_or(false) && file_path.exists() {
@@ -526,7 +494,7 @@ impl Session for ConcurrentSessionContext {
         }
 
         if let Some(path) = file_path.as_path().parent() {
-            writer::fs::mkdir_if_not_exists(path, true)?;
+            local_fs::fs::mkdir_if_not_exists(path, true)?;
         }
 
         log::debug!("save record batches to {:?}", file_path.to_str().unwrap());
@@ -536,50 +504,7 @@ impl Session for ConcurrentSessionContext {
             let session = &mut self.read().await;
             let data_frame = session.df_ctx.table(&data_source.name).await?;
 
-            match data_source.format {
-                DataSourceFormat::Parquet => {
-                    writer::parquet_file::write(
-                        &data_frame.collect().await?,
-                        file_path.to_str().unwrap(),
-                    )?;
-                }
-                DataSourceFormat::Csv => {
-                    writer::csv_file::write(
-                        &data_frame.collect().await?,
-                        file_path.to_str().unwrap(),
-                        &options,
-                    )?;
-                }
-                DataSourceFormat::NdJson => {
-                    writer::raw_json_file::write(
-                        &data_frame.collect().await?,
-                        file_path.to_str().unwrap(),
-                    )?;
-                }
-                DataSourceFormat::Json => {
-                    writer::json_file::write(
-                        &data_frame.collect().await?,
-                        file_path.to_str().unwrap(),
-                    )?;
-                }
-                #[cfg(feature = "avro")]
-                DataSourceFormat::Avro => {
-                    return Err(ResponseError::unsupported_type(
-                        "Save feature currently not supported 'Avro'",
-                    ));
-                }
-                #[cfg(feature = "flight")]
-                DataSourceFormat::Flight => {
-                    return Err(ResponseError::unsupported_type(
-                        "Not supported format 'flight' to save local file system",
-                    ));
-                }
-                DataSourceFormat::Arrow => {
-                    return Err(ResponseError::unsupported_type(
-                        "Not supported format 'arrow' to save local file system",
-                    ));
-                }
-            }
+            local_fs::json_file::write(&data_frame.collect().await?, file_path.to_str().unwrap())?;
         }
 
         Ok(())
@@ -715,16 +640,5 @@ impl Session for ConcurrentSessionContext {
         self.touch().await;
         let context = &self.read().await.df_ctx;
         Ok(context.sql(sql).await?)
-    }
-}
-
-fn create_data_file_path(file: &str) -> Result<String, ResponseError> {
-    let mut file_path = std::path::PathBuf::from(&Settings::global().server.data_dir);
-    file_path.push(location_uri::to_file_path_and_name(file)?);
-    match file_path.to_str() {
-        Some(v) => Ok(v.to_owned()),
-        None => Err(ResponseError::unsupported_format(format!(
-            "Can not decode file path string {file:?}"
-        ))),
     }
 }

@@ -108,6 +108,26 @@ impl axum::response::IntoResponse for ResponseError {
     }
 }
 
+impl From<url::ParseError> for ResponseError {
+    fn from(e: url::ParseError) -> Self {
+        ResponseError {
+            error: "url_parse_error".to_string(),
+            message: e.to_string(),
+            code: http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl From<object_store::Error> for ResponseError {
+    fn from(e: object_store::Error) -> Self {
+        ResponseError {
+            error: "object_store_error".to_string(),
+            message: e.to_string(),
+            code: http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 impl ResponseError {
     pub fn session_not_found(id: impl Into<String>) -> Self {
         Self {
@@ -178,14 +198,6 @@ impl ResponseError {
             code: http::StatusCode::INTERNAL_SERVER_ERROR,
             error: "parquet_deserialization".to_string(),
             message: "Failed to deserialize parquet file into record batches".to_string(),
-        }
-    }
-
-    pub fn parquet_serialization(_: parquet::errors::ParquetError) -> Self {
-        Self {
-            code: http::StatusCode::INTERNAL_SERVER_ERROR,
-            error: "parquet_serialization".to_string(),
-            message: "Failed to serialize record batches into parquet file".to_string(),
         }
     }
 

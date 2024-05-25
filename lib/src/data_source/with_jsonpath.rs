@@ -2,7 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 9, 2023
 //
 
-use crate::data_source::reader::json_decoder;
+use crate::data_source::decoder::json_decoder;
 use crate::data_source::{infer_schema, schema::DataSourceSchema};
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;

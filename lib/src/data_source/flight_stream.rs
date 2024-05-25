@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use crate::data_source::location_uri;
+use crate::data_source::location;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 use crate::server::flight::split_descriptor_value;
@@ -18,7 +18,7 @@ pub async fn to_record_batch(
     #[allow(unused_variables)] options: &DataSourceOption, // TODO: Define the options specifications for `flight`
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let uri_parts =
-        location_uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
+        location::uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
     let uri_scheme = &uri_parts.scheme.as_ref().unwrap().to_string();
     let authority = &uri_parts.authority.as_ref().unwrap().to_string();
     let ticket = if let Some(pq) = &uri_parts.path_and_query {

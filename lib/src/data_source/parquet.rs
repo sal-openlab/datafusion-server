@@ -13,6 +13,7 @@ use crate::data_source::transport::http;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 
+#[deprecated(note = "Only used in deprecated endpoint `/arrow/parquet/:file`, To be removed soon.")]
 pub fn from_file_to_record_batch(file_path: &str) -> Result<Vec<RecordBatch>, ResponseError> {
     let file = File::open(file_path)?;
     let builder = ParquetRecordBatchReaderBuilder::try_new(file)

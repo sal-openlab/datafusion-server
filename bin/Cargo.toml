@@ -1,7 +1,7 @@
 [package]
 name = "datafusion-server"
 version = "0.1.0"
-description = "datafusion-server crate library command-line executer"
+description = "datafusion-server crate library command-line executor"
 license = "MIT"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
 keywords = ["datafusion-server"]

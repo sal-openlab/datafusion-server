@@ -8,7 +8,7 @@ use std::io::{BufReader, Read};
 use datafusion::arrow::record_batch::RecordBatch;
 
 use crate::data_source::{
-    reader::build_record_batch, schema::DataSourceSchema, transport::http, with_jsonpath,
+    decoder::build_record_batch, schema::DataSourceSchema, transport::http, with_jsonpath,
 };
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;

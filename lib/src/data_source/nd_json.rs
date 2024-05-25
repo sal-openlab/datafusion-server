@@ -2,8 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> March 25, 2023
 //
 
-use std::fs::File;
-use std::io::{BufRead, BufReader, Cursor, Seek};
+use std::io::{BufRead, Cursor, Seek};
 
 use datafusion::arrow::error::ArrowError;
 use datafusion::arrow::{
@@ -16,15 +15,6 @@ use crate::data_source::schema::DataSourceSchema;
 use crate::data_source::transport::http;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
-
-pub fn from_file_to_record_batch(
-    file_path: &str,
-    schema: &Option<DataSourceSchema>,
-    options: &DataSourceOption,
-) -> Result<Vec<RecordBatch>, ResponseError> {
-    let file = BufReader::new(File::open(file_path)?);
-    to_record_batch(file, schema, options)
-}
 
 pub async fn from_response_to_record_batch(
     uri: &str,

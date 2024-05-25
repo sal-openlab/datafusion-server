@@ -40,8 +40,8 @@ pub enum DataType {
     String, // variable length string in Unicode with UTF-8 encoding
     List(Box<DataType>),
     LargeList(Box<DataType>),
-    Map(Box<DataType>, Box<DataType>),
-    Struct(Vec<(String, DataType)>),
+    Map(MapType),
+    Struct(StructType),
     Union(UnionType),
 }
 
@@ -88,26 +88,35 @@ impl DataType {
                     arrow::datatypes::Field::new("item", child_type.to_arrow_data_type(), true),
                 ))
             }
-            DataType::Map(key_type, value_type) => arrow::datatypes::DataType::Map(
+            DataType::Map(map_type) => arrow::datatypes::DataType::Map(
                 arrow::datatypes::FieldRef::from(arrow::datatypes::Field::new(
                     "entry",
                     arrow::datatypes::DataType::Struct(arrow::datatypes::Fields::from(vec![
-                        arrow::datatypes::Field::new("key", key_type.to_arrow_data_type(), false),
+                        arrow::datatypes::Field::new(
+                            "key",
+                            map_type.key.to_arrow_data_type(),
+                            false,
+                        ),
                         arrow::datatypes::Field::new(
                             "value",
-                            value_type.to_arrow_data_type(),
+                            map_type.value.to_arrow_data_type(),
                             true,
                         ),
                     ])),
                     false,
                 )),
-                false,
+                map_type.ordered,
             ),
-            DataType::Struct(fields) => arrow::datatypes::DataType::Struct(
-                fields
+            DataType::Struct(struct_type) => arrow::datatypes::DataType::Struct(
+                struct_type
+                    .fields
                     .iter()
-                    .map(|(name, data_type)| {
-                        arrow::datatypes::Field::new(name, data_type.to_arrow_data_type(), true)
+                    .map(|field| {
+                        arrow::datatypes::Field::new(
+                            &field.name,
+                            field.data_type.to_arrow_data_type(),
+                            true,
+                        )
                     })
                     .collect(),
             ),
@@ -189,26 +198,29 @@ impl DataType {
             arrow::datatypes::DataType::LargeList(field) => {
                 DataType::LargeList(Box::new(Self::from_arrow_data_type(field.data_type())))
             }
-            arrow::datatypes::DataType::Map(field, _keys_sorted) => {
+            arrow::datatypes::DataType::Map(field, ordered) => {
                 let arrow::datatypes::DataType::Struct(fields) = field.data_type() else {
                     // TODO: error handling
                     panic!("Expected DataType::Struct but found something else")
                 };
                 let key_type = Self::from_arrow_data_type(fields[0].data_type());
                 let value_type = Self::from_arrow_data_type(fields[1].data_type());
-                DataType::Map(Box::new(key_type), Box::new(value_type))
+                DataType::Map(MapType {
+                    key: Box::new(key_type),
+                    value: Box::new(value_type),
+                    ordered: *ordered,
+                })
             }
-            arrow::datatypes::DataType::Struct(fields) => DataType::Struct(
-                fields
+            arrow::datatypes::DataType::Struct(fields) => DataType::Struct(StructType {
+                fields: fields
                     .iter()
-                    .map(|field| {
-                        (
-                            field.name().to_string(),
-                            Self::from_arrow_data_type(field.data_type()),
-                        )
+                    .map(|field| Field {
+                        name: field.name().to_string(),
+                        data_type: Self::from_arrow_data_type(field.data_type()),
+                        nullable: Some(field.is_nullable()),
                     })
-                    .collect::<Vec<(String, DataType)>>(),
-            ),
+                    .collect(),
+            }),
             arrow::datatypes::DataType::Union(union_fields, mode) => {
                 let types = union_fields
                     .iter()
@@ -332,6 +344,12 @@ pub struct MapType {
     key: Box<DataType>,
     value: Box<DataType>,
     ordered: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(transparent)]
+pub struct StructType {
+    fields: Vec<Field>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

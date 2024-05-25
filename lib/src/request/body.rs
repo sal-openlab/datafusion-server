@@ -6,8 +6,10 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-use crate::data_source::location_uri::SupportedScheme;
-use crate::data_source::{location_uri, schema};
+use crate::data_source::{
+    location::{self, uri::SupportedScheme},
+    schema,
+};
 use crate::response::http_error::ResponseError;
 
 #[derive(Deserialize, Clone, Debug)]
@@ -27,8 +29,21 @@ pub struct DataSourceOption {
 }
 
 impl DataSourceOption {
-    /// Creates a data source config with defaults
-    pub fn new_with_default() -> Self {
+    /// Creates a data source options
+    pub fn new() -> Self {
+        Self {
+            has_header: None,
+            infer_schema_rows: None,
+            delimiter: None,
+            json_path: None,
+            require_normalize: None,
+            overwrite: None,
+            headers: None,
+        }
+    }
+
+    /// Creates a data source options with defaults
+    pub fn default() -> Self {
         Self {
             has_header: Some(true),
             infer_schema_rows: Some(100),
@@ -145,9 +160,9 @@ impl DataSource {
     }
 
     pub fn validator(&self) -> Result<(), ResponseError> {
-        let uri = location_uri::to_parts(&self.location)
+        let uri = location::uri::to_parts(&self.location)
             .map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
-        let scheme = location_uri::scheme(&uri)?;
+        let scheme = location::uri::scheme(&uri)?;
 
         match self.format {
             DataSourceFormat::Csv => {}
@@ -169,7 +184,7 @@ impl DataSource {
             }
             #[cfg(feature = "avro")]
             DataSourceFormat::Avro => {
-                if scheme != SupportedScheme::File {
+                if scheme != SupportedScheme::File && scheme != SupportedScheme::S3 {
                     return Err(ResponseError::unsupported_type(format!(
                         "Not supported data source, Avro with remote location '{}'",
                         self.location

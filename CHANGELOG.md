@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 (2024-05-25)
+
+* Added support for AWS and GCS object stores
+    + AWS S3 (`s3://`)
+    + Google Cloud Storage (`gs://`) _experimental_
+    + Please refer to
+      this [table](https://sal-openlab.github.io/datafusion-server/data-source/what-datasource/#data-source-format-and-location-matrix)
+      for the correspondence between data source formats and locations
+    + Refer to this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/object-store/) for
+      object store configuration and usages
+* Fixed an issue where the schema for the `Map` data type was not being generated correctly
+
 ## 0.13.2 (2024-05-11) - Quick patch to keep up with the DataFusion crate
 
 * Updates to DataFusion v38.0.0

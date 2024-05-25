@@ -14,3 +14,17 @@ upload_limit_size = 20 # 20MB
 [log]
 # trace, debug, info, warn, error
 level = "debug"
+
+[[storages]]
+type = "aws"
+access_key_id = "AKIA"
+secret_access_key = "SECRET"
+region = "us-east-1"
+bucket = "my-bucket"
+description = "e.g. `s3://my-bucket/path/to/file.parquet` in data source location"
+
+[[storages]]
+type = "gcs"
+service_account_key = "SERVICE_ACCOUNT_KEY"
+bucket = "my-gcs-bucket"
+description = "e.g. `gs://my-bucket/path/to/file.parquet` in data source location"
