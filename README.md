@@ -19,6 +19,8 @@ for an introductory tutorial and a full usage guide. Additionally,
 [REST API documentation](https://sal-openlab.github.io/datafusion-server/api/v1/) is available according
 to the OpenAPI specification.
 
+![System Diagram](https://github.com/sal-openlab/datafusion-server/blob/main/doc/system-diagram.svg)
+
 ## License
 
 License under the [MIT](LICENSE)
