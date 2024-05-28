@@ -45,4 +45,4 @@ in [Data Source Connector Plugin]({{< ref "/using-python-plugin/datasource-conne
 
 * {{< icon "fa-circle-check" >}} Supported
 * {{< icon "download" >}} Save feature supported
-* Object store is currently supported AWS S3 and Google Cloud Storage
+* Object store: Amazon S3, Google Cloud Storage, Microsoft Azure Blob Storage, WebDAV

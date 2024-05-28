@@ -7,16 +7,18 @@ weight: 100
 
 ## Supported Object Stores
 
-* Amazon S3
-* Google Cloud Storage (Experimental Support)
-* Microsoft Azure (Planned)
-* WebDAV (Planned)
+* [Amazon S3](https://aws.amazon.com/s3/) {{< icon "external-link" >}}
+* [Google Cloud Storage](https://cloud.google.com/storage) {{< icon "external-link" >}} (Experimental Support)
+* [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs) {{< icon "
+  external-link" >}} (Experimental Support)
+* [WebDAV](https://datatracker.ietf.org/doc/html/rfc2518) {{< icon "external-link" >}}
 
 ## Preparing Object Store
 
 ### Amazon S3
 
-Parameters can be defined in a configuration file or as environment variables. If you’re writing it in the config.toml file, you would add an entry like this.
+Parameters can be defined in a configuration file or as environment variables. If you’re writing it in the config.toml
+file, you would add an entry like this.
 
 ```toml
 [[storages]]
@@ -29,7 +31,8 @@ bucket = "my-bucket"
 
 If you’re using multiple buckets, you would write multiple entries.
 
-If you’re specifying values through environment variables, set the values to the following keys. The definitions specified in environment variables and those defined in config.toml will be merged.
+If you’re specifying values through environment variables, set the values to the following keys. The definitions
+specified in environment variables and those defined in config.toml will be merged.
 
 * `AWS_ACCESS_KEY_ID`
 * `AWS_SECRET_ACCESS_KEY`
@@ -56,7 +59,7 @@ GCS, like S3, also specifies parameters in the environment configuration file or
 
 ```toml
 [[storages]]
-type = "gcs"
+type = "gcp"
 service_account_key = "SERVICE_ACCOUNT_KEY"
 bucket = "my-bucket"
 ```
@@ -68,9 +71,48 @@ Likewise for environment variables,
 * `GOOGLE_SERVICE_ACCOUNT_KEY`
 * `GOOGLE_BUCKET`
 
+### Microsoft Azure Blob Storage
+
+Specify parameters from the environment configuration file or environment variables.
+
+```toml
+[[storages]]
+type = "azure"
+account_name = "AZURE_STORAGE_ACCOUNT_NAME"
+access_key = "AZURE_STORAGE_ACCESS_KEY"
+container = "my-container"
+```
+
+Likewise for environment variables,
+
+* `AZURE_STORAGE_ACCOUNT_NAME`
+* `AZURE_STORAGE_ACCESS_KEY`
+* `AZURE_CONTAINER`
+
+### WebDAV
+
+Specify the scheme and authority part in the URL (for example, `https://server.com`). DataFusion Server treats the
+location scheme as either http or https, and if the authority matches the server defined here, it handles it as an
+extension of WebDAV for HTTP.
+
+```toml
+[[storages]]
+type = "webdav"
+url = "https://server.com"
+user = "USER"
+password = "PASSWORD"
+```
+
+Likewise for environment variables,
+
+* `HTTP_URL`
+* `HTTP_USER`
+* `HTTP_PASSWORD`
+
 ## Data Source Definition
 
-Please refer to the details of the data source definition [here]({{< ref "/data-source/definition-basics" >}}). The only thing that changes when dealing with a data source from Object Store is the location key.
+Please refer to the details of the data source definition [here]({{< ref "/data-source/definition-basics" >}}). The only
+thing that changes when dealing with a data source from Object Store is the location key.
 
 ```json
 [
@@ -85,7 +127,8 @@ Please refer to the details of the data source definition [here]({{< ref "/data-
 ]
 ```
 
-In this example, a data source is defined to read “example.csv” from an S3 bucket. Similarly, if reading Parquet from GCS, it would look like this:
+In this example, a data source is defined to read / write “example.csv” from / to an S3 bucket. Similarly, if reading
+/writing Parquet from / to Google Cloud Storage, it would look like this:
 
 ```json
 [
@@ -97,5 +140,44 @@ In this example, a data source is defined to read “example.csv” from an S3 b
 ]
 ```
 
+For Microsoft Azure Blob Storage, the same applies,
 
+```json
+[
+  {
+    "format": "ndJson",
+    "name": "example",
+    "location": "az://my-container/path/to/example.json"
+  }
+]
+```
 
+The scheme can be specified using commonly used schemes such as `adl`, `abfs`, and `abfss`, in addition to `az`.
+
+WebDAV might need a bit of explanation. Just by looking at the location, it’s not clear whether it’s for regular http(s)
+access or for accessing WebDAV, which is an extension of HTTP.
+
+```json
+[
+  {
+    "format": "avro",
+    "name": "example",
+    "location": "https://server.com/path/to/example.avro"
+  }
+]
+```
+
+If DataFusion Server has the following entry defined in the configuration file or environment variables, it treats
+access to server.com via http(s) as WebDAV. This includes adding methods like `PROPFIND` and adding basic
+authentication.
+
+```toml
+[[storages]]
+type = "webdav"
+url = "https://server.com"
+user = "USER"
+password = "PASSWORD"
+```
+
+The `url` defined in the configuration includes only the scheme and authority. Any path or query parameters are
+completely ignored.

@@ -57,9 +57,26 @@ pub struct StorageAws {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct StorageGcs {
+pub struct StorageGcp {
     pub service_account_key: String,
     pub bucket: String,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct StorageAzure {
+    pub account_name: String,
+    pub access_key: String,
+    pub container: String,
+    pub description: Option<String>,
+}
+
+#[cfg(feature = "webdav")]
+#[derive(Debug, Deserialize, Clone)]
+pub struct StorageHttp {
+    pub url: String,
+    pub user: Option<String>,
+    pub password: Option<String>,
     pub description: Option<String>,
 }
 
@@ -67,7 +84,10 @@ pub struct StorageGcs {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Storage {
     Aws(StorageAws),
-    Gcs(StorageGcs),
+    Gcp(StorageGcp),
+    Azure(StorageAzure),
+    #[cfg(feature = "webdav")]
+    Webdav(StorageHttp),
 }
 
 #[derive(Debug, Deserialize, Clone)]

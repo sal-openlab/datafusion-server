@@ -1,8 +1,12 @@
 # Changelog
 
+## 0.15.0 (2024-0)
+
+* Added support for WebDAV storages
+
 ## 0.14.0 (2024-05-25)
 
-* Added support for AWS and GCS object stores
+* Added support for AWS and GCP object stores
     + AWS S3 (`s3://`)
     + Google Cloud Storage (`gs://`) _experimental_
     + Please refer to
