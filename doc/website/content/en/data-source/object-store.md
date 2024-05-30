@@ -8,9 +8,8 @@ weight: 100
 ## Supported Object Stores
 
 * [Amazon S3](https://aws.amazon.com/s3/) {{< icon "external-link" >}}
-* [Google Cloud Storage](https://cloud.google.com/storage) {{< icon "external-link" >}} (Experimental Support)
-* [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs) {{< icon "
-  external-link" >}} (Experimental Support)
+* [Google Cloud Storage](https://cloud.google.com/storage) {{< icon "external-link" >}}
+* [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/products/storage/blobs) {{< icon "external-link" >}}
 * [WebDAV](https://datatracker.ietf.org/doc/html/rfc2518) {{< icon "external-link" >}}
 
 ## Preparing Object Store
