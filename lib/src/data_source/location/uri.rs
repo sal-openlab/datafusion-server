@@ -3,6 +3,7 @@
 //
 
 use std::collections::HashMap;
+use std::string::ToString;
 
 use axum::http::uri::{InvalidUri, Parts, Uri};
 use thiserror::Error;
@@ -10,13 +11,13 @@ use thiserror::Error;
 #[cfg(feature = "plugin")]
 use crate::plugin::plugin_manager::PluginManager;
 use crate::response::http_error::ResponseError;
+#[cfg(feature = "webdav")]
+use crate::settings::{Settings, Storage};
 
 #[derive(Error, Debug)]
 pub enum InvalidLocation {
     #[error("Incorrect URI format")]
     IncorrectUriFormat(#[from] InvalidUri),
-    #[error("Missing scheme")]
-    MissingScheme,
     #[error("Unsupported scheme")]
     UnsupportedScheme,
 }
@@ -28,6 +29,9 @@ pub enum SupportedScheme {
     File,
     S3,
     GS,
+    AZ,
+    #[cfg(feature = "webdav")]
+    Webdav,
     #[cfg(feature = "flight")]
     Grpc,
     #[cfg(feature = "flight")]
@@ -38,7 +42,15 @@ pub enum SupportedScheme {
 
 impl SupportedScheme {
     pub fn handle_object_store(&self) -> bool {
-        matches!(self, Self::File | Self::S3 | Self::GS)
+        match self {
+            Self::File => true,
+            Self::S3 => true,
+            Self::GS => true,
+            Self::AZ => true,
+            #[cfg(feature = "webdav")]
+            Self::Webdav => true,
+            _ => false,
+        }
     }
 
     pub fn remote_source(&self) -> bool {
@@ -51,19 +63,38 @@ impl SupportedScheme {
     }
 }
 
-#[allow(clippy::unnecessary_wraps)] // never returns `Err` while enabling plugin feature
 pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
-    if parts.scheme.is_none() {
-        return Ok(SupportedScheme::File);
-    }
-
     if let Some(scheme) = &parts.scheme {
         match &*scheme.to_string() {
+            #[cfg(feature = "webdav")]
+            "http" | "https" => {
+                if let Some(storages) = &Settings::global().storages {
+                    for storage in storages {
+                        match storage {
+                            Storage::Webdav(http) => {
+                                let (scheme, authority, pq) = parts_to_string(parts);
+                                if format!("{scheme}://{authority}{pq}").starts_with(&http.url) {
+                                    return Ok(SupportedScheme::Webdav);
+                                }
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+
+                match &*scheme.to_string() {
+                    "http" => Ok(SupportedScheme::Http),
+                    _ => Ok(SupportedScheme::Https),
+                }
+            }
+            #[cfg(not(feature = "webdav"))]
             "http" => Ok(SupportedScheme::Http),
+            #[cfg(not(feature = "webdav"))]
             "https" => Ok(SupportedScheme::Https),
             "file" => Ok(SupportedScheme::File),
             "s3" => Ok(SupportedScheme::S3),
             "gs" => Ok(SupportedScheme::GS),
+            "az" | "adl" | "abfs" | "abfss" => Ok(SupportedScheme::AZ),
             #[cfg(feature = "flight")]
             "grpc" => Ok(SupportedScheme::Grpc),
             #[cfg(feature = "flight")]
@@ -83,7 +114,7 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
             _ => Err(InvalidLocation::UnsupportedScheme.into()),
         }
     } else {
-        Err(InvalidLocation::MissingScheme.into())
+        Ok(SupportedScheme::File)
     }
 }
 
@@ -106,6 +137,28 @@ pub fn to_parts(uri: &str) -> anyhow::Result<Parts> {
         .parse::<Uri>()?
         .into_parts();
     Ok(parts)
+}
+
+#[cfg(feature = "webdav")]
+pub fn parts_to_string(parts: &Parts) -> (String, String, String) {
+    let scheme = parts
+        .scheme
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_default();
+
+    let authority = parts
+        .authority
+        .as_ref()
+        .map(ToString::to_string)
+        .unwrap_or_default();
+
+    let pq = parts
+        .path_and_query
+        .as_ref()
+        .map_or_else(|| "/".to_string(), ToString::to_string);
+
+    (scheme, authority, pq)
 }
 
 #[allow(dead_code)] // now only use for plugin feature
@@ -138,6 +191,14 @@ mod tests {
         let uri = location::uri::to_parts(s).unwrap();
         assert_eq!(uri.authority.unwrap().as_str(), "authority:8080");
         assert_eq!(uri.path_and_query.unwrap().as_str(), "/path/foo");
+    }
+
+    #[test]
+    fn valid_no_path_uri() {
+        let s = "http://authority";
+        let uri = location::uri::to_parts(s).unwrap();
+        assert_eq!(uri.authority.unwrap().as_str(), "authority");
+        assert_eq!(uri.path_and_query.unwrap().as_str(), "/");
     }
 
     #[test]

@@ -8,7 +8,7 @@
 Multiple session, variety of data sources query server implemented by Rust.
 
 * Asynchronous architecture used by [Tokio](https://tokio.rs/) ecosystem
-* [Apache Arrow](https://arrow.apache.org/) with [Arrow DataFusion](https://arrow.apache.org/datafusion/)
+* [Apache Arrow](https://arrow.apache.org/) with [Apache DataFusion](https://arrow.apache.org/datafusion/)
     + Supports multiple data source with SQL queries
 * Python plugin feature for data source connector and post processor
 * Horizontal scaling architecture between servers using
@@ -88,7 +88,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.13.2
+    datafusion-server:0.15.0
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -116,7 +116,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.13.2"
+datafusion-server = "0.15.0"
 ```
 
 #### Example of src/main.rs
@@ -193,7 +193,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.13.2", features = ["plugin"] }
+datafusion-server = { version = "0.15.0", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -219,7 +219,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.13.2", features = ["plugin"] }
+datafusion-server = { version = "0.15.0", features = ["plugin"] }
 ```
 
 #### Build for release

@@ -1,8 +1,15 @@
 # Changelog
 
+## 0.15.0 (2024-05-29)
+
+* Added support for Microsoft Azure Blob Storage (`az://` or other scheme) and WebDAV (`https`, `https`) storages
+    + Refer to this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/object-store/) for
+      object store configuration and usages
+* Change the settings of `storages`.`type` for Google Cloud Storage from `gcs` to `gcp`
+
 ## 0.14.0 (2024-05-25)
 
-* Added support for AWS and GCS object stores
+* Added support for AWS and GCP object stores
     + AWS S3 (`s3://`)
     + Google Cloud Storage (`gs://`) _experimental_
     + Please refer to

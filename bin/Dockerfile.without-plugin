@@ -7,7 +7,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release --features=flight,avro
+ && cargo build --release --features=flight,avro,webdav
 
 FROM debian:bookworm-slim
 

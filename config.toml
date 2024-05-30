@@ -24,7 +24,21 @@ bucket = "my-bucket"
 description = "e.g. `s3://my-bucket/path/to/file.parquet` in data source location"
 
 [[storages]]
-type = "gcs"
+type = "gcp"
 service_account_key = "SERVICE_ACCOUNT_KEY"
 bucket = "my-gcs-bucket"
 description = "e.g. `gs://my-bucket/path/to/file.parquet` in data source location"
+
+[[storages]]
+type = "azure"
+account_name = "AZURE_STORAGE_ACCOUNT_NAME"
+access_key = "AZURE_STORAGE_ACCESS_KEY"
+container = "my-container"
+description = "e.g. `az://my-container/path/to/file.parquet` in data source location"
+
+[[storages]]
+type = "webdav"
+url = "https://server.com"
+user = "USER"
+password = "PASSWORD"
+description = "e.g. `https://server.com/dav/file.parquet` in data source location"

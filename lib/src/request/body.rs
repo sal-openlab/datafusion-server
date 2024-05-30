@@ -184,7 +184,7 @@ impl DataSource {
             }
             #[cfg(feature = "avro")]
             DataSourceFormat::Avro => {
-                if scheme != SupportedScheme::File && scheme != SupportedScheme::S3 {
+                if !scheme.handle_object_store() {
                     return Err(ResponseError::unsupported_type(format!(
                         "Not supported data source, Avro with remote location '{}'",
                         self.location
