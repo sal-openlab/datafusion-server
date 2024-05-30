@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.15.0 (2024-05-29)
+## 0.15.0 (2024-05-29), 0.15.1
 
 * Added support for Microsoft Azure Blob Storage (`az://` or other scheme) and WebDAV (`https`, `https`) storages
     + Refer to this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/object-store/) for
