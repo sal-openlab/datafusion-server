@@ -21,7 +21,7 @@ to the OpenAPI specification.
 
 ## System Overview
 
-![System Diagram](https://github.com/sal-openlab/datafusion-server/blob/main/doc/system-diagram.svg)
+![System Diagram](https://github.com/sal-openlab/datafusion-server/blob/main/doc/system-diagram.svg?raw=true)
 
 ## License
 
