@@ -2,7 +2,6 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 3, 2023
 //
 
-use std::fs::File;
 use std::io::{Read, Seek};
 use std::sync::Arc;
 
@@ -12,18 +11,6 @@ use crate::data_source::schema::DataSourceSchema;
 use crate::data_source::transport::http;
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
-
-#[deprecated(
-    note = "Only used in deprecated endpoints `/arrow/csv/:file` and `/json/csv/:file`, To be removed soon."
-)]
-pub fn from_file_to_record_batch(
-    file_path: &str,
-    schema: &Option<DataSourceSchema>,
-    options: &DataSourceOption,
-) -> Result<Vec<RecordBatch>, ResponseError> {
-    let file = File::open(file_path)?;
-    to_record_batch(file, schema, options)
-}
 
 pub async fn from_response_to_record_batch(
     uri: &str,

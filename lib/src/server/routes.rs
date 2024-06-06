@@ -14,17 +14,10 @@ use axum::{
 use tokio::sync::Mutex;
 
 use crate::context::session_manager::SessionManager;
-use crate::response::handler::{
-    arrow_csv, arrow_parquet, data_source, dataframe, json_csv, processor, session, sys_info,
-};
+use crate::response::handler::{data_source, dataframe, processor, session, sys_info};
 use crate::settings::Settings;
 
 pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
-    let arrow_route = Router::new()
-        .route("/csv/:file", get(arrow_csv::csv_responder))
-        .route("/parquet/:file", get(arrow_parquet::parquet_responder));
-
-    let json_route = Router::new().route("/csv/:file", get(json_csv::csv_responder));
     let df_route = Router::new()
         .route("/query", post(dataframe::query_responder))
         .with_state(session_mgr.clone());
@@ -57,8 +50,6 @@ pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
     let base_url = get_base_url();
 
     Router::new()
-        .nest(&format!("{base_url}/arrow"), arrow_route)
-        .nest(&format!("{base_url}/json"), json_route)
         .nest(&format!("{base_url}/dataframe"), df_route)
         .nest(&format!("{base_url}/session"), session_route)
         .nest(&format!("{base_url}/session"), session_upload_route)
