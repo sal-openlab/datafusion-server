@@ -1,6 +1,6 @@
 [workspace]
 members = ["lib"]
-exclude = ["bin", "example"]
+exclude = ["bin", "example", "tool"]
 resolver = "2"
 
 [workspace.package]
