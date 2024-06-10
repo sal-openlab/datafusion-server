@@ -18,8 +18,11 @@ mod record_batch;
 #[derive(Parser)]
 #[clap(author, version, about = "Shows arrow format file", long_about = None)]
 struct Args {
-    #[clap(long, short = 'b', value_name = "base64", help = "decodes base64")]
+    #[clap(long, short = 'b', value_name = "base64", help = "Decodes base64")]
     base64: bool,
+
+    #[clap(long, short = 's', value_name = "schema", help = "Outputs schema")]
+    with_schema: bool,
 
     #[clap(value_name = "FILE", help = "filename or '-' (stdin)")]
     file: PathBuf,
@@ -43,9 +46,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match record_batch::create(buffer) {
         Ok(batches) => {
-            println!("{}", pretty_format_batches(&batches)?);
+            if batches.is_empty() {
+                eprintln!("Error: empty record batches");
+            } else {
+                if args.with_schema {
+                    let schema = batches.first().unwrap().schema_ref();
+                    for field in schema.all_fields() {
+                        println!("{field}");
+                    }
+                }
+
+                println!("{}", pretty_format_batches(&batches)?);
+            }
         }
-        Err(e) => eprintln!("Can not create record batches: {e}"),
+        Err(e) => eprintln!("Can not parse record batches: {e}"),
     }
 
     Ok(())

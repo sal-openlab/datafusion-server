@@ -15,9 +15,10 @@ Arguments:
 <FILE>  filename or '-' (stdin)
 
 Options:
--b, --base64   decodes base64
--h, --help     Print help
--V, --version  Print version
+-b, --base64       Decodes base64
+-s, --with-schema  Outputs schema
+-h, --help         Print help
+-V, --version      Print version
 ```
 
 ## Detail
@@ -67,4 +68,16 @@ The display would look like this.
 | hello - arrow | 12345 | [1, 2, 3, 4, 5]  | {key1: value1, key2: 1.1} |
 | world         | 67890 | [6, 7, 8, 9, 10] | {key1: value2, key2: 2.2} |
 +---------------+-------+------------------+---------------------------+
+```
+
+In case the option `--with-schema` (or `-b`) is specified, the schema information will be displayed before the table.
+
+```
+Field { name: "foo", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "bar", data_type: Int64, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "col_list", data_type: List(Field { name: "item", data_type: Int32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "item", data_type: Int32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "col_struct", data_type: Struct([Field { name: "key1", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }, Field { name: "key2", data_type: Float32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }]), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "key1", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
+Field { name: "key2", data_type: Float32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
 ```
