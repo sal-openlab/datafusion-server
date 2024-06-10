@@ -51,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else {
                 if args.with_schema {
                     let schema = batches.first().unwrap().schema_ref();
-                    for field in schema.all_fields() {
+                    for field in schema.fields() {
                         println!("{field}");
                     }
                 }

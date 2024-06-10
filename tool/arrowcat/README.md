@@ -76,8 +76,5 @@ In case the option `--with-schema` (or `-b`) is specified, the schema informatio
 Field { name: "foo", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
 Field { name: "bar", data_type: Int64, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
 Field { name: "col_list", data_type: List(Field { name: "item", data_type: Int32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
-Field { name: "item", data_type: Int32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
 Field { name: "col_struct", data_type: Struct([Field { name: "key1", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }, Field { name: "key2", data_type: Float32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }]), nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
-Field { name: "key1", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
-Field { name: "key2", data_type: Float32, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
 ```
