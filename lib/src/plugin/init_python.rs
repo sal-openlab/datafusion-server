@@ -3,7 +3,7 @@
 //
 
 #[cfg(feature = "plugin")]
-use pyo3::types::PyModule;
+use pyo3::types::{PyAnyMethods, PyModule};
 #[cfg(feature = "plugin")]
 use pyo3::Python;
 
@@ -14,7 +14,7 @@ pub fn py_init() -> anyhow::Result<()> {
     log::debug!("Python bindings has been initialized");
 
     Python::with_gil(|py| {
-        let sys = PyModule::import(py, "sys")?;
+        let sys = PyModule::import_bound(py, "sys")?;
         let version: String = sys.getattr("version")?.extract()?;
         log::debug!("Detected runtime: {}", &version);
         Ok(())

@@ -20,8 +20,8 @@ use datafusion::arrow::{
 use once_cell::sync::OnceCell;
 #[cfg(feature = "plugin")]
 use pyo3::{
-    types::{IntoPyDict, PyDict, PyModule},
-    {Py, PyAny, PyResult, Python},
+    types::{IntoPyDict, PyAnyMethods, PyDict, PyModule},
+    Bound, {Py, PyAny, PyResult, Python},
 };
 #[cfg(feature = "plugin")]
 use std::collections::HashMap;
@@ -56,7 +56,7 @@ impl PluginManager {
     #[allow(clippy::unused_self)]
     pub fn py_interpreter_info(&self) -> String {
         Python::with_gil(|py| -> PyResult<String> {
-            let sys = PyModule::import(py, "sys")?;
+            let sys = PyModule::import_bound(py, "sys")?;
             sys.getattr("version")?.extract()
         })
         .unwrap_or("Unknown".to_string())
@@ -85,7 +85,7 @@ impl PluginManager {
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
 
         let result = Python::with_gil(|py| -> PyResult<Py<PyAny>> {
-            let py_func: Py<PyAny> = PyModule::from_code(py, &py_code, "", "")?
+            let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
                 .getattr(entry.as_str())?
                 .into();
 
@@ -96,12 +96,12 @@ impl PluginManager {
             };
 
             let kwargs = if let Some(query) = query {
-                query.into_py_dict(py)
+                query.into_py_dict_bound(py)
             } else {
-                PyDict::new(py)
+                PyDict::new_bound(py)
             };
 
-            append_to_py_dict(py, &[plugin_options, &self.system_info()], kwargs)?;
+            append_to_py_dict(py, &[plugin_options, &self.system_info()], &kwargs)?;
 
             log::debug!(
                 "Call py func {} with args {:?}, {:?}, {:?}, {:?}, {:?}",
@@ -113,7 +113,7 @@ impl PluginManager {
                 kwargs
             );
 
-            py_func.call(py, (format, authority, path, arrow_schema), Some(kwargs))
+            py_func.call_bound(py, (format, authority, path, arrow_schema), Some(&kwargs))
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
 
@@ -149,21 +149,21 @@ impl PluginManager {
         let record_batch = compute::concat_batches(&record_batches[0].schema(), record_batches)?;
 
         let result = Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
-            let py_func: Py<PyAny> = PyModule::from_code(py, &py_code, "", "")?
+            let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
                 .getattr(entry.as_str())?
                 .into();
 
             let pyarrow = record_batch.to_pyarrow(py)?;
 
-            let kwargs = PyDict::new(py);
-            append_to_py_dict(py, &[plugin_options, &self.system_info()], kwargs)?;
+            let kwargs = PyDict::new_bound(py);
+            append_to_py_dict(py, &[plugin_options, &self.system_info()], &kwargs)?;
 
             log::debug!("Call py func {} with args {:?}", entry.as_str(), kwargs);
 
-            let args = (pyarrow.downcast::<PyAny>(py)?,);
-            let result = py_func.call(py, args, Some(kwargs))?;
+            let args = (pyarrow.downcast_bound::<PyAny>(py)?,);
+            let result = py_func.call_bound(py, args, Some(&kwargs))?;
 
-            self.to_record_batches(py, &result)
+            self.to_record_batches(result.downcast_bound(py)?)
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
 
@@ -172,8 +172,8 @@ impl PluginManager {
 
     #[cfg(feature = "plugin")]
     #[allow(clippy::unused_self)]
-    pub fn to_record_batches(&self, py: Python, value: &Py<PyAny>) -> PyResult<Vec<RecordBatch>> {
-        Ok(vec![RecordBatch::from_pyarrow(value.extract(py)?)?])
+    pub fn to_record_batches(&self, value: &Bound<'_, PyAny>) -> PyResult<Vec<RecordBatch>> {
+        Ok(vec![RecordBatch::from_pyarrow_bound(value)?])
     }
 
     #[cfg(feature = "plugin")]

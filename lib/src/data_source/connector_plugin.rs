@@ -3,12 +3,14 @@
 //
 
 use datafusion::arrow::record_batch::RecordBatch;
-use pyo3::types::PyBytes;
-use pyo3::{Py, PyAny, PyResult, Python};
+use pyo3::{
+    types::{PyBytes, PyBytesMethods},
+    Py, PyAny, PyResult, Python,
+};
 
-use crate::data_source::decoder::build_record_batch;
 use crate::data_source::{
-    csv, location, nd_json, parquet, schema::DataSourceSchema, with_jsonpath,
+    csv, decoder::build_record_batch, location, nd_json, parquet, schema::DataSourceSchema,
+    with_jsonpath,
 };
 use crate::request::body::{DataSourceFormat, DataSourceOption, PluginOption};
 use crate::response::http_error::ResponseError;
@@ -46,7 +48,7 @@ pub fn to_record_batch(
 
     Ok(match format {
         DataSourceFormat::Arrow => Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
-            PluginManager::global().to_record_batches(py, &py_result)
+            PluginManager::global().to_record_batches(py_result.downcast_bound(py)?)
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?,
         DataSourceFormat::Json => {
@@ -87,7 +89,7 @@ pub fn to_record_batch(
 fn py_result_to_bytes(py_result: &Py<PyAny>) -> Result<bytes::Bytes, ResponseError> {
     let mut buffer = bytes::BytesMut::new();
     Python::with_gil(|py| -> PyResult<()> {
-        let py_bytes = py_result.downcast::<PyBytes>(py)?.as_bytes();
+        let py_bytes = py_result.downcast_bound::<PyBytes>(py)?.as_bytes();
         buffer.extend_from_slice(py_bytes);
         Ok(())
     })

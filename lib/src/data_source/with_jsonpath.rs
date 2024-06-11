@@ -2,14 +2,15 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 9, 2023
 //
 
-use crate::data_source::decoder::json_decoder;
-use crate::data_source::{infer_schema, schema::DataSourceSchema};
+use std::str::FromStr;
+
+use datafusion::arrow::{self, record_batch::RecordBatch};
+use jsonpath_rust::{find_slice, JsonPathInst, JsonPathValue};
+use serde_json::Value;
+
+use crate::data_source::{decoder::json_decoder, infer_schema, schema::DataSourceSchema};
 use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
-use datafusion::arrow;
-use datafusion::arrow::record_batch::RecordBatch;
-use jsonpath_rust::JsonPathFinder;
-use serde_json::Value;
 
 pub fn to_record_batch(
     utf8text: &str,
@@ -21,22 +22,20 @@ pub fn to_record_batch(
         None => "$.*",
     };
 
-    let finder = JsonPathFinder::from_str(utf8text, json_path)
-        .map_err(ResponseError::json_parsing)?
-        .find();
+    let json = serde_json::from_str(utf8text)?;
+    let path_finder = JsonPathInst::from_str(json_path)
+        .map_err(|e| ResponseError::json_parsing(format!("Invalid JSONPath {json_path:?}: {e}")))?;
 
-    if !finder.is_array() {
-        return Err(ResponseError::json_parsing(
-            "results of JSON Path is not array",
-        ));
-    }
-
-    let json_rows = finder.as_array().unwrap(); // safe because before checked
+    let found_slices: Vec<JsonPathValue<Value>> = find_slice(&path_finder, &json);
+    let json_rows: Vec<Value> = found_slices
+        .into_iter()
+        .map(JsonPathValue::to_data)
+        .collect();
 
     let df_schema = if let Some(schema) = schema {
         schema.to_arrow_schema()
     } else {
-        infer_schema::from_json_value(json_rows, options)?
+        infer_schema::from_json_value(&json_rows, options)?
     };
 
     log::debug!("number of parsed JSON objects: {}", json_rows.len());
