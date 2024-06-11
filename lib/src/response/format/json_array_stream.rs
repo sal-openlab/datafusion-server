@@ -8,13 +8,8 @@ pub fn make_buffered_stream(record_batches: &[RecordBatch]) -> Result<Vec<u8>, A
     let mut buf = Vec::new();
     let mut writer = ArrayWriter::new(&mut buf);
 
-    // TODO: changed `&[batch]` to `&[&batch]` in Arrow v40, but still `&[batch]` in DataFusion v28
-    // writer.write_batches(record_batches)?;
-    // May be removed this conversion near the future
-    for batch in &record_batches.to_vec() {
-        writer.write_batches(&[batch])?;
-    }
-
+    let record_batch_refs: Vec<&RecordBatch> = record_batches.iter().collect();
+    writer.write_batches(&record_batch_refs)?;
     writer.finish()?;
 
     Ok(buf)

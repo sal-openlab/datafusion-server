@@ -12,6 +12,7 @@ pub fn u32_or_default(value: Option<&String>, default: u32) -> u32 {
     }
 }
 
+#[allow(dead_code)]
 pub fn usize_or_default(value: Option<&String>, default: usize) -> usize {
     match value {
         Some(v) => v.parse::<usize>().unwrap_or(default),
@@ -27,6 +28,7 @@ pub fn str_or_default(value: Option<&String>, default: &str) -> String {
     }
 }
 
+#[allow(dead_code)]
 pub fn bool_or_default(value: Option<&String>, default: bool) -> bool {
     match value {
         Some(v) => matches!(v.to_ascii_lowercase().as_str(), "true" | "yes" | "on" | "1"),
