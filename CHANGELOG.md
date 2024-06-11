@@ -1,6 +1,22 @@
 # Changelog
 
-## 0.15.0 (2024-05-29), 0.15.1
+## 0.15.2 (2024-06-11)
+
+* Updates to DataFusion v39 and Arrow v52
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/39.0.0.md
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5200-2024-06-03
+* Added `arrowcat` command line tool
+    + Please refer to [README.md](tool/arrowcat/README.md) for details
+* Removes deprecated legacy APIs
+    + `/arrow/csv/:filename`
+    + `/arrow/parquet/:filename`
+    + `/json/csv/:filename`
+
+## 0.15.1 (2024-05-29)
+
+* Incorrect link to system diagrams in README.md
+
+## 0.15.0 (2024-05-29)
 
 * Added support for Microsoft Azure Blob Storage (`az://` or other scheme) and WebDAV (`https`, `https`) storages
     + Refer to this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/object-store/) for

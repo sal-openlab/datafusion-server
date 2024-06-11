@@ -14,10 +14,11 @@ Multiple session, variety of data sources query server implemented by Rust.
 * Horizontal scaling architecture between servers using
   the [Arrow Flight](https://arrow.apache.org/docs/format/Flight.html) gRPC feature
 
-Please see the **[Documentation](https://sal-openlab.github.io/datafusion-server/introduction/)**
-for an introductory tutorial and a full usage guide. Additionally,
-[REST API documentation](https://sal-openlab.github.io/datafusion-server/api/v1/) is available according
-to the OpenAPI specification.
+Please see the **[Documentation](https://sal-openlab.github.io/datafusion-server/introduction/)** for an introductory
+tutorial and a full usage guide. Additionally,
+the [REST API documentation](https://sal-openlab.github.io/datafusion-server/api/v1/) is available according to the
+OpenAPI specification. Also, refer to
+the [CHANGELOG](https://github.com/sal-openlab/datafusion-server/blob/main/CHANGELOG.md) for the latest information.
 
 ## System Overview
 
@@ -88,7 +89,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.15.0
+    datafusion-server:0.15.2
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -116,7 +117,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.15.0"
+datafusion-server = "0.15.2"
 ```
 
 #### Example of src/main.rs
@@ -193,7 +194,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.15.0", features = ["plugin"] }
+datafusion-server = { version = "0.15.2", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -219,7 +220,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.15.0", features = ["plugin"] }
+datafusion-server = { version = "0.15.2", features = ["plugin"] }
 ```
 
 #### Build for release
