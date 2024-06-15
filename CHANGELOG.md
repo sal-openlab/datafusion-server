@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.0 (2024-06-15)
+
+* Delta Lake integration (currently read direction only)
+    + For more details, please refer to
+      this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/delta-lake/)
+
 ## 0.15.2 (2024-06-11)
 
 * Updates to DataFusion v39 and Arrow v52
@@ -7,7 +13,7 @@
     + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5200-2024-06-03
 * Added `arrowcat` command line tool
     + Please refer to [README.md](tool/arrowcat/README.md) for details
-* Removes deprecated legacy APIs
+* Removes deprecated legacy API endpoints
     + `/arrow/csv/:filename`
     + `/arrow/parquet/:filename`
     + `/json/csv/:filename`
@@ -18,7 +24,7 @@
 
 ## 0.15.0 (2024-05-29)
 
-* Added support for Microsoft Azure Blob Storage (`az://` or other scheme) and WebDAV (`https`, `https`) storages
+* Added support for Microsoft Azure Blob Storage (`az://` or other scheme) and WebDAV (`http`, `https`) storages
     + Refer to this [documentation](https://sal-openlab.github.io/datafusion-server/data-source/object-store/) for
       object store configuration and usages
 * Change the settings of `storages`.`type` for Google Cloud Storage from `gcs` to `gcp`
