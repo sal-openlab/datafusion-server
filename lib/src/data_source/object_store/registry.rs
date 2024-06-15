@@ -6,12 +6,11 @@ use std::sync::Arc;
 use datafusion::execution::context::SessionContext;
 use object_store::{
     aws::AmazonS3Builder, azure::MicrosoftAzureBuilder, gcp::GoogleCloudStorageBuilder,
+    DynObjectStore,
 };
-#[cfg(feature = "webdav")]
-use object_store::{http::HttpBuilder, ClientOptions};
 
 #[cfg(feature = "webdav")]
-use crate::data_source::location;
+use crate::data_source::object_store::build_store;
 use crate::response::http_error::ResponseError;
 use crate::settings::{Settings, Storage};
 
@@ -24,30 +23,32 @@ pub fn register(ctx: &SessionContext) -> Result<(), ResponseError> {
                 Storage::Aws(aws) => {
                     log::debug!("Register 's3://{}' to object store registry", &aws.bucket);
 
-                    let s3 = AmazonS3Builder::new()
+                    let store = AmazonS3Builder::new()
                         .with_bucket_name(&aws.bucket)
                         .with_region(&aws.region)
                         .with_access_key_id(&aws.access_key_id)
                         .with_secret_access_key(&aws.secret_access_key)
                         .build()?;
 
-                    ctx.runtime_env().register_object_store(
-                        &url::Url::parse(&format!("s3://{}", &aws.bucket))?,
-                        Arc::new(s3),
-                    );
+                    register_to_runtime_env(
+                        ctx,
+                        &format!("s3://{}", &aws.bucket),
+                        Arc::new(store),
+                    )?;
                 }
                 Storage::Gcp(gcp) => {
                     log::debug!("Register 'gs://{}' to object store registry", &gcp.bucket);
 
-                    let gs = GoogleCloudStorageBuilder::new()
+                    let store = GoogleCloudStorageBuilder::new()
                         .with_bucket_name(&gcp.bucket)
                         .with_service_account_key(&gcp.service_account_key)
                         .build()?;
 
-                    ctx.runtime_env().register_object_store(
-                        &url::Url::parse(&format!("gs://{}", &gcp.bucket))?,
-                        Arc::new(gs),
-                    );
+                    register_to_runtime_env(
+                        ctx,
+                        &format!("gs://{}", &gcp.bucket),
+                        Arc::new(store),
+                    )?;
                 }
                 Storage::Azure(azure) => {
                     log::debug!(
@@ -55,26 +56,30 @@ pub fn register(ctx: &SessionContext) -> Result<(), ResponseError> {
                         &azure.container
                     );
 
-                    let az = MicrosoftAzureBuilder::new()
+                    let store = MicrosoftAzureBuilder::new()
                         .with_account(&azure.account_name)
                         .with_access_key(&azure.access_key)
                         .with_container_name(&azure.container)
                         .build()?;
 
-                    ctx.runtime_env().register_object_store(
-                        &url::Url::parse(&format!("az://{}", &azure.container))?,
-                        Arc::new(az),
-                    );
+                    register_to_runtime_env(
+                        ctx,
+                        &format!("az://{}", &azure.container),
+                        Arc::new(store),
+                    )?;
                 }
                 #[cfg(feature = "webdav")]
                 Storage::Webdav(http) => {
                     log::debug!("Register '{}' to object store registry", &http.url);
 
-                    register_webdav(
+                    register_to_runtime_env(
                         ctx,
                         &http.url,
-                        http.user.as_ref().unwrap_or(&String::new()),
-                        http.password.as_ref().unwrap_or(&String::new()),
+                        build_store::webdav(
+                            &http.url,
+                            http.user.as_ref().unwrap_or(&String::new()),
+                            http.password.as_ref().unwrap_or(&String::new()),
+                        )?,
                     )?;
                 }
             }
@@ -97,14 +102,11 @@ fn register_from_env(ctx: &SessionContext) -> Result<(), ResponseError> {
 
         log::debug!("Register 's3://{bucket}' to object store registry");
 
-        let s3 = AmazonS3Builder::from_env()
+        let store = AmazonS3Builder::from_env()
             .with_bucket_name(&bucket)
             .build()?;
 
-        ctx.runtime_env().register_object_store(
-            &url::Url::parse(&format!("s3://{}", &bucket))?,
-            Arc::new(s3),
-        );
+        register_to_runtime_env(ctx, &format!("s3://{}", &bucket), Arc::new(store))?;
     }
 
     if env::var("GOOGLE_SERVICE_ACCOUNT_KEY").is_ok() && env::var("GOOGLE_BUCKET").is_ok() {
@@ -112,14 +114,11 @@ fn register_from_env(ctx: &SessionContext) -> Result<(), ResponseError> {
 
         log::debug!("Register 'gs://{bucket}' to object store registry");
 
-        let gs = GoogleCloudStorageBuilder::from_env()
+        let store = GoogleCloudStorageBuilder::from_env()
             .with_bucket_name(&bucket)
             .build()?;
 
-        ctx.runtime_env().register_object_store(
-            &url::Url::parse(&format!("gs://{}", &bucket))?,
-            Arc::new(gs),
-        );
+        register_to_runtime_env(ctx, &format!("gs://{}", &bucket), Arc::new(store))?;
     }
 
     if env::var("AZURE_STORAGE_ACCOUNT_NAME").is_ok()
@@ -130,14 +129,11 @@ fn register_from_env(ctx: &SessionContext) -> Result<(), ResponseError> {
 
         log::debug!("Register 'az://{container}' to object store registry");
 
-        let az = MicrosoftAzureBuilder::from_env()
+        let store = MicrosoftAzureBuilder::from_env()
             .with_container_name(&container)
             .build()?;
 
-        ctx.runtime_env().register_object_store(
-            &url::Url::parse(&format!("az://{}", &container))?,
-            Arc::new(az),
-        );
+        register_to_runtime_env(ctx, &format!("gs://{}", &container), Arc::new(store))?;
     }
 
     #[cfg(feature = "webdav")]
@@ -148,35 +144,19 @@ fn register_from_env(ctx: &SessionContext) -> Result<(), ResponseError> {
 
         log::debug!("Register '{url}' to object store registry");
 
-        register_webdav(ctx, &url, &user, &password)?;
+        register_to_runtime_env(ctx, &url, build_store::webdav(&url, &user, &password)?)?;
     }
 
     Ok(())
 }
 
-#[cfg(feature = "webdav")]
-fn register_webdav(
+fn register_to_runtime_env(
     ctx: &SessionContext,
     url: &str,
-    user: &str,
-    password: &str,
+    store: Arc<DynObjectStore>,
 ) -> Result<(), ResponseError> {
-    let parts = location::uri::to_parts(url)?;
-    let (scheme, authority, _) = location::uri::parts_to_string(&parts);
-
-    let url_with_auth = if !user.to_string().is_empty() || !password.to_string().is_empty() {
-        format!("{scheme}://{user}:{password}@{authority}")
-    } else {
-        format!("{scheme}://{authority}")
-    };
-
-    let http_store = HttpBuilder::new()
-        .with_url(url_with_auth)
-        .with_client_options(ClientOptions::new().with_allow_http(true))
-        .build()?;
-
     ctx.runtime_env()
-        .register_object_store(&url::Url::parse(url)?, Arc::new(http_store));
+        .register_object_store(&url::Url::parse(url)?, store);
 
     Ok(())
 }

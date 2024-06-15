@@ -1,0 +1,2 @@
+{"add":{"path":"1-f8472cc9-52e5-4332-b7f9-634ac3224ccb-0.parquet","partitionValues":{},"size":611,"modificationTime":1718340284453,"dataChange":true,"stats":"{\"numRecords\": 5, \"minValues\": {\"data\": 6}, \"maxValues\": {\"data\": 10}, \"nullCount\": {\"data\": 0}}","tags":null,"deletionVector":null,"baseRowId":null,"defaultRowCommitVersion":null,"clusteringProvider":null}}
+{"commitInfo":{"timestamp":1718340284453,"operation":"WRITE","operationParameters":{"mode":"Append","partitionBy":"[]"},"clientVersion":"delta-rs.0.18.0"}}

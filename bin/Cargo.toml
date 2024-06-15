@@ -18,6 +18,7 @@ plugin = ["datafusion-server/plugin"]
 flight = ["datafusion-server/flight"]
 avro = ["datafusion-server/avro"]
 webdav = ["datafusion-server/webdav"]
+deltalake = ["datafusion-server/deltalake"]
 
 [dependencies]
 datafusion-server = { path = "../lib" }

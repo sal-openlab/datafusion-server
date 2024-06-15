@@ -42,7 +42,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release --features=plugin,flight,avro,webdav
+ && cargo build --release --features=plugin,flight,avro,webdav,deltalake
 
 FROM debian:bookworm-slim
 

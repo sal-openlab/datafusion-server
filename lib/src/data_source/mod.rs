@@ -2,6 +2,8 @@
 pub mod connector_plugin;
 pub mod csv;
 mod decoder;
+#[cfg(feature = "deltalake")]
+pub mod deltalake;
 #[cfg(feature = "flight")]
 pub mod flight_stream;
 pub mod infer_schema;

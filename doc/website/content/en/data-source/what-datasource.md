@@ -24,6 +24,7 @@ The DataFusion Server supports the following standard data sources in the follow
 * Parquet
 * Avro
 * Arrow Flight gRPC
+* [Delta Lake](https://delta.io/) {{< icon "external-link" >}}
 
 ## Data Source Connector Plugins
 
@@ -33,8 +34,8 @@ in [Data Source Connector Plugin]({{< ref "/using-python-plugin/datasource-conne
 
 ## Data Source Format and Location Matrix
 
-| format \\ location |            http(s)             |           grpc(+tls)           | local filesystem                                       | object store                                           |             plugin             |
-|--------------------|:------------------------------:|:------------------------------:|:-------------------------------------------------------|:-------------------------------------------------------|:------------------------------:|
+| format \\ location | http(s)                        | grpc(+tls)                     | local filesystem                                       | object store                                           | plugin                         |
+|--------------------|:-------------------------------|:-------------------------------|:-------------------------------------------------------|:-------------------------------------------------------|:-------------------------------|
 | Arrow              |                                |                                |                                                        |                                                        | {{< icon "fa-circle-check" >}} |
 | JSON               | {{< icon "fa-circle-check" >}} |                                | {{< icon "fa-circle-check" >}} {{< icon "download" >}} |                                                        | {{< icon "fa-circle-check" >}} |
 | ndJSON             | {{< icon "fa-circle-check" >}} |                                | {{< icon "fa-circle-check" >}} {{< icon "download" >}} | {{< icon "fa-circle-check" >}} {{< icon "download" >}} | {{< icon "fa-circle-check" >}} |
@@ -42,6 +43,7 @@ in [Data Source Connector Plugin]({{< ref "/using-python-plugin/datasource-conne
 | Parquet            | {{< icon "fa-circle-check" >}} |                                | {{< icon "fa-circle-check" >}} {{< icon "download" >}} | {{< icon "fa-circle-check" >}} {{< icon "download" >}} | {{< icon "fa-circle-check" >}} |
 | Avro               |                                |                                | {{< icon "fa-circle-check" >}}                         | {{< icon "fa-circle-check" >}}                         |                                |
 | Arrow Flight       |                                | {{< icon "fa-circle-check" >}} |                                                        |                                                        |                                |
+| Delta Lake         |                                |                                | {{< icon "fa-circle-check" >}}                         | {{< icon "fa-circle-check" >}}                         |                                |
 
 * {{< icon "fa-circle-check" >}} Supported
 * {{< icon "download" >}} Save feature supported

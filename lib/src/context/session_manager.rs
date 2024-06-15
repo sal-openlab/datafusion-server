@@ -125,6 +125,13 @@ pub trait SessionManager: Send + Sync + 'static {
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
 
+    #[cfg(feature = "deltalake")]
+    async fn append_from_deltalake(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError>;
+
     #[cfg(feature = "plugin")]
     async fn append_connector_plugin(
         &self,
@@ -371,6 +378,10 @@ impl SessionManager for SessionContextManager {
             DataSourceFormat::Flight => {
                 self.append_flight_stream(session_id, data_source).await?;
             }
+            #[cfg(feature = "deltalake")]
+            DataSourceFormat::Deltalake => {
+                self.append_from_deltalake(session_id, data_source).await?;
+            }
         }
 
         Ok(())
@@ -408,7 +419,8 @@ impl SessionManager for SessionContextManager {
         } else {
             use std::str::FromStr;
             return Err(ResponseError::request_validation(format!(
-                "Unsupported scheme '{}' to save feature",
+                "Unsupported format '{}' and/or scheme '{}' are save feature",
+                &data_source.format.to_str(),
                 &uri.scheme
                     .unwrap_or_else(|| http::uri::Scheme::from_str("unknown").unwrap())
             )));
@@ -526,6 +538,18 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_flight_stream(data_source)
+            .await?;
+        Ok(())
+    }
+
+    #[cfg(feature = "deltalake")]
+    async fn append_from_deltalake(
+        &self,
+        session_id: &str,
+        data_source: &DataSource,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_from_deltalake(data_source)
             .await?;
         Ok(())
     }

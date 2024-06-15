@@ -70,7 +70,7 @@ The display would look like this.
 +---------------+-------+------------------+---------------------------+
 ```
 
-In case the option `--with-schema` (or `-b`) is specified, the schema information will be displayed before the table.
+In case the option `--with-schema` (or `-s`) is specified, the schema information will be displayed before the table.
 
 ```
 Field { name: "foo", data_type: Utf8, nullable: true, dict_id: 0, dict_is_ordered: false, metadata: {} }
