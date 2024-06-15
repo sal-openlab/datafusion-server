@@ -96,6 +96,9 @@ pub enum DataSourceFormat {
     #[cfg(feature = "flight")]
     #[serde(rename = "flight")]
     Flight,
+    #[cfg(feature = "deltalake")]
+    #[serde(rename = "deltalake")]
+    Deltalake,
 }
 
 impl DataSourceFormat {
@@ -111,6 +114,8 @@ impl DataSourceFormat {
             DataSourceFormat::Avro => "avro",
             #[cfg(feature = "flight")]
             DataSourceFormat::Flight => "flight",
+            #[cfg(feature = "deltalake")]
+            DataSourceFormat::Deltalake => "deltaLake",
         }
     }
 }
@@ -202,6 +207,15 @@ impl DataSource {
                 ) {
                     return Err(ResponseError::unsupported_type(
                         "Data source flight only supported 'http', 'https', 'grpc', 'grpc+tls' schemes",
+                    ));
+                }
+            }
+            #[cfg(feature = "deltalake")]
+            DataSourceFormat::Deltalake => {
+                #[cfg(feature = "flight")]
+                if matches!(scheme, SupportedScheme::Grpc | SupportedScheme::GrpcTls) {
+                    return Err(ResponseError::unsupported_type(
+                        "Data source delta lake not supported 'grpc' and 'grpc+tls' schemes",
                     ));
                 }
             }

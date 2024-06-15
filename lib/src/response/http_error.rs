@@ -128,6 +128,17 @@ impl From<object_store::Error> for ResponseError {
     }
 }
 
+#[cfg(feature = "deltalake")]
+impl From<delta_kernel::Error> for ResponseError {
+    fn from(e: delta_kernel::Error) -> Self {
+        ResponseError {
+            error: "delta_kernel_error".to_string(),
+            message: e.to_string(),
+            code: http::StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 impl ResponseError {
     pub fn session_not_found(id: impl Into<String>) -> Self {
         Self {

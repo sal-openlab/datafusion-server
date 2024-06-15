@@ -16,6 +16,8 @@ use tokio::sync::RwLock;
 
 #[cfg(feature = "plugin")]
 use crate::data_source::connector_plugin;
+#[cfg(feature = "deltalake")]
+use crate::data_source::deltalake;
 #[cfg(feature = "flight")]
 use crate::data_source::flight_stream;
 use crate::data_source::{csv, json, local_fs, location, nd_json, object_store, parquet};
@@ -107,6 +109,8 @@ pub trait Session: Send + Sync + 'static {
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
+    #[cfg(feature = "deltalake")]
+    async fn append_from_deltalake(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     #[cfg(feature = "plugin")]
     async fn append_from_connector_plugin(
         &self,
@@ -394,6 +398,20 @@ impl Session for ConcurrentSessionContext {
 
         let record_batches =
             flight_stream::to_record_batch(&data_source.location, &options).await?;
+
+        Self::register_record_batch(self, data_source, &record_batches).await?;
+
+        Ok(())
+    }
+
+    #[cfg(feature = "deltalake")]
+    async fn append_from_deltalake(&self, data_source: &DataSource) -> Result<(), ResponseError> {
+        let options = match &data_source.options {
+            Some(o) => o.clone(),
+            None => DataSourceOption::default(),
+        };
+
+        let record_batches = deltalake::to_record_batch(&data_source.location, &options).await?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 

@@ -41,6 +41,26 @@ pub enum SupportedScheme {
 }
 
 impl SupportedScheme {
+    #[allow(dead_code)]
+    pub fn to_string(&self) -> &str {
+        match self {
+            Self::Http => "http",
+            Self::Https => "https",
+            Self::File => "file",
+            Self::S3 => "s3",
+            Self::GS => "gs",
+            Self::AZ => "az",
+            #[cfg(feature = "webdav")]
+            Self::Webdav => "webdav",
+            #[cfg(feature = "flight")]
+            Self::Grpc => "grpc",
+            #[cfg(feature = "flight")]
+            Self::GrpcTls => "grpc+tls",
+            #[cfg(feature = "plugin")]
+            Self::Plugin => "plugin",
+        }
+    }
+
     pub fn handle_object_store(&self) -> bool {
         match self {
             Self::File => true,

@@ -20,6 +20,7 @@ plugin = ["pyo3", "datafusion/pyarrow"]
 flight = ["arrow-flight", "tonic"]
 avro = ["datafusion/avro"]
 webdav = ["object_store/http"]
+deltalake = ["delta_kernel"]
 
 [dependencies]
 anyhow = "1.0.86"
@@ -54,3 +55,4 @@ arrow-flight = { version = "52.0.0", optional = true }
 pyo3 = { version = "0.21.2", optional = true }
 object_store = { version = "0.10.1", features = ["aws", "gcp", "azure"] }
 url = "2.5.1"
+delta_kernel = { version = "0.1.1", optional = true, features = ["default-engine"] }

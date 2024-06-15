@@ -71,6 +71,12 @@ pub fn to_record_batch(
         DataSourceFormat::Parquet => {
             parquet::from_bytes_to_record_batch(py_result_to_bytes(&py_result)?)?
         }
+        #[cfg(feature = "deltalake")]
+        DataSourceFormat::Deltalake => {
+            return Err(ResponseError::unsupported_type(
+                "Format of plugins are not supported 'deltalake'",
+            ));
+        }
         #[cfg(feature = "flight")]
         DataSourceFormat::Flight => {
             return Err(ResponseError::unsupported_type(
