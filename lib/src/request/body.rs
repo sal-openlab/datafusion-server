@@ -26,6 +26,7 @@ pub struct DataSourceOption {
     pub overwrite: Option<bool>,
     // for http headers
     pub headers: Option<HashMap<String, String>>,
+    pub version: Option<u64>,
 }
 
 impl DataSourceOption {
@@ -39,6 +40,7 @@ impl DataSourceOption {
             require_normalize: None,
             overwrite: None,
             headers: None,
+            version: None,
         }
     }
 
@@ -52,6 +54,7 @@ impl DataSourceOption {
             require_normalize: Some(false),
             overwrite: Some(false),
             headers: None,
+            version: None,
         }
     }
 

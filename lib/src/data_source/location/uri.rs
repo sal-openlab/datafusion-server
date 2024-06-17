@@ -22,7 +22,7 @@ pub enum InvalidLocation {
     UnsupportedScheme,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum SupportedScheme {
     Http,
     Https,
@@ -42,7 +42,7 @@ pub enum SupportedScheme {
 
 impl SupportedScheme {
     #[allow(dead_code)]
-    pub fn to_string(&self) -> &str {
+    pub fn to_str(&self) -> &str {
         match self {
             Self::Http => "http",
             Self::Https => "https",
@@ -58,6 +58,30 @@ impl SupportedScheme {
             Self::GrpcTls => "grpc+tls",
             #[cfg(feature = "plugin")]
             Self::Plugin => "plugin",
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn from_str(scheme: &str) -> Self {
+        match scheme {
+            "http" => SupportedScheme::Http,
+            "https" => SupportedScheme::Https,
+            "file" => SupportedScheme::File,
+            "s3" => SupportedScheme::S3,
+            "gs" => SupportedScheme::GS,
+            "az" | "adl" | "abfs" | "abfss" => SupportedScheme::AZ,
+            #[cfg(feature = "webdav")]
+            "webdav" => SupportedScheme::Webdav,
+            #[cfg(feature = "flight")]
+            "grpc" => SupportedScheme::Grpc,
+            #[cfg(feature = "flight")]
+            "grpc+tls" => SupportedScheme::GrpcTls,
+            #[cfg(feature = "plugin")]
+            "plugin" => SupportedScheme::Plugin,
+            #[cfg(feature = "plugin")]
+            _ => SupportedScheme::Plugin,
+            #[cfg(not(feature = "plugin"))]
+            _ => SupportedScheme::File,
         }
     }
 

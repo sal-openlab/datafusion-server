@@ -14,7 +14,11 @@ use crate::data_source::location;
 use crate::response::http_error::ResponseError;
 
 #[cfg(feature = "webdav")]
-pub fn webdav(url: &str, user: &str, password: &str) -> Result<Arc<DynObjectStore>, ResponseError> {
+pub fn webdav(
+    url: &str,
+    user: &str,
+    password: &str,
+) -> Result<(Arc<DynObjectStore>, String, String), ResponseError> {
     let parts = location::uri::to_parts(url)?;
     let (scheme, authority, _) = location::uri::parts_to_string(&parts);
 
@@ -29,5 +33,5 @@ pub fn webdav(url: &str, user: &str, password: &str) -> Result<Arc<DynObjectStor
         .with_client_options(ClientOptions::new().with_allow_http(true))
         .build()?;
 
-    Ok(Arc::new(http_store))
+    Ok((Arc::new(http_store), scheme, authority))
 }

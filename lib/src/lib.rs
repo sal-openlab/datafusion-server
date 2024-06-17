@@ -44,7 +44,7 @@ mod statistics;
 #[tokio::main]
 pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     LAZY_SETTINGS
-        .set(settings)
+        .set(settings.init_object_store_registry()?)
         .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;
 
     LAZY_STATISTICS

@@ -12,6 +12,8 @@ use log::Level;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
+use crate::data_source::object_store::credential_manager;
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct Server {
     pub address: String,
@@ -96,6 +98,8 @@ pub struct Settings {
     pub session: Session,
     pub log: Log,
     pub storages: Option<Vec<Storage>>,
+    #[serde(skip)]
+    pub object_store_manager: credential_manager::ObjectStoreManager,
 }
 
 pub static LAZY_SETTINGS: OnceCell<Settings> = OnceCell::new();
@@ -138,6 +142,19 @@ impl Settings {
             .unwrap()
             .set_default("log.level", "info")
             .unwrap()
+    }
+
+    /// ## Errors
+    /// Can not initialize object store credentials.
+    pub fn init_object_store_registry(mut self) -> Result<Self, ConfigError> {
+        self.object_store_manager = credential_manager::ObjectStoreManager::new_with_config(
+            &self.storages,
+        )
+        .map_err(|e| {
+            ConfigError::Message(format!("Can not initialize object store credentials: {e}"))
+        })?;
+
+        Ok(self)
     }
 
     /// ## Panics
