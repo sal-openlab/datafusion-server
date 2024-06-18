@@ -20,6 +20,26 @@ specify the root directory of the Delta Lake table. The schemes that can be spec
 the `location` refer to supported
 [Format and Location Matrix]({{< ref "/data-source/what-datasource#data-source-format-and-location-matrix" >}}).
 
+## Options
+
+### Specified Table Version (Delta Table Time Travel Feature)
+
+Specify the version number of the Delta table in the `version` key of the `options` block. The initial version is `0`.
+
+```json
+{
+  "format": "deltalake",
+  "name": "example",
+  "location": "file:///delta-tables/delta-table",
+  "options": {
+    "version": 0
+  }
+}
+```
+
+Here is the official documentation on Delta Lake’s ‘Time
+Travel’: [Delta Lake Time Travel](https://delta.io/blog/2023-02-01-delta-lake-time-travel/) {{< icon "external-link" >}}
+
 ## Usage Example
 
 ```sh

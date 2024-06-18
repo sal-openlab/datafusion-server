@@ -25,9 +25,21 @@ or enables Python plugin feature:
 datafusion-server = { version = "0.12.1", features = ["plugin"] }
 ```
 
+Refer to the next section for the configurable feature flags.
+
+## Feature flags
+
+| flags     | feature                                         |
+|-----------|-------------------------------------------------|
+| plugin    | Data source connector and post processor plugin |
+| flight    | Arrow Flight RPC client / server                |
+| avro      | Apache Avro format for using data source        |
+| webdav    | HTTP extended WebDAV store                      |
+| deltalake | Delta Lake integration                          |
+
 ## Example of call the DataFusion Server entry function
 
-Configuration programatically.
+Configuration programmatically.
 
 ```rust
 use datafusion_server::settings::Settings;
@@ -82,17 +94,17 @@ level = "debug"
 
 ### Configuration parameters
 
-| Parameter           | Description                  | Default    |
-| -- | -- | -- |
-| `server.address`    | Acceptable host address      | `0.0.0.0`  |
-| `server.port`       | Listening port for HTTP      | `4000`     |
-| `server.flight_grpc_port` | Listening port for Flight gRPC | `50051` |
-| `server.base_url`   | URL prefix                   | `/`        |
-| `server.data_dir`   | Static data source directory | `./data`   |
-| `server.plugin_dir` | Python plugin directory      | `./plugin` |
-| `session.default_keep_alive` | Default session timeout value in seconds | `3600` |
-| `session.upload_limit_size`  | Size limit in MB for `/session/:id/datasource/upload` endpoint | `20` |
-| `log.level` | Logging level (`trace`, `debug`, `info`, `warn`, `error`) | `info` |
+| Parameter                    | Description                                                    | Default    |
+|------------------------------|----------------------------------------------------------------|------------|
+| `server.address`             | Acceptable host address                                        | `0.0.0.0`  |
+| `server.port`                | Listening port for HTTP                                        | `4000`     |
+| `server.flight_grpc_port`    | Listening port for Flight gRPC                                 | `50051`    |
+| `server.base_url`            | URL prefix                                                     | `/`        |
+| `server.data_dir`            | Static data source directory                                   | `./data`   |
+| `server.plugin_dir`          | Python plugin directory                                        | `./plugin` |
+| `session.default_keep_alive` | Default session timeout value in seconds                       | `3600`     |
+| `session.upload_limit_size`  | Size limit in MB for `/session/:id/datasource/upload` endpoint | `20`       |
+| `log.level`                  | Logging level (`trace`, `debug`, `info`, `warn`, `error`)      | `info`     |
 
 
 
