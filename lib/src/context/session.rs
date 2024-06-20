@@ -411,7 +411,7 @@ impl Session for ConcurrentSessionContext {
             None => DataSourceOption::default(),
         };
 
-        let record_batches = deltalake::to_record_batch(&data_source.location, &options).await?;
+        let record_batches = deltalake::to_record_batch(&data_source.location, &options)?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 
