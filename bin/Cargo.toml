@@ -19,6 +19,7 @@ flight = ["datafusion-server/flight"]
 avro = ["datafusion-server/avro"]
 webdav = ["datafusion-server/webdav"]
 deltalake = ["datafusion-server/deltalake"]
+telemetry = ["datafusion-server/telemetry"]
 
 [dependencies]
 datafusion-server = { path = "../lib" }

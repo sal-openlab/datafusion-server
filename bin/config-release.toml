@@ -3,6 +3,11 @@
 [server]
 port = 4000
 flight_grpc_port = 50051 # only for enables `flight` feature
+
+# It must not be exposed to the public in a production environment, only for inner docker network in this case.
+metrics_address = "0.0.0.0" # only for enables `telemetry` feature
+metrics_port = 9100  # only for enables `telemetry` feature
+
 base_url = "/"
 data_dir = "/var/datafusion-server/data"
 plugin_dir = "/usr/local/datafusion-server/plugins"

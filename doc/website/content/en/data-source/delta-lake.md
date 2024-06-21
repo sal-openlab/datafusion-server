@@ -24,7 +24,8 @@ the `location` refer to supported
 
 ### Specified Table Version (Delta Table Time Travel Feature)
 
-Specify the version number of the Delta table in the `version` key of the `options` block. The initial version is `0`.
+Specify the version number of the Delta table in the `version` key of the `options` block.
+The initial version is `0`. If omitted, the latest version will be used.
 
 ```json
 {

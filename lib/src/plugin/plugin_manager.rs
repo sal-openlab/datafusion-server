@@ -30,6 +30,7 @@ pub static PLUGIN_MANAGER: OnceCell<PluginManager> = OnceCell::new();
 
 #[derive(Debug)]
 pub struct PluginManager {
+    #[allow(dead_code)]
     pub plugin_map: PluginMap,
 }
 
