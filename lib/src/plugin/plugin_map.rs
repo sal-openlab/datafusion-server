@@ -9,6 +9,7 @@ use crate::Settings;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct PluginMap {
     // module, (py_file, entry, version)

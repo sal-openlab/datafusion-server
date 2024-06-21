@@ -8,6 +8,7 @@ use axum::{
 };
 
 pub struct BodyWithLimit {
+    #[allow(dead_code)]
     pub payload: bytes::Bytes,
 }
 

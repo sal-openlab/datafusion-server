@@ -18,7 +18,10 @@ use crate::data_source::object_store::credential_manager;
 pub struct Server {
     pub address: String,
     pub port: u16,
+    pub flight_address: String,
     pub flight_grpc_port: u16,
+    pub metrics_address: String,
+    pub metrics_port: u16,
     pub base_url: String,
     pub data_dir: String,
     pub plugin_dir: String,
@@ -128,7 +131,13 @@ impl Settings {
             .unwrap()
             .set_default("server.port", 4000)
             .unwrap()
+            .set_default("server.flight_address", "0.0.0.0")
+            .unwrap()
             .set_default("server.flight_grpc_port", 50051)
+            .unwrap()
+            .set_default("server.metrics_address", "127.0.0.1")
+            .unwrap()
+            .set_default("server.metrics_port", 9100)
             .unwrap()
             .set_default("server.base_url", "/")
             .unwrap()

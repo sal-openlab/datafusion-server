@@ -26,6 +26,7 @@ pub struct DataSourceOption {
     pub overwrite: Option<bool>,
     // for http headers
     pub headers: Option<HashMap<String, String>>,
+    #[allow(dead_code)]
     pub version: Option<u64>,
 }
 

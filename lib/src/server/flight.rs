@@ -22,6 +22,7 @@ use tonic::{Request, Response, Status, Streaming};
 
 use crate::context::session_manager::SessionManager;
 use crate::response::receiver_stream;
+use crate::server::metrics;
 use crate::settings::Settings;
 
 macro_rules! process_descriptor {
@@ -161,19 +162,23 @@ impl FlightService for DataFusionServerFlightService {
         &self,
         request: Request<FlightDescriptor>,
     ) -> Result<Response<FlightInfo>, Status> {
-        let descriptor = request.into_inner();
-        let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
-        let schema = Self::schema_from_logical_plan(self, &session_id, &sql).await?;
+        metrics::track_flight("get_flight_info", request, |request| async move {
+            let descriptor = request.into_inner();
+            let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
+            let schema = Self::schema_from_logical_plan(self, &session_id, &sql).await?;
 
-        Ok(Response::new(
-            FlightInfo::new()
-                .try_with_schema(&schema)
-                .map_err(|e| Status::internal(e.to_string()))?
-                .with_endpoint(
-                    FlightEndpoint::new().with_ticket(Ticket::new(format!("{session_id}/{sql}"))),
-                )
-                .with_descriptor(descriptor),
-        ))
+            Ok(Response::new(
+                FlightInfo::new()
+                    .try_with_schema(&schema)
+                    .map_err(|e| Status::internal(e.to_string()))?
+                    .with_endpoint(
+                        FlightEndpoint::new()
+                            .with_ticket(Ticket::new(format!("{session_id}/{sql}"))),
+                    )
+                    .with_descriptor(descriptor),
+            ))
+        })
+        .await
     }
 
     async fn poll_flight_info(
@@ -187,12 +192,15 @@ impl FlightService for DataFusionServerFlightService {
         &self,
         request: Request<FlightDescriptor>,
     ) -> Result<Response<SchemaResult>, Status> {
-        let descriptor = request.into_inner();
-        let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
+        metrics::track_flight("get_schema", request, |request| async move {
+            let descriptor = request.into_inner();
+            let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
 
-        Ok(Response::new(
-            Self::ipc_schema_result(self, &session_id, &sql).await?,
-        ))
+            Ok(Response::new(
+                Self::ipc_schema_result(self, &session_id, &sql).await?,
+            ))
+        })
+        .await
     }
 
     type DoGetStream = BoxedStream<FlightData>;
@@ -201,43 +209,46 @@ impl FlightService for DataFusionServerFlightService {
         &self,
         request: Request<Ticket>,
     ) -> Result<Response<Self::DoGetStream>, Status> {
-        let ticket = request.into_inner();
+        metrics::track_flight("do_get", request, |request| async move {
+            let ticket = request.into_inner();
 
-        if let Ok(ticket_str) = std::str::from_utf8(&ticket.ticket) {
-            log::info!("Call do_get: {ticket_str}");
+            if let Ok(ticket_str) = std::str::from_utf8(&ticket.ticket) {
+                log::info!("Call do_get: {ticket_str}");
 
-            let (session_id, ticket_value) = split_descriptor_value(Some(ticket_str))?;
-            let sql = if ticket_value.chars().any(char::is_whitespace) {
-                ticket_value // May be SQL statement
+                let (session_id, ticket_value) = split_descriptor_value(Some(ticket_str))?;
+                let sql = if ticket_value.chars().any(char::is_whitespace) {
+                    ticket_value // May be SQL statement
+                } else {
+                    format!("SELECT * FROM {ticket_value}")
+                };
+
+                let batch_stream = self
+                    .session_mgr
+                    .lock()
+                    .await
+                    .execute_sql_stream(&session_id, &sql)
+                    .await
+                    .map_err(from_http_response_err)?;
+
+                let (tx, rx) = tokio::sync::mpsc::channel(32);
+
+                tokio::spawn(async move {
+                    if let Err(e) = Self::send_record_batch_stream(batch_stream, tx).await {
+                        log::error!("Error converting and sending batches: {}", e);
+                    }
+                });
+
+                let flight_data_stream = receiver_stream::Receive::new(rx)
+                    .map_err(|_| Status::internal("Channel receive error"));
+
+                Ok(Response::new(
+                    Box::pin(flight_data_stream) as Self::DoGetStream
+                ))
             } else {
-                format!("SELECT * FROM {ticket_value}")
-            };
-
-            let batch_stream = self
-                .session_mgr
-                .lock()
-                .await
-                .execute_sql_stream(&session_id, &sql)
-                .await
-                .map_err(from_http_response_err)?;
-
-            let (tx, rx) = tokio::sync::mpsc::channel(32);
-
-            tokio::spawn(async move {
-                if let Err(e) = Self::send_record_batch_stream(batch_stream, tx).await {
-                    log::error!("Error converting and sending batches: {}", e);
-                }
-            });
-
-            let flight_data_stream = receiver_stream::Receive::new(rx)
-                .map_err(|_| Status::internal("Channel receive error"));
-
-            Ok(Response::new(
-                Box::pin(flight_data_stream) as Self::DoGetStream
-            ))
-        } else {
-            Err(Status::invalid_argument("Invalid ticket"))
-        }
+                Err(Status::invalid_argument("Invalid ticket"))
+            }
+        })
+        .await
     }
 
     type DoPutStream = BoxedStream<PutResult>;
@@ -323,7 +334,7 @@ pub fn create_server<S: SessionManager>(
 > {
     let sock_addr = format!(
         "{}:{}",
-        Settings::global().server.address,
+        Settings::global().server.flight_address,
         Settings::global().server.flight_grpc_port,
     )
     .parse::<SocketAddr>()?;

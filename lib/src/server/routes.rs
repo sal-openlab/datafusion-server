@@ -15,6 +15,8 @@ use tokio::sync::Mutex;
 
 use crate::context::session_manager::SessionManager;
 use crate::response::handler::{data_source, dataframe, processor, session, sys_info};
+#[cfg(feature = "telemetry")]
+use crate::server::metrics;
 use crate::settings::Settings;
 
 pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
@@ -49,12 +51,20 @@ pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
 
     let base_url = get_base_url();
 
-    Router::new()
+    #[allow(unused_mut)]
+    let mut router = Router::new()
         .nest(&format!("{base_url}/dataframe"), df_route)
         .nest(&format!("{base_url}/session"), session_route)
         .nest(&format!("{base_url}/session"), session_upload_route)
         .route(&format!("{base_url}/healthz"), get(hc_handler))
-        .route(&format!("{base_url}/sysinfo"), get(sys_info::handler))
+        .route(&format!("{base_url}/sysinfo"), get(sys_info::handler));
+
+    #[cfg(feature = "telemetry")]
+    {
+        router = router.route_layer(axum::middleware::from_fn(metrics::track_http));
+    }
+
+    router
 }
 
 fn get_base_url() -> String {

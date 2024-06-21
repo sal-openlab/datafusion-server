@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.17.0 (2024-06-21)
+
+* Metrics tracking and exposing for [Prometheus](https://prometheus.io/) integration
+    + Please refer to this [document](https://sal-openlab.github.io/datafusion-server/installation/telemetry/)
+      for more details
+* Refactor object stores credentials to credential manager
+* Resolved some warnings reported by clippy
+    + `clippy-all.sh` to checks all features combination
+* Support for specifying table versions (time travel feature) in Delta Lake
+    + Specify the version of the Delta table in the data source definition under `options.version`
+    + Please refer to the
+      [documentation](https://sal-openlab.github.io/datafusion-server/data-source/delta-lake/#options)
+      for more details on this as well
+
 ## 0.16.0 (2024-06-15)
 
 * Delta Lake integration (currently read direction only)

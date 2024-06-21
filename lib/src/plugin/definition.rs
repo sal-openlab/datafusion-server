@@ -4,10 +4,12 @@
 
 #[cfg(feature = "plugin")]
 use config::{Config, ConfigError, File};
+#[cfg(feature = "plugin")]
 use serde::Deserialize;
 #[cfg(feature = "plugin")]
 use std::path::Path;
 
+#[cfg(feature = "plugin")]
 #[derive(Debug, Deserialize, Clone)]
 pub enum PluginType {
     #[serde(rename = "datasource")]
@@ -16,8 +18,10 @@ pub enum PluginType {
     Processor,
 }
 
+#[cfg(feature = "plugin")]
 #[derive(Debug, Deserialize, Clone)]
 pub struct General {
+    #[allow(dead_code)]
     pub title: String,
     pub plugin_type: PluginType,
     pub version: String,
@@ -25,18 +29,21 @@ pub struct General {
     pub module: Option<String>,
 }
 
+#[cfg(feature = "plugin")]
 #[derive(Debug, Deserialize, Clone)]
 pub struct Plugin {
     pub file: String,
     pub entry: String,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[cfg(feature = "plugin")]
+#[derive(Deserialize)]
 pub struct Definition {
     pub general: General,
     pub plugin: Plugin,
 }
 
+#[cfg(feature = "plugin")]
 impl Definition {
     #[cfg(feature = "plugin")]
     pub fn new(def_file: &Path) -> Result<Self, ConfigError> {

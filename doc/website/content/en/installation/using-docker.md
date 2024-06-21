@@ -7,7 +7,8 @@ weight: 10
 
 ## Pre-built Docker images
 
-DataFusion Server has two container options: a full-featured container with Python plugin enabled and a compact container without Python plugin.
+DataFusion Server has two container options: a full-featured container with Python plugin enabled and a compact
+container without Python plugin.
 
 ### Pull container image from GitHub container registry
 
@@ -66,7 +67,8 @@ Inspecting container logs.
 docker logs datafusion-server
 ```
 
-Call statistics endpoint by [cURL](https://curl.se/) {{< icon "external-link" >}}with [jq](https://jqlang.github.io/jq/) {{< icon "external-link" >}}formatter.
+Call statistics endpoint by [cURL](https://curl.se/) {{< icon "external-link" >}}with
+[jq](https://jqlang.github.io/jq/) {{< icon "external-link" >}}formatter.
 
 ```shell
 curl http://localhost:4000/sysinfo | jq
@@ -112,9 +114,18 @@ docker stop datafusion-server
 ## Building containers your self
 
 {{< hint type=note title="Supported Environments" >}}
-* Docker CE / EE [Supported platforms](https://docs.docker.com/engine/install/#supported-platforms) {{< icon "external-link" >}}
-* Docker Desktop for [Windows](https://docs.docker.com/desktop/install/windows-install/) {{< icon "external-link" >}}/ [macOS](https://docs.docker.com/desktop/install/mac-install/) {{< icon "external-link" >}}/ [Linux](https://docs.docker.com/desktop/install/linux-install/) {{< icon "external-link" >}}
-{{< /hint >}}
+
+* Docker CE / EE
+  [Supported platforms](https://docs.docker.com/engine/install/#supported-platforms)
+  {{< icon "external-link" >}}
+* Docker Desktop for
+  [Windows](https://docs.docker.com/desktop/install/windows-install/)
+  {{< icon "external-link" >}}
+  / [macOS](https://docs.docker.com/desktop/install/mac-install/)
+  {{< icon "external-link" >}}
+  / [Linux](https://docs.docker.com/desktop/install/linux-install/)
+  {{< icon "external-link" >}}
+  {{< /hint >}}
 
 ### Clone the source codes from GitHub
 
@@ -129,7 +140,8 @@ cd datafusion-server
 ./make-containers.sh
 ```
 
-This will build two containers: a full-feature container and a compact container with the without plugin feature. Additionally, Docker image files containing both containers are generated.
+This will build two containers: a full-feature container and a compact container with the without plugin feature.
+Additionally, Docker image files containing both containers are generated.
 
 * datafusion-server-x.y.z.tar.gz
 * datafusion-server-without-plugin-x.y.z.tar.gz
@@ -144,6 +156,7 @@ Full-featured built container:
 docker run -d --rm \
     -p 4000:4000 \
     -p 50051:50051 \
+    -p 9100:9100 \
     -v ./data:/var/datafusion-server/data \
     --name datafusion-server \
     datafusion-server:x.y.z
@@ -155,6 +168,7 @@ or without Python plugin container:
 docker run -d --rm \
     -p 4000:4000 \
     -p 50051:50051 \
+    -p 9100:9100 \
     -v ./data:/var/datafusion-server/data \
     --name datafusion-server \
     datafusion-server-without-plugin:x.y.z
@@ -166,6 +180,12 @@ If you are only using sample data in a container, omit the `-v ./data:/var/xapi-
 docker run -d --rm \
     -p 4000:4000 \
     -p 50051:50051 \
+    -p 9100:9100 \
     --name datafusion-server \
     datafusion-server:x.y.z
 ```
+
+{{< hint type=warning >}}
+The metrics expose port (default 9100) should not be publicly accessible. It should be operated within the same Docker
+network as the Prometheus server, but it is shown here as an example.
+{{< /hint >}}
