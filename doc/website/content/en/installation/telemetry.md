@@ -62,6 +62,17 @@ flight_requests_duration_seconds{method="do_get",status="error",quantile="0.999"
 flight_requests_duration_seconds{method="do_get",status="error",quantile="1"} 0.000506459
 ```
 
+## Metric Names and Labels
+
+Currently, following metric names and labels are exposed:
+
+| metric name                      | value                                         | labels               |
+|----------------------------------|-----------------------------------------------|----------------------|
+| http_requests_total              | Total number of HTTP requests received        | method, path, status |
+| http_requests_duration_seconds   | Latency from request to response              | method, path, status |
+| flight_requests_total            | Total number of Flight gRPC requests received | method, status       |
+| flight_requests_duration_seconds | Latency from request to response              | method, status       |
+
 ## Configuring Prometheus
 
 Detailed configuration information about Prometheus is not provided here.
