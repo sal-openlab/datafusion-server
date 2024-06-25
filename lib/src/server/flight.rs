@@ -18,9 +18,13 @@ use datafusion::{
     physical_plan::SendableRecordBatchStream,
 };
 use futures::{stream::BoxStream, StreamExt, TryStreamExt};
-use tonic::{Request, Response, Status, Streaming};
+use tonic::{
+    codegen::tokio_stream::wrappers::ReceiverStream, Request, Response, Status, Streaming,
+};
 
 use crate::context::session_manager::SessionManager;
+use crate::data_source::flight_stream;
+use crate::request::body::DataSourceFormat;
 use crate::response::receiver_stream;
 use crate::server::metrics;
 use crate::settings::Settings;
@@ -255,9 +259,50 @@ impl FlightService for DataFusionServerFlightService {
 
     async fn do_put(
         &self,
-        _request: Request<Streaming<FlightData>>,
+        request: Request<Streaming<FlightData>>,
     ) -> Result<Response<Self::DoPutStream>, Status> {
-        Err(Status::unimplemented("Not yet implemented"))
+        metrics::track_flight("do_put", request, |request| async move {
+            let mut stream = request.into_inner();
+
+            let (record_batches, descriptor) = flight_stream::to_record_batches(&mut stream)
+                .await
+                .map_err(from_http_response_err)?;
+
+            let (session_id, table_name) = if let Some(descriptor) = &descriptor {
+                process_descriptor!(
+                    descriptor,
+                    {
+                        let (session_id, table_name) = split_descriptor_path(descriptor)?;
+                        Ok((session_id, table_name))
+                    },
+                    { Err(Status::invalid_argument("Invalid descriptor type 'cmd'")) }
+                )?
+            } else {
+                return Err(Status::invalid_argument(
+                    "No descriptor found in FlightData",
+                ));
+            };
+
+            self.session_mgr
+                .lock()
+                .await
+                .append_record_batch(
+                    &session_id,
+                    DataSourceFormat::Flight,
+                    &table_name,
+                    &record_batches,
+                )
+                .await
+                .map_err(from_http_response_err)?;
+
+            // Send PutResult messages back to the client
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            let result_stream = ReceiverStream::new(rx);
+            tx.send(Ok(PutResult::default())).await.unwrap();
+
+            Ok(Response::new(Box::pin(result_stream) as Self::DoPutStream))
+        })
+        .await
     }
 
     type DoExchangeStream = BoxedStream<FlightData>;

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.1 (2024-06-25)
+
+* Missing functions and bug fixes
+    + Since the `do_put` method of the Flight feature was not implemented
+        - Available test client at `example/flight-client`
+    + Exponential definitions for latency was not applied to metrics for the Flight feature methods
+
 ## 0.17.0 (2024-06-21)
 
 * Metrics tracking and exposing for [Prometheus](https://prometheus.io/) integration

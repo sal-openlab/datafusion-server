@@ -118,8 +118,17 @@ pub trait SessionManager: Send + Sync + 'static {
         data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
 
+    #[cfg(feature = "flight")] // currently used only `flight` feature
+    async fn append_record_batch(
+        &self,
+        session_id: &str,
+        format: DataSourceFormat,
+        name: &str,
+        record_batches: &[RecordBatch],
+    ) -> Result<(), ResponseError>;
+
     #[cfg(feature = "flight")]
-    async fn append_flight_stream(
+    async fn append_from_flight_client(
         &self,
         session_id: &str,
         data_source: &DataSource,
@@ -376,7 +385,8 @@ impl SessionManager for SessionContextManager {
             }
             #[cfg(feature = "flight")]
             DataSourceFormat::Flight => {
-                self.append_flight_stream(session_id, data_source).await?;
+                self.append_from_flight_client(session_id, data_source)
+                    .await?;
             }
             #[cfg(feature = "deltalake")]
             DataSourceFormat::Deltalake => {
@@ -530,14 +540,30 @@ impl SessionManager for SessionContextManager {
         Ok(())
     }
 
+    #[cfg(feature = "flight")] // currently used only `flight` feature
+    async fn append_record_batch(
+        &self,
+        session_id: &str,
+        format: DataSourceFormat,
+        name: &str,
+        record_batches: &[RecordBatch],
+    ) -> Result<(), ResponseError> {
+        let data_source = DataSource::new(format, name, Some(""));
+
+        context!(self, session_id)?
+            .register_record_batch(&data_source, record_batches)
+            .await?;
+        Ok(())
+    }
+
     #[cfg(feature = "flight")]
-    async fn append_flight_stream(
+    async fn append_from_flight_client(
         &self,
         session_id: &str,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
-            .append_from_flight_stream(data_source)
+            .append_from_flight_client(data_source)
             .await?;
         Ok(())
     }

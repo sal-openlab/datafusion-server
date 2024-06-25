@@ -9,11 +9,12 @@ use crate::request::body::DataSourceOption;
 use crate::response::http_error::ResponseError;
 use crate::server::flight::split_descriptor_value;
 use arrow_flight::{
-    flight_service_client::FlightServiceClient, utils::flight_data_to_arrow_batch, Ticket,
+    flight_service_client::FlightServiceClient, utils::flight_data_to_arrow_batch, FlightData,
+    FlightDescriptor, Ticket,
 };
 use datafusion::arrow::{datatypes::Schema, record_batch::RecordBatch};
 
-pub async fn to_record_batch(
+pub async fn do_get(
     uri: &str,
     #[allow(unused_variables)] options: &DataSourceOption, // TODO: Define the options specifications for `flight`
 ) -> Result<Vec<RecordBatch>, ResponseError> {
@@ -48,6 +49,14 @@ pub async fn to_record_batch(
         .map_err(|e| from_tonic_err(&e))?
         .into_inner();
 
+    let (record_batches, _) = to_record_batches(&mut stream).await?;
+
+    Ok(record_batches)
+}
+
+pub async fn to_record_batches(
+    stream: &mut tonic::Streaming<FlightData>,
+) -> Result<(Vec<RecordBatch>, Option<FlightDescriptor>), ResponseError> {
     let flight_data = stream
         .message()
         .await
@@ -55,6 +64,7 @@ pub async fn to_record_batch(
         .unwrap();
 
     let schema = Arc::new(Schema::try_from(&flight_data)?);
+    let descriptor = flight_data.flight_descriptor.clone();
 
     let mut record_batches: Vec<RecordBatch> = vec![];
     let map_by_field = std::collections::HashMap::new();
@@ -64,7 +74,7 @@ pub async fn to_record_batch(
         record_batches.push(record_batch);
     }
 
-    Ok(record_batches)
+    Ok((record_batches, descriptor))
 }
 
 fn from_tonic_err(e: &tonic::Status) -> ResponseError {
