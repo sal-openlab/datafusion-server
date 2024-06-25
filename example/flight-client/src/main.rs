@@ -4,18 +4,26 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-use arrow::{datatypes::Schema, util::pretty};
+use arrow::{
+    array::{ArrayRef, Int32Array},
+    datatypes::{DataType, Field, Schema},
+    record_batch::RecordBatch,
+    util::pretty,
+};
+use arrow_flight::encode::FlightDataEncoderBuilder;
 use arrow_flight::{
     flight_descriptor, flight_service_client::FlightServiceClient,
     utils::flight_data_to_arrow_batch, FlightDescriptor, Ticket,
 };
 use clap::{Parser, ValueEnum};
+use futures::stream::StreamExt;
 
 #[derive(Debug, Clone, PartialEq, ValueEnum)]
 enum Method {
     GetFlightInfo,
     GetSchema,
     DoGet,
+    DoPut,
 }
 
 #[derive(Parser)]
@@ -114,8 +122,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let dictionaries_by_field = HashMap::new();
 
             while let Some(flight_data) = stream.message().await? {
-                let record_batch =
-                    flight_data_to_arrow_batch(&flight_data, schema.clone(), &dictionaries_by_field)?;
+                let record_batch = flight_data_to_arrow_batch(
+                    &flight_data,
+                    schema.clone(),
+                    &dictionaries_by_field,
+                )?;
                 results.push(record_batch);
             }
 
@@ -124,6 +135,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 results.len()
             );
             pretty::print_batches(&results)?;
+        }
+        Method::DoPut => {
+            let schema = Schema::new(vec![Field::new("field1", DataType::Int32, false)]);
+            let data = Int32Array::from(vec![1, 2, 3, 4, 5]);
+            let record_batch =
+                RecordBatch::try_new(Arc::new(schema.clone()), vec![Arc::new(data) as ArrayRef])?;
+
+            let descriptor = FlightDescriptor::new_path(vec![arg.ticket]);
+            println!(">>> do_put(): {:?}", descriptor);
+
+            let flight_data = FlightDataEncoderBuilder::new()
+                .with_flight_descriptor(Some(descriptor))
+                .build(futures::stream::iter(vec![Ok(record_batch)]))
+                .map(|result| result.unwrap());
+
+            let request = tonic::Request::new(flight_data);
+
+            let response = client.do_put(request).await?;
+            println!(">>> Response: {:?}", response);
         }
     }
 

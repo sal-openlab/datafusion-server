@@ -105,7 +105,7 @@ pub trait Session: Send + Sync + 'static {
         data: bytes::Bytes,
     ) -> Result<(), ResponseError>;
     #[cfg(feature = "flight")]
-    async fn append_from_flight_stream(
+    async fn append_from_flight_client(
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError>;
@@ -387,7 +387,7 @@ impl Session for ConcurrentSessionContext {
     }
 
     #[cfg(feature = "flight")]
-    async fn append_from_flight_stream(
+    async fn append_from_flight_client(
         &self,
         data_source: &DataSource,
     ) -> Result<(), ResponseError> {
@@ -396,8 +396,7 @@ impl Session for ConcurrentSessionContext {
             None => DataSourceOption::default(),
         };
 
-        let record_batches =
-            flight_stream::to_record_batch(&data_source.location, &options).await?;
+        let record_batches = flight_stream::do_get(&data_source.location, &options).await?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 
