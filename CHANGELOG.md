@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.1 (2024-07-13) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to DataFusion v40 and Arrow v52.1
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/40.0.0.md
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5210-2024-07-02
+
 ## 0.18.0 (2024-07-12)
 
 * Adds `disable_stateful_features` setting to server configurations
