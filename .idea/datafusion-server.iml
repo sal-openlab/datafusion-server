@@ -5,9 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$/bin/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/tool/arrowcat/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/example/flight-client/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/bin/target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
       <excludeFolder url="file://$MODULE_DIR$/tool/arrowcat/target" />
+      <excludeFolder url="file://$MODULE_DIR$/example/flight-client/target" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
