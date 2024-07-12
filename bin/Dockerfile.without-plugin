@@ -1,4 +1,4 @@
-FROM rust:1.79 as builder
+FROM rust:1.79-alpine AS builder
 
 WORKDIR /usr/src/datafusion-server
 
@@ -6,19 +6,19 @@ COPY ./lib ./lib
 COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
-RUN cd bin \
+ENV RUSTFLAGS="-Ctarget-feature=-crt-static"
+
+RUN apk add --no-cache musl-dev openssl-dev \
+ && cd bin \
  && cargo build --release --features=flight,avro,webdav,deltalake,telemetry
 
-FROM debian:bookworm-slim
+FROM alpine:latest
 
 COPY --from=builder /usr/src/datafusion-server/bin/target/release/datafusion-server /usr/local/bin/datafusion-server
 COPY ./bin/data /var/datafusion-server/data
 COPY ./bin/config-release.toml /etc/datafusion-server-config.toml
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates dumb-init \
- && apt-get autoremove -y \
- && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+RUN apk add --no-cache tini libgcc
 
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["datafusion-server", "-f", "/etc/datafusion-server-config.toml"]
