@@ -97,20 +97,18 @@ level = "debug"
 
 ### Configuration parameters
 
-| Parameter                    | Description                                                    | Default     |
-|------------------------------|----------------------------------------------------------------|-------------|
-| `server.address`             | Acceptable host address                                        | `0.0.0.0`   |
-| `server.port`                | Listening port for HTTP                                        | `4000`      |
-| `server.flight_address`      | Acceptable host address for Flight gRPC                        | `0.0.0.0`   |       
-| `server.flight_grpc_port`    | Listening port for Flight gRPC                                 | `50051`     |
-| `server.metrics_address`     | Acceptable host address for metrics information for Prometheus | `127.0.0.1` |       
-| `server.metrics_port`        | Listening port for metrics information for Prometheus          | `9100`      |
-| `server.base_url`            | URL prefix                                                     | `/`         |
-| `server.data_dir`            | Static data source directory                                   | `./data`    |
-| `server.plugin_dir`          | Python plugin directory                                        | `./plugin`  |
-| `session.default_keep_alive` | Default session timeout value in seconds                       | `3600`      |
-| `session.upload_limit_size`  | Size limit in MB for `/session/:id/datasource/upload` endpoint | `20`        |
-| `log.level`                  | Logging level (`trace`, `debug`, `info`, `warn`, `error`)      | `info`      |
-
-
-
+| Parameter                          | Description                                                    | Default     |
+|------------------------------------|----------------------------------------------------------------|-------------|
+| `server.address`                   | Acceptable host address                                        | `0.0.0.0`   |
+| `server.port`                      | Listening port for HTTP                                        | `4000`      |
+| `server.flight_address`            | Acceptable host address for Flight gRPC                        | `0.0.0.0`   |       
+| `server.flight_grpc_port`          | Listening port for Flight gRPC                                 | `50051`     |
+| `server.metrics_address`           | Acceptable host address for metrics information for Prometheus | `127.0.0.1` |       
+| `server.metrics_port`              | Listening port for metrics information for Prometheus          | `9100`      |
+| `server.base_url`                  | URL prefix                                                     | `/`         |
+| `server.data_dir`                  | Static data source directory                                   | `./data`    |
+| `server.plugin_dir`                | Python plugin directory                                        | `./plugin`  |
+| `server.disable_stateful_features` | Disables stateful endpoints, like a `/session/create`          | `false`     |                          
+| `session.default_keep_alive`       | Default session timeout value in seconds                       | `3600`      |
+| `session.upload_limit_size`        | Size limit in MB for `/session/:id/datasource/upload` endpoint | `20`        |
+| `log.level`                        | Logging level (`trace`, `debug`, `info`, `warn`, `error`)      | `info`      |

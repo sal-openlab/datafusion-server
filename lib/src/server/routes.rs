@@ -51,13 +51,16 @@ pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
 
     let base_url = get_base_url();
 
-    #[allow(unused_mut)]
     let mut router = Router::new()
-        .nest(&format!("{base_url}/dataframe"), df_route)
-        .nest(&format!("{base_url}/session"), session_route)
-        .nest(&format!("{base_url}/session"), session_upload_route)
         .route(&format!("{base_url}/healthz"), get(hc_handler))
-        .route(&format!("{base_url}/sysinfo"), get(sys_info::handler));
+        .route(&format!("{base_url}/sysinfo"), get(sys_info::handler))
+        .nest(&format!("{base_url}/dataframe"), df_route);
+
+    if !Settings::global().server.disable_stateful_features {
+        router = router
+            .nest(&format!("{base_url}/session"), session_route)
+            .nest(&format!("{base_url}/session"), session_upload_route);
+    }
 
     #[cfg(feature = "telemetry")]
     {
