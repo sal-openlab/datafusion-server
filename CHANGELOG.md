@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.18.0 (2024-07-12)
+
+* Adds `disable_stateful_features` setting to server configurations
+    + Please refer to
+      this [document](https://sal-openlab.github.io/datafusion-server/installation/using-crate/#configuration-parameters)
+      for more details
+    + It is intended to be a stateless container when running on clustering solutions such as Kubernetes
+* The following metrics parameters have been added
+    + `session_contexts_total`
+    + `session_context_duration_seconds`
+    + `data_source_registrations_total`
+    + Please refer to
+      this [document](https://sal-openlab.github.io/datafusion-server/installation/telemetry/#metric-names-and-labels)
+      for more details
+* Updates some latest crates dependencies
+
 ## 0.17.1 (2024-06-25)
 
 * Missing functions and bug fixes

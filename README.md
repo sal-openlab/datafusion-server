@@ -33,11 +33,11 @@ Copyright (c) 2022 - 2024 SAL Ltd. - https://sal.co.jp
 ## Supported environment
 
 * Linux
-* BSD based Unix incl. macOS 10.6+
-* SVR4 based Unix
-* Windows 10+ incl. WSL 2
+* BSD based Unix incl. macOS / Mac OSX
+* SVR based Unix
+* Windows incl. WSL2 / Cygwin
 
-and other [LLVM](https://llvm.org/) supported environment.
+and other [LLVM](https://llvm.org/docs/GettingStarted.html#hardware) supported environment.
 
 ## Using pre-built Docker image (Currently available amd64 architecture only)
 
@@ -89,7 +89,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.17.0
+    datafusion-server:0.18.0
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -117,7 +117,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.17.0"
+datafusion-server = "0.18.0"
 ```
 
 #### Example of src/main.rs
@@ -194,7 +194,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = { version = "0.17.0", features = ["plugin"] }
+datafusion-server = { version = "0.18.0", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -220,7 +220,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.17.0", features = ["plugin"] }
+datafusion-server = { version = "0.18.0", features = ["plugin"] }
 ```
 
 #### Build for release
