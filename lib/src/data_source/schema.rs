@@ -287,6 +287,7 @@ impl TimeUnit {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn from_arrow_time_unit(time_unit: &arrow::datatypes::TimeUnit) -> Self {
         match time_unit {
             arrow::datatypes::TimeUnit::Second => Self::Second,
@@ -324,6 +325,7 @@ impl IntervalUnit {
         }
     }
 
+    #[allow(clippy::trivially_copy_pass_by_ref)]
     fn from_arrow_interval_unit(interval_unit: &arrow::datatypes::IntervalUnit) -> Self {
         match interval_unit {
             arrow::datatypes::IntervalUnit::YearMonth => Self::YearMonth,

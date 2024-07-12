@@ -110,7 +110,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ticket: arg.ticket.into(),
             });
 
-            println!(">>> do_get(): {:?}", request);
+            println!(">>> do_get(): {:?}", &request);
             let mut stream = client.do_get(request).await?.into_inner();
 
             // the schema should be the first message returned, else client should error

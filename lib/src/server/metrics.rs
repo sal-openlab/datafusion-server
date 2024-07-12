@@ -5,6 +5,8 @@
 #[cfg(feature = "telemetry")]
 use axum::{response::IntoResponse, routing::get};
 #[cfg(feature = "telemetry")]
+use chrono::{DateTime, Utc};
+#[cfg(feature = "telemetry")]
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 
 #[cfg(feature = "telemetry")]
@@ -38,18 +40,25 @@ pub async fn create_server() -> Result<
 
 #[cfg(feature = "telemetry")]
 fn setup_metrics_recorder() -> Result<PrometheusHandle, anyhow::Error> {
-    const EXPONENTIAL_SECONDS: &[f64] = &[
+    const API_EXPONENTIAL_SECONDS: &[f64] = &[
         0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
     ];
+
+    const SESSION_EXPONENTIAL_SECONDS: &[f64] =
+        &[0.1, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 600.0, 1800.0, 3600.0];
 
     Ok(PrometheusBuilder::new()
         .set_buckets_for_metric(
             Matcher::Full("http_requests_duration_seconds".to_string()),
-            EXPONENTIAL_SECONDS,
+            API_EXPONENTIAL_SECONDS,
         )?
         .set_buckets_for_metric(
             Matcher::Full("flight_requests_duration_seconds".to_string()),
-            EXPONENTIAL_SECONDS,
+            API_EXPONENTIAL_SECONDS,
+        )?
+        .set_buckets_for_metric(
+            Matcher::Full("session_context_duration_seconds".to_string()),
+            SESSION_EXPONENTIAL_SECONDS,
         )?
         .install_recorder()?)
 }
@@ -124,4 +133,28 @@ where
     Fut: std::future::Future<Output = Result<tonic::Response<R>, tonic::Status>>,
 {
     next(req).await
+}
+
+#[cfg(feature = "telemetry")]
+pub fn track_session_context_duration(session_start: DateTime<Utc>) {
+    let now: DateTime<Utc> = Utc::now();
+    let duration = now.signed_duration_since(session_start);
+
+    #[allow(clippy::cast_precision_loss)]
+    metrics::histogram!("session_context_duration_seconds")
+        .record(duration.num_milliseconds() as f64 / 1000_f64);
+}
+
+#[cfg(feature = "telemetry")]
+pub fn track_session_contexts_total() {
+    metrics::counter!("session_contexts_total").increment(1);
+}
+
+#[cfg(feature = "telemetry")]
+pub fn track_data_sources_total(scheme: &str, format: &str) {
+    let labels = [
+        ("scheme", scheme.to_string()),
+        ("format", format.to_string()),
+    ];
+    metrics::counter!("data_source_registrations_total", &labels).increment(1);
 }

@@ -72,6 +72,9 @@ Currently, following metric names and labels are exposed:
 | http_requests_duration_seconds   | Latency from request to response              | method, path, status |
 | flight_requests_total            | Total number of Flight gRPC requests received | method, status       |
 | flight_requests_duration_seconds | Latency from request to response              | method, status       |
+| session_contexts_total           | Total number of contexts created              |                      |
+| session_context_duration_seconds | Lifetime per session                          |                      |
+| data_source_registrations_total  | Total number of data source loaded            | scheme, format       |
 
 ## Configuring Prometheus
 

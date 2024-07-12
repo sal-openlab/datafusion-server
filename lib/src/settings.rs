@@ -25,6 +25,7 @@ pub struct Server {
     pub base_url: String,
     pub data_dir: String,
     pub plugin_dir: String,
+    pub disable_stateful_features: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -144,6 +145,8 @@ impl Settings {
             .set_default("server.data_dir", "data")
             .unwrap()
             .set_default("server.plugin_dir", "plugin")
+            .unwrap()
+            .set_default("server.disable_stateful_features", false)
             .unwrap()
             .set_default("session.default_keep_alive", 3600)
             .unwrap()
