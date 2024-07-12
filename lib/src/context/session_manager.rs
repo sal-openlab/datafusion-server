@@ -19,6 +19,8 @@ use crate::request::body::{
     DataSource, DataSourceFormat, MergeDirection, MergeOption, MergeProcessor,
 };
 use crate::response::{handler, http_error::ResponseError};
+#[cfg(feature = "telemetry")]
+use crate::server;
 
 #[derive(Clone)]
 pub struct SessionContextManager {
@@ -239,6 +241,9 @@ impl SessionManager for SessionContextManager {
         let mut contexts = self.contexts.write().await;
         contexts.insert(session_id.clone(), context);
 
+        #[cfg(feature = "telemetry")]
+        server::metrics::track_session_contexts_total();
+
         Ok(session_id)
     }
 
@@ -247,7 +252,15 @@ impl SessionManager for SessionContextManager {
             return Err(ResponseError::session_not_found(session_id));
         }
 
+        #[cfg(feature = "telemetry")]
+        {
+            if let Some(context) = self.contexts.read().await.get(session_id) {
+                server::metrics::track_session_context_duration(context.session_start_time().await);
+            }
+        }
+
         self.contexts.write().await.remove(session_id);
+
         Ok(())
     }
 
@@ -335,6 +348,13 @@ impl SessionManager for SessionContextManager {
         if scheme == location::uri::SupportedScheme::Plugin {
             self.append_connector_plugin(session_id, data_source)
                 .await?;
+
+            #[cfg(feature = "telemetry")]
+            server::metrics::track_data_sources_total(
+                &format!("plugin/{}", uri.scheme.unwrap().as_str()),
+                data_source.format.to_str(),
+            );
+
             return Ok(());
         }
 
@@ -393,6 +413,9 @@ impl SessionManager for SessionContextManager {
                 self.append_from_deltalake(session_id, data_source).await?;
             }
         }
+
+        #[cfg(feature = "telemetry")]
+        server::metrics::track_data_sources_total(scheme.to_str(), data_source.format.to_str());
 
         Ok(())
     }
