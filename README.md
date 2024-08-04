@@ -118,6 +118,7 @@ edition = "2021"
 
 [dependencies]
 datafusion-server = "0.18.1"
+clap = { version = "4.5", features = ["derive"] }
 ```
 
 #### Example of src/main.rs
@@ -188,11 +189,6 @@ Require Python interpreter v3.7+
 #### Example of Cargo.toml
 
 ```toml
-[package]
-name = "server-executor"
-version = "0.1.0"
-edition = "2021"
-
 [dependencies]
 datafusion-server = { version = "0.18.1", features = ["plugin"] }
 ```
@@ -208,11 +204,6 @@ $ cargo run
 #### Example of Cargo.toml
 
 ```toml
-[package]
-name = "server-executor"
-version = "0.1.0"
-edition = "2021"
-
 [profile.release]
 opt-level = 'z'
 strip = true

@@ -19,6 +19,27 @@ upload_limit_size = 20 # 20MB
 # trace, debug, info, warn, error
 level = "debug"
 
+[[databases]]
+type = "postgres"
+namespace = "pg1"
+user = "example"
+password = "password"
+host = "postgres.local"
+port = 5432
+ssl_mode = "disable"
+database = "example"
+description = "PostgreSQL"
+
+[[databases]]
+type = "mysql"
+namespace = "my1"
+user = "root"
+password = "password"
+host = "mariadb.local"
+port = 3306
+database = "example"
+description = "MySQL / MariaDB"
+
 # [[storages]]
 # type = "aws"
 # access_key_id = "AKIA"

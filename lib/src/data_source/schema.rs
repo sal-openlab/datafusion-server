@@ -240,8 +240,8 @@ impl DataType {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TimestampType {
-    unit: TimeUnit,
-    timezone: Option<String>,
+    pub unit: TimeUnit,
+    pub timezone: Option<String>,
 }
 
 impl TimestampType {
@@ -255,7 +255,7 @@ impl TimestampType {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DurationType {
-    unit: TimeUnit,
+    pub unit: TimeUnit,
 }
 
 impl DurationType {
@@ -266,7 +266,7 @@ impl DurationType {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TimeType {
-    unit: TimeUnit,
+    pub unit: TimeUnit,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -300,7 +300,7 @@ impl TimeUnit {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct IntervalType {
-    unit: IntervalUnit,
+    pub unit: IntervalUnit,
 }
 
 impl IntervalType {
@@ -310,7 +310,7 @@ impl IntervalType {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-enum IntervalUnit {
+pub enum IntervalUnit {
     YearMonth,
     DayTime,
     MonthDayNano,
@@ -337,27 +337,27 @@ impl IntervalUnit {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DecimalType {
-    precision: u8,
-    scale: i8,
+    pub precision: u8,
+    pub scale: i8,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MapType {
-    key: Box<DataType>,
-    value: Box<DataType>,
-    ordered: bool,
+    pub key: Box<DataType>,
+    pub value: Box<DataType>,
+    pub ordered: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(transparent)]
 pub struct StructType {
-    fields: Vec<Field>,
+    pub fields: Vec<Field>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UnionType {
-    types: Vec<(i8, DataType)>,
-    mode: UnionMode,
+    pub types: Vec<(i8, DataType)>,
+    pub mode: UnionMode,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

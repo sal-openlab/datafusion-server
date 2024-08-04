@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.19.0
+
+* Integrates with external database engines
+    + Example of PostgreSQL
+
+config.toml
+
+```toml
+[[databases]]
+type = "postgres"
+namespace = "pg1"
+user = "example"
+password = "password"
+host = "postgres.local"
+port = 5432
+ssl_mode = "disable"
+database = "example"
+description = "PostgreSQL"
+```
+
+Query
+
+```sql
+SELECT M.city AS city, SUM("superstore.Sales") AS sales
+  FROM superstore, table1@pg1 M
+ WHERE "superstore.City" = M.city
+GROUP BY "superstore.City"
+```
+
+* Adds metric parameters for Prometheus
+    + `memory_usage_bytes` and `virtual_memory_usage_bytes`
+* Update katest crates dependencies
+
 ## 0.18.1 (2024-07-13) - Quick patch to keep up with the latest DataFusion crate
 
 * Updates to DataFusion v40 and Arrow v52.1
