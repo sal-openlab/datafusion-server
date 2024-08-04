@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.19.0
+## 0.19.0 (Will be released soon)
 
 * Integrates with external database engines
     + Example of PostgreSQL
@@ -31,7 +31,7 @@ GROUP BY "superstore.City"
 
 * Adds metric parameters for Prometheus
     + `memory_usage_bytes` and `virtual_memory_usage_bytes`
-* Update katest crates dependencies
+* Update latest crates dependencies
 
 ## 0.18.1 (2024-07-13) - Quick patch to keep up with the latest DataFusion crate
 

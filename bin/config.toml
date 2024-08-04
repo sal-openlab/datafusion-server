@@ -3,7 +3,7 @@
 [server]
 address = "0.0.0.0"
 port = 4000
-flist_address = "0.0.0.0"
+flight_address = "0.0.0.0"
 flight_grpc_port = 50051
 metrics_address = "127.0.0.1"
 metrics_port = 9100
