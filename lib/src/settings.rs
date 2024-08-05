@@ -65,6 +65,8 @@ pub struct DatabaseConfigPostgres {
     pub port: Option<u16>,
     pub database: String,
     pub ssl_mode: Option<String>,
+    pub max_connections: Option<u32>,
+    pub enable_schema_cache: Option<bool>,
     pub description: Option<String>,
 }
 
@@ -77,6 +79,9 @@ pub struct DatabaseConfigMySQL {
     pub host: String,
     pub port: Option<u16>,
     pub database: String,
+    pub ssl_mode: Option<String>,
+    pub max_connections: Option<u32>,
+    pub enable_schema_cache: Option<bool>,
     pub description: Option<String>,
 }
 
@@ -213,31 +218,17 @@ impl Settings {
 
     /// ## Errors
     /// Can not initialize object store credentials and external database connection pools.
-    #[cfg(any(feature = "postgres", feature = "mysql"))]
-    pub async fn init_global_managers(mut self) -> Result<Self, ConfigError> {
-        self.database_pool_manager =
-            database_manager::DatabaseManager::new_with_config(&self.databases)
-                .await
-                .map_err(|e| {
-                    ConfigError::Message(format!(
-                        "Can not initialize database connection pools: {e}"
-                    ))
-                })?;
-
-        self.object_store_manager = credential_manager::ObjectStoreManager::new_with_config(
-            &self.storages,
-        )
-        .map_err(|e| {
-            ConfigError::Message(format!("Can not initialize object store credentials: {e}"))
-        })?;
-
-        Ok(self)
-    }
-
-    /// ## Errors
-    /// Can not initialize object store credentials.
-    #[cfg(not(any(feature = "postgres", feature = "mysql")))]
     pub fn init_global_managers(mut self) -> Result<Self, ConfigError> {
+        #[cfg(any(feature = "postgres", feature = "mysql"))]
+        {
+            self.database_pool_manager = database_manager::DatabaseManager::new_with_config(
+                &self.databases,
+            )
+            .map_err(|e| {
+                ConfigError::Message(format!("Can not initialize database connection pools: {e}"))
+            })?;
+        }
+
         self.object_store_manager = credential_manager::ObjectStoreManager::new_with_config(
             &self.storages,
         )

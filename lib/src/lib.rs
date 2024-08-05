@@ -41,11 +41,6 @@ type BoxedFuture =
 /// * Unknown errors
 #[tokio::main]
 pub async fn execute(settings: Settings) -> anyhow::Result<()> {
-    #[cfg(any(feature = "postgres", feature = "mysql"))]
-    LAZY_SETTINGS
-        .set(settings.init_global_managers().await?)
-        .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;
-    #[cfg(not(any(feature = "postgres", feature = "mysql")))]
     LAZY_SETTINGS
         .set(settings.init_global_managers()?)
         .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;

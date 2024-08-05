@@ -26,17 +26,21 @@ user = "example"
 password = "password"
 host = "postgres.local"
 port = 5432
-ssl_mode = "disable"
+# disable, allow, prefer(default), require, verify-ca, verify-full
+ssl_mode = "prefer"
+max_connections = 30
 database = "example"
 description = "PostgreSQL"
 
 [[databases]]
 type = "mysql"
 namespace = "my1"
-user = "root"
+user = "example"
 password = "password"
 host = "mariadb.local"
 port = 3306
+# disabled(default), preferred（default 5.7.3+), required, verify-ca, verify-identity
+ssl_mode = "preferred"
 database = "example"
 description = "MySQL / MariaDB"
 

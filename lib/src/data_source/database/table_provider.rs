@@ -16,7 +16,7 @@ use datafusion::{
         array::{
             ArrayBuilder, ArrayRef, BinaryBuilder, BooleanBuilder, Date32Builder,
             Decimal128Builder, Float32Builder, Float64Builder, Int16Builder, Int32Builder,
-            Int64Builder, Int8Builder, StringBuilder, Time64NanosecondBuilder,
+            Int64Builder, Int8Builder, StringBuilder, Time64MicrosecondBuilder,
             TimestampMicrosecondBuilder,
         },
         datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit},
@@ -370,8 +370,8 @@ impl DatabaseTable {
                 DataType::Date32 => {
                     Box::new(Date32Builder::with_capacity(BATCH_SIZE)) as Box<dyn ArrayBuilder>
                 }
-                DataType::Time64(TimeUnit::Nanosecond) => {
-                    Box::new(Time64NanosecondBuilder::with_capacity(BATCH_SIZE))
+                DataType::Time64(TimeUnit::Microsecond) => {
+                    Box::new(Time64MicrosecondBuilder::with_capacity(BATCH_SIZE))
                         as Box<dyn ArrayBuilder>
                 }
                 _ => {
@@ -457,19 +457,22 @@ impl DatabaseTable {
             DataType::Date32 => {
                 if let Some(builder) = builder.as_any_mut().downcast_mut::<Date32Builder>() {
                     if let Some(nd) = row.get::<chrono::NaiveDate>(field.name()) {
-                        builder.append_value(nd.num_days_from_ce());
+                        builder.append_value(nd.num_days_from_ce() - 719_163 /* 1970-01-01 */);
                     } else {
                         builder.append_null();
                     }
                 }
             }
-            DataType::Time64(TimeUnit::Nanosecond) => {
+            DataType::Time64(TimeUnit::Microsecond) => {
                 if let Some(builder) = builder
                     .as_any_mut()
-                    .downcast_mut::<Time64NanosecondBuilder>()
+                    .downcast_mut::<Time64MicrosecondBuilder>()
                 {
                     if let Some(nt) = row.get::<chrono::NaiveTime>(field.name()) {
-                        builder.append_value(i64::from(nt.num_seconds_from_midnight()));
+                        builder.append_value(
+                            i64::from(nt.num_seconds_from_midnight()) * 1_000_000
+                                + i64::from(nt.nanosecond()) / 1_000,
+                        );
                     } else {
                         builder.append_null();
                     }

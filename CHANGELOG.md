@@ -23,7 +23,7 @@ description = "PostgreSQL"
 Query
 
 ```sql
-SELECT M.city AS city, SUM("superstore.Sales") AS sales
+SELECT M.city, M.population, SUM("superstore.Sales") AS sales
   FROM superstore, table1@pg1 M
  WHERE "superstore.City" = M.city
 GROUP BY "superstore.City"

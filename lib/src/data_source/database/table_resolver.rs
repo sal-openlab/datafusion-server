@@ -17,15 +17,22 @@ pub struct TableResolver {
     pool: AnyDatabasePool,
     database: String,
     tables: Arc<RwLock<HashMap<String, Arc<dyn TableProvider>>>>,
+    schema_cache: bool,
 }
 
 impl TableResolver {
-    pub fn new(engine_type: DatabaseEngineType, pool: AnyDatabasePool, database: &str) -> Self {
+    pub fn new(
+        engine_type: DatabaseEngineType,
+        pool: AnyDatabasePool,
+        database: &str,
+        schema_cache: bool,
+    ) -> Self {
         TableResolver {
             engine_type,
             pool,
             database: database.to_string(),
             tables: Arc::new(RwLock::new(HashMap::new())),
+            schema_cache,
         }
     }
 
@@ -33,7 +40,7 @@ impl TableResolver {
         &self,
         table_name: &str,
     ) -> Result<Arc<dyn TableProvider>, DataFusionError> {
-        {
+        if self.schema_cache {
             let tables = self.tables.read().unwrap();
             if let Some(table) = tables.get(table_name) {
                 return Ok(table.clone());
@@ -50,7 +57,7 @@ impl TableResolver {
             .await?,
         );
 
-        {
+        if self.schema_cache {
             let mut tables = self.tables.write().unwrap();
             tables.insert(table_name.to_string(), table.clone());
         }

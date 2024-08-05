@@ -32,8 +32,8 @@ pub fn to_arrow_dtype(
             DataType::Timestamp(TimeUnit::Microsecond, None)
         }
         "date" => DataType::Date32,
-        "time with time zone" => DataType::Time64(TimeUnit::Nanosecond),
-        "time" | "time without time zone" => DataType::Time64(TimeUnit::Nanosecond),
+        "time with time zone" => DataType::Time64(TimeUnit::Microsecond),
+        "time" | "time without time zone" => DataType::Time64(TimeUnit::Microsecond),
         // "interval" => DataType::Utf8,
         "boolean" => DataType::Boolean,
         "uuid" => DataType::Utf8,

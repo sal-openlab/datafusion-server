@@ -11,7 +11,10 @@ use axum::async_trait;
 use sqlx::mysql::MySqlRow;
 #[cfg(feature = "postgres")]
 use sqlx::postgres::PgRow;
-use sqlx::{Pool, Row};
+use sqlx::{
+    pool::PoolOptions,
+    {Pool, Row},
+};
 
 pub enum AnyDatabaseRow {
     #[cfg(feature = "postgres")]
@@ -150,18 +153,24 @@ pub enum AnyDatabasePool {
 }
 
 impl AnyDatabasePool {
-    pub async fn new(url: &str) -> Result<Self, sqlx::Error> {
+    pub fn new(url: &str, max_connections: u32) -> Result<Self, sqlx::Error> {
         let scheme = url.split(':').next().unwrap_or("");
 
         match scheme {
             #[cfg(feature = "postgres")]
             "postgres" => {
-                let pool = Pool::<sqlx::Postgres>::connect(url).await?;
+                let pool_options: PoolOptions<sqlx::Postgres> = PoolOptions::new()
+                    .max_connections(max_connections)
+                    .min_connections(1);
+                let pool = pool_options.connect_lazy(url)?;
                 Ok(AnyDatabasePool::Postgres(Arc::new(pool)))
             }
             #[cfg(feature = "mysql")]
             "mysql" => {
-                let pool = Pool::<sqlx::MySql>::connect(url).await?;
+                let pool_options: PoolOptions<sqlx::MySql> = PoolOptions::new()
+                    .max_connections(max_connections)
+                    .min_connections(1);
+                let pool = pool_options.connect_lazy(url)?;
                 Ok(AnyDatabasePool::MySql(Arc::new(pool)))
             }
             _ => Err(sqlx::Error::Configuration(

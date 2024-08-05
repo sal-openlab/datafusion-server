@@ -2,8 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> July 27, 2024
 //
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
+use std::collections::{hash_map::Entry, HashMap};
 use std::sync::Arc;
 
 use crate::data_source::database::{
@@ -17,7 +16,7 @@ pub struct DatabaseManager {
 }
 
 impl DatabaseManager {
-    pub async fn new_with_config(
+    pub fn new_with_config(
         database_settings: &Option<Vec<Database>>,
     ) -> Result<Self, sqlx::error::Error> {
         let mut resolvers: HashMap<String, Arc<TableResolver>> = HashMap::new();
@@ -25,18 +24,18 @@ impl DatabaseManager {
         sqlx::any::install_default_drivers();
 
         if let Some(databases) = database_settings {
-            Self::from_config(&mut resolvers, databases).await?;
+            Self::from_config(&mut resolvers, databases)?;
         }
 
         Ok(Self { resolvers })
     }
 
-    async fn from_config(
+    fn from_config(
         resolvers: &mut HashMap<String, Arc<TableResolver>>,
         databases: &Vec<Database>,
     ) -> Result<(), sqlx::error::Error> {
         for database in databases {
-            let (namespace, database_name, url) = match database {
+            let (namespace, database_name, url, schema_cache, max_connections) = match database {
                 #[cfg(feature = "postgres")]
                 Database::Postgres(postgres) => {
                     let mut url = format!(
@@ -53,11 +52,17 @@ impl DatabaseManager {
                         url = format!("{url}?sslmode={ssl_mode}");
                     }
 
-                    (&postgres.namespace, &postgres.database, url)
+                    (
+                        &postgres.namespace,
+                        &postgres.database,
+                        url,
+                        postgres.enable_schema_cache.unwrap_or(false),
+                        postgres.max_connections.unwrap_or(10),
+                    )
                 }
                 #[cfg(feature = "mysql")]
                 Database::MySQL(mysql) => {
-                    let url = format!(
+                    let mut url = format!(
                         "{}://{}:{}@{}:{}/{}",
                         database.scheme(),
                         &mysql.user,
@@ -67,22 +72,42 @@ impl DatabaseManager {
                         &mysql.database,
                     );
 
-                    (&mysql.namespace, &mysql.database, url)
+                    if let Some(ssl_mode) = &mysql.ssl_mode {
+                        url = format!("{url}?ssl-mode={ssl_mode}");
+                    }
+
+                    (
+                        &mysql.namespace,
+                        &mysql.database,
+                        url,
+                        mysql.enable_schema_cache.unwrap_or(false),
+                        mysql.max_connections.unwrap_or(10),
+                    )
                 }
             };
 
-            Self::register(resolvers, namespace, database.scheme(), database_name, &url).await?;
+            Self::register(
+                resolvers,
+                namespace,
+                database.scheme(),
+                database_name,
+                &url,
+                schema_cache,
+                max_connections,
+            )?;
         }
 
         Ok(())
     }
 
-    async fn register(
+    fn register(
         resolvers: &mut HashMap<String, Arc<TableResolver>>,
         namespace: &Option<String>,
         scheme: &str,
         database: &str,
         url: &str,
+        schema_cache: bool,
+        max_connections: u32,
     ) -> Result<(), sqlx::error::Error> {
         let key = namespace.clone().unwrap_or(scheme.to_string());
         log::debug!("Create '{key}' database connection pool");
@@ -90,8 +115,9 @@ impl DatabaseManager {
         if let Entry::Vacant(entry) = resolvers.entry(key.clone()) {
             entry.insert(Arc::new(TableResolver::new(
                 DatabaseEngineType::from_scheme(scheme)?,
-                AnyDatabasePool::new(url).await?,
+                AnyDatabasePool::new(url, max_connections)?,
                 database,
+                schema_cache,
             )));
         } else {
             log::error!("Duplicated database connection pool '{key}'");
