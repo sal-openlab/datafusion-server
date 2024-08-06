@@ -19,30 +19,28 @@ upload_limit_size = 20 # 20MB
 # trace, debug, info, warn, error
 level = "debug"
 
-[[databases]]
-type = "postgres"
-namespace = "pg1"
-user = "example"
-password = "password"
-host = "postgres.local"
-port = 5432
-# disable, allow, prefer(default), require, verify-ca, verify-full
-ssl_mode = "prefer"
-max_connections = 30
-database = "example"
-description = "PostgreSQL"
+# [[databases]]
+# type = "postgres"
+# namespace = "pg1"
+# user = "example"
+# password = "password"
+# host = "postgres-server.local"
+# port = 5432
+# ssl_mode = "prefer" # disable, allow, prefer (default), require, verify-ca, verify-full
+# max_connections = 30
+# database = "example"
+# description = "PostgreSQL"
 
-[[databases]]
-type = "mysql"
-namespace = "my1"
-user = "example"
-password = "password"
-host = "mariadb.local"
-port = 3306
-# disabled(default), preferred（default 5.7.3+), required, verify-ca, verify-identity
-ssl_mode = "preferred"
-database = "example"
-description = "MySQL / MariaDB"
+# [[databases]]
+# type = "mysql"
+# namespace = "my1"
+# user = "root"
+# password = "password"
+# host = "mariadb-server.local"
+# port = 3306
+# ssl_mode = "preferred" # disabled (default), preferred（default 5.7.3+), required, verify-ca, verify-identity
+# database = "example"
+# description = "MySQL / MariaDB"
 
 # [[storages]]
 # type = "aws"

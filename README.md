@@ -89,7 +89,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.18.1
+    datafusion-server:0.19.0
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -98,7 +98,7 @@ If you are only using sample data in a container, omit the `-v ./bin/data:/var/x
 
 ### Pre-require
 
-* Rust Toolchain 1.74+ (Edition 2021) from https://www.rust-lang.org
+* Rust Toolchain 1.76+ (Edition 2021) from https://www.rust-lang.org
 * _or_ the Rust official container from https://hub.docker.com/_/rust
 
 ### How to run
@@ -117,7 +117,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.18.1"
+datafusion-server = "0.19.0"
 clap = { version = "4.5", features = ["derive"] }
 ```
 
@@ -190,7 +190,7 @@ Require Python interpreter v3.7+
 
 ```toml
 [dependencies]
-datafusion-server = { version = "0.18.1", features = ["plugin"] }
+datafusion-server = { version = "0.19.0", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -211,7 +211,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.18.1", features = ["plugin"] }
+datafusion-server = { version = "0.19.0", features = ["plugin"] }
 ```
 
 #### Build for release

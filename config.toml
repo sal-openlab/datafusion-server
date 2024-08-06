@@ -1,4 +1,4 @@
-# Configuration file of datafusion-server
+# datafusion-server - example configuration file
 
 [server]
 address = "0.0.0.0"
@@ -18,6 +18,30 @@ upload_limit_size = 20 # 20MB
 [log]
 # trace, debug, info, warn, error
 level = "debug"
+
+[[databases]]
+type = "postgres"
+namespace = "pg1"
+user = "example"
+password = "password"
+host = "postgres-server.local"
+port = 5432
+database = "example"
+ssl_mode = "prefer" # disable, allow, prefer (default), require, verify-ca, verify-full
+max_connections = 30 # default 10
+description = "PostgreSQL"
+
+[[databases]]
+type = "mysql"
+namespace = "mysql1"
+user = "root"
+password = "password"
+host = "mysql-server.local"
+port = 3306
+database = "example"
+ssl_mode = "preferred" # disabled (default), preferred（default 5.7.3+), required, verify-ca, verify-identity
+max_connections = 30 # default 10
+description = "MySQL / MariaDB"
 
 [[storages]]
 type = "aws"

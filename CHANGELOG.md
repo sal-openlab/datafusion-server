@@ -1,37 +1,16 @@
 # Changelog
 
-## 0.19.0 (Will be released soon)
+## 0.19.0 (2024-08-06)
 
-* Integrates with external database engines
-    + Example of PostgreSQL
-
-config.toml
-
-```toml
-[[databases]]
-type = "postgres"
-namespace = "pg1"
-user = "example"
-password = "password"
-host = "postgres.local"
-port = 5432
-ssl_mode = "disable"
-database = "example"
-description = "PostgreSQL"
-```
-
-Query
-
-```sql
-SELECT M.city, M.population, SUM("superstore.Sales") AS sales
-  FROM superstore, table1@pg1 M
- WHERE "superstore.City" = M.city
-GROUP BY "superstore.City"
-```
-
-* Adds metric parameters for Prometheus
-    + `memory_usage_bytes` and `virtual_memory_usage_bytes`
-* Update latest crates dependencies
+* Seamlessly integrates with external database engines
+    + Currently supported PostgreSQL and MySQL / MariaDB
+    + Please refer to
+      this [document](https://sal-openlab.github.io/datafusion-server/database/) for more details
+* Adds memory consumptions metric parameters for `/metrics` endpoint
+    + `memory_usage_bytes`
+    + `virtual_memory_usage_bytes`
+* Update latest crates dependencies, Arrow v52.2 and others
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5220-2024-07-24
 
 ## 0.18.1 (2024-07-13) - Quick patch to keep up with the latest DataFusion crate
 

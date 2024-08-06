@@ -7,7 +7,7 @@ weight: 20
 
 ## Pre-require (MSRV)
 
-* Rust Toolchain 1.74+ (Edition 2021) from https://www.rust-lang.org {{< icon "external-link" >}}
+* Rust Toolchain 1.76+ (Edition 2021) from https://www.rust-lang.org {{< icon "external-link" >}}
 
 ## Add DataFusion Server crate to your Cargo.toml
 
@@ -29,14 +29,16 @@ Refer to the next section for the configurable feature flags.
 
 ## Feature flags
 
-| flags     | feature                                           |
-|-----------|---------------------------------------------------|
-| plugin    | Data source connector and post processor plugin   |
-| flight    | Arrow Flight RPC client / server                  |
-| avro      | Apache Avro format for using data source          |
-| webdav    | HTTP extended WebDAV store                        |
-| deltalake | Delta Lake integration                            |
-| telemetry | Track and expose metric information to Prometheus |
+| flags     | feature                                                   |
+|-----------|-----------------------------------------------------------|
+| plugin    | Data source connector and post processor plugin           |
+| flight    | Arrow Flight RPC client / server                          |
+| avro      | Apache Avro format for using data source                  |
+| webdav    | HTTP extended WebDAV store                                |
+| deltalake | Delta Lake integration                                    |
+| postgres  | Seamless integration with PostgreSQL database server      |
+| mysql     | Seamless integration with MySQL / MariaDB database server |
+| telemetry | Track and expose metric information to Prometheus         |
 
 ## Example of call the DataFusion Server entry function
 

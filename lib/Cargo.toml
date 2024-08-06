@@ -21,7 +21,7 @@ flight = ["arrow-flight", "tonic"]
 avro = ["datafusion/avro"]
 webdav = ["object_store/http"]
 deltalake = ["delta_kernel"]
-telemetry = ["metrics", "metrics-exporter-prometheus", "tonic", "sysinfo"]
+telemetry = ["metrics", "metrics-exporter-prometheus", "sysinfo"]
 postgres = ["sqlx/postgres", "sqlx/uuid"]
 mysql = ["sqlx/mysql"]
 
@@ -54,13 +54,12 @@ axum-extra = { version = "0.9.3", features = ["typed-header"] }
 multer = { version = "3.1.0" }
 mime = { version = "0.3.17" }
 datafusion = { version = "40.0.0" }
-arrow-flight = { version = "52.1.0", optional = true }
+arrow-flight = { version = "52.2.0", optional = true }
 pyo3 = { version = "0.21.1", optional = true }
 object_store = { version = "0.10.2", features = ["aws", "gcp", "azure"] }
 url = "2.5.2"
 delta_kernel = { version = "0.2.0", optional = true, features = ["default-engine"] }
 metrics = { version = "0.23.0", optional = true, default-features = false }
 metrics-exporter-prometheus = { version = "0.15.3", optional = true, default-features = false }
-sysinfo = { version = "0.31.0", optional = true }
+sysinfo = { version = "0.31.2", optional = true }
 sqlx = { version = "0.8.0", optional = true, default-features = false, features = ["runtime-tokio", "runtime-tokio-rustls", "any", "chrono", "rust_decimal"] }
-#num-bigint = { version = "0.4.6", optional = true }

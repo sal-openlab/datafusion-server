@@ -67,8 +67,8 @@ impl AnyDatabaseRow {
     ) -> Option<T> {
         match self {
             AnyDatabaseRow::Postgres(row) => row.try_get(column).ok(),
-            #[allow(unreachable_patterns)]
-            _ => None,
+            #[cfg(feature = "mysql")]
+            AnyDatabaseRow::MySql(_) => None,
         }
     }
 
@@ -79,8 +79,8 @@ impl AnyDatabaseRow {
     ) -> Option<T> {
         match self {
             AnyDatabaseRow::MySql(row) => row.try_get(column).ok(),
-            #[allow(unreachable_patterns)]
-            _ => None,
+            #[cfg(feature = "postgres")]
+            AnyDatabaseRow::Postgres(_) => None,
         }
     }
 }
