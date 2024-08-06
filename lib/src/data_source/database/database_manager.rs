@@ -3,6 +3,7 @@
 //
 
 use std::collections::{hash_map::Entry, HashMap};
+use std::env;
 use std::sync::Arc;
 
 use crate::data_source::database::{
@@ -22,6 +23,8 @@ impl DatabaseManager {
         let mut resolvers: HashMap<String, Arc<TableResolver>> = HashMap::new();
 
         sqlx::any::install_default_drivers();
+
+        Self::from_env(&mut resolvers)?;
 
         if let Some(databases) = database_settings {
             Self::from_config(&mut resolvers, databases)?;
@@ -94,6 +97,90 @@ impl DatabaseManager {
                 &url,
                 schema_cache,
                 max_connections,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    fn from_env(
+        resolvers: &mut HashMap<String, Arc<TableResolver>>,
+    ) -> Result<(), sqlx::error::Error> {
+        #[cfg(feature = "postgres")]
+        if env::var("POSTGRES_USER").is_ok()
+            && env::var("POSTGRES_PASSWORD").is_ok()
+            && env::var("POSTGRES_HOST").is_ok()
+            && env::var("POSTGRES_DATABASE").is_ok()
+        {
+            let mut url = format!(
+                "postgres://{}:{}@{}:{}/{}",
+                env::var("POSTGRES_USER").unwrap(),
+                env::var("POSTGRES_PASSWORD").unwrap(),
+                env::var("POSTGRES_HOST").unwrap(),
+                env::var("POSTGRES_PORT")
+                    .unwrap_or_default()
+                    .parse::<u16>()
+                    .unwrap_or(5432),
+                env::var("POSTGRES_DATABASE").unwrap(),
+            );
+
+            if let Ok(ssl_mode) = &env::var("POSTGRES_SSL_MODE") {
+                url = format!("{url}?sslmode={ssl_mode}");
+            }
+
+            Self::register(
+                resolvers,
+                &Some(env::var("POSTGRES_NAMESPACE").unwrap_or("postgres".to_string())),
+                "postgres",
+                &env::var("POSTGRES_DATABASE").unwrap(),
+                &url,
+                env::var("POSTGRES_ENABLE_SCHEMA_CACHE")
+                    .unwrap_or_default()
+                    .to_lowercase()
+                    == "true",
+                env::var("POSTGRES_MAX_CONNECTIONS")
+                    .unwrap_or_default()
+                    .parse::<u32>()
+                    .unwrap_or(10),
+            )?;
+        }
+
+        #[cfg(feature = "mysql")]
+        if env::var("MYSQL_USER").is_ok()
+            && env::var("MYSQL_PASSWORD").is_ok()
+            && env::var("MYSQL_HOST").is_ok()
+            && env::var("MYSQL_DATABASE").is_ok()
+        {
+            let mut url = format!(
+                "mysql://{}:{}@{}:{}/{}",
+                env::var("MYSQL_USER").unwrap(),
+                env::var("MYSQL_PASSWORD").unwrap(),
+                env::var("MYSQL_HOST").unwrap(),
+                env::var("MYSQL_PORT")
+                    .unwrap_or_default()
+                    .parse::<u16>()
+                    .unwrap_or(3306),
+                env::var("MYSQL_DATABASE").unwrap(),
+            );
+
+            if let Ok(ssl_mode) = &env::var("MYSQL_SSL_MODE") {
+                url = format!("{url}?ssl-mode={ssl_mode}");
+            }
+
+            Self::register(
+                resolvers,
+                &Some(env::var("MYSQL_NAMESPACE").unwrap_or("mysql".to_string())),
+                "mysql",
+                &env::var("MYSQL_DATABASE").unwrap(),
+                &url,
+                env::var("MYSQL_ENABLE_SCHEMA_CACHE")
+                    .unwrap_or_default()
+                    .to_lowercase()
+                    == "true",
+                env::var("MYSQL_MAX_CONNECTIONS")
+                    .unwrap_or_default()
+                    .parse::<u32>()
+                    .unwrap_or(10),
             )?;
         }
 
