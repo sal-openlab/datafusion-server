@@ -1,4 +1,4 @@
-FROM rust:1.79-alpine AS builder
+FROM rust:1.80-alpine AS builder
 
 WORKDIR /usr/src/datafusion-server
 
@@ -10,7 +10,7 @@ ENV RUSTFLAGS="-Ctarget-feature=-crt-static"
 
 RUN apk add --no-cache musl-dev openssl-dev \
  && cd bin \
- && cargo build --release --features=flight,avro,webdav,deltalake,telemetry
+ && cargo build --release --features=flight,avro,webdav,deltalake,postgres,mysql,telemetry
 
 FROM alpine:latest
 

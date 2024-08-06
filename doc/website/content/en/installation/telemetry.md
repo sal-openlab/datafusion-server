@@ -68,6 +68,8 @@ Currently, following metric names and labels are exposed:
 
 | metric name                      | value                                         | labels               |
 |----------------------------------|-----------------------------------------------|----------------------|
+| memory_usage_bytes               | Physical memory usage                         |                      |
+| virtual_memory_usage_bytes       | Virtual (swap) memory usage                   |                      |
 | http_requests_total              | Total number of HTTP requests received        | method, path, status |
 | http_requests_duration_seconds   | Latency from request to response              | method, path, status |
 | flight_requests_total            | Total number of Flight gRPC requests received | method, status       |

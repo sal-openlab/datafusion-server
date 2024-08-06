@@ -12,6 +12,8 @@ use log::Level;
 use once_cell::sync::OnceCell;
 use serde::Deserialize;
 
+#[cfg(any(feature = "postgres", feature = "mysql"))]
+use crate::data_source::database::database_manager;
 use crate::data_source::object_store::credential_manager;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -49,6 +51,59 @@ impl Log {
             "warn" => Some(Level::Warn),
             "error" => Some(Level::Error),
             _ => None,
+        }
+    }
+}
+
+#[cfg(feature = "postgres")]
+#[derive(Debug, Deserialize, Clone)]
+pub struct DatabaseConfigPostgres {
+    pub namespace: Option<String>,
+    pub user: String,
+    pub password: String,
+    pub host: String,
+    pub port: Option<u16>,
+    pub database: String,
+    pub ssl_mode: Option<String>,
+    pub max_connections: Option<u32>,
+    pub enable_schema_cache: Option<bool>,
+    pub description: Option<String>,
+}
+
+#[cfg(feature = "mysql")]
+#[derive(Debug, Deserialize, Clone)]
+pub struct DatabaseConfigMySQL {
+    pub namespace: Option<String>,
+    pub user: String,
+    pub password: String,
+    pub host: String,
+    pub port: Option<u16>,
+    pub database: String,
+    pub ssl_mode: Option<String>,
+    pub max_connections: Option<u32>,
+    pub enable_schema_cache: Option<bool>,
+    pub description: Option<String>,
+}
+
+#[cfg(any(feature = "postgres", feature = "mysql"))]
+#[derive(Debug, Deserialize, Clone)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Database {
+    #[cfg(feature = "postgres")]
+    Postgres(DatabaseConfigPostgres),
+    #[cfg(feature = "mysql")]
+    MySQL(DatabaseConfigMySQL),
+}
+
+#[cfg(any(feature = "postgres", feature = "mysql"))]
+impl Database {
+    #[must_use]
+    pub fn scheme(&self) -> &str {
+        match self {
+            #[cfg(feature = "postgres")]
+            Database::Postgres(_) => "postgres",
+            #[cfg(feature = "mysql")]
+            Database::MySQL(_) => "mysql",
         }
     }
 }
@@ -96,12 +151,17 @@ pub enum Storage {
     Webdav(StorageHttp),
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub struct Settings {
     pub server: Server,
     pub session: Session,
     pub log: Log,
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
+    pub databases: Option<Vec<Database>>,
     pub storages: Option<Vec<Storage>>,
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
+    #[serde(skip)]
+    pub database_pool_manager: database_manager::DatabaseManager,
     #[serde(skip)]
     pub object_store_manager: credential_manager::ObjectStoreManager,
 }
@@ -157,8 +217,18 @@ impl Settings {
     }
 
     /// ## Errors
-    /// Can not initialize object store credentials.
-    pub fn init_object_store_registry(mut self) -> Result<Self, ConfigError> {
+    /// Can not initialize object store credentials and external database connection pools.
+    pub fn init_global_managers(mut self) -> Result<Self, ConfigError> {
+        #[cfg(any(feature = "postgres", feature = "mysql"))]
+        {
+            self.database_pool_manager = database_manager::DatabaseManager::new_with_config(
+                &self.databases,
+            )
+            .map_err(|e| {
+                ConfigError::Message(format!("Can not initialize database connection pools: {e}"))
+            })?;
+        }
+
         self.object_store_manager = credential_manager::ObjectStoreManager::new_with_config(
             &self.storages,
         )
@@ -173,5 +243,26 @@ impl Settings {
     /// Configuration variables has not been initialized.
     pub fn global() -> &'static Settings {
         LAZY_SETTINGS.get().expect("Settings is not initialized")
+    }
+
+    #[must_use]
+    pub fn debug(&self) -> String {
+        let mut result = format!("{:?}, {:?}, {:?}", self.server, self.session, self.log);
+
+        #[cfg(any(feature = "postgres", feature = "mysql"))]
+        {
+            let databases: Vec<_> = self
+                .database_pool_manager
+                .resolvers
+                .keys()
+                .cloned()
+                .collect();
+            result = format!("{result}, Database {{ namespaces: {databases:?} }}");
+        }
+
+        let stores: Vec<_> = self.object_store_manager.stores.keys().cloned().collect();
+        result = format!("{result}, Storage {{ stores: {stores:?} }}");
+
+        result
     }
 }

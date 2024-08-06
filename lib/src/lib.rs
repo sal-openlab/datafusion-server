@@ -7,15 +7,12 @@
 use std::future::IntoFuture;
 use std::sync::Arc;
 
-use log::Level;
-
 use context::session_manager::SessionContextManager;
+use log::Level;
 use plugin::plugin_manager::{PluginManager, PLUGIN_MANAGER};
-use settings::{Settings, LAZY_SETTINGS};
-use statistics::{Statistics, LAZY_STATISTICS};
 
-use crate::context::session_manager::SessionManager;
-use crate::server::signal_handler;
+use crate::server::{interval_worker, signal_handler};
+use crate::settings::{Settings, LAZY_SETTINGS};
 
 mod context;
 mod data_source;
@@ -45,12 +42,8 @@ type BoxedFuture =
 #[tokio::main]
 pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     LAZY_SETTINGS
-        .set(settings.init_object_store_registry()?)
+        .set(settings.init_global_managers()?)
         .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;
-
-    LAZY_STATISTICS
-        .set(Statistics::new())
-        .map_err(|_| anyhow::anyhow!("Can not initialize statistics"))?;
 
     simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info))?;
 
@@ -78,7 +71,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     log::info!("flight gRPC service listening on {flight_addr:?}");
     #[cfg(feature = "telemetry")]
     log::info!("metrics service listening on {metrics_addr:?}");
-    log::debug!("with config: {:?}", Settings::global());
+    log::debug!("with config: {}", Settings::global().debug());
 
     let http_service =
         http_server.with_graceful_shutdown(signal_handler::register_shutdown_signal());
@@ -122,17 +115,10 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
             log::error!("Can not initialize metrics server: {:?}", e);
             return Err(anyhow::anyhow!("metrics server initialization error: {:?}", e));
         },
-        () = cleanup_worker(session_mgr) => {},
+        () = interval_worker::cleanup_and_update_metrics(session_mgr) => {},
     }
 
     log::info!("Server terminated");
 
     Ok(())
-}
-
-async fn cleanup_worker(session_mgr: Arc<tokio::sync::Mutex<SessionContextManager>>) {
-    loop {
-        session_mgr.lock().await.cleanup().await;
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-    }
 }

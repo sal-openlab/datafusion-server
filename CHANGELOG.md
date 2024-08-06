@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0 (2024-08-06)
+
+* Seamlessly integrates with external database engines
+    + Currently supported PostgreSQL and MySQL / MariaDB
+    + Please refer to
+      this [document](https://sal-openlab.github.io/datafusion-server/database/) for more details
+* Adds memory consumptions metric parameters for `/metrics` endpoint
+    + `memory_usage_bytes`
+    + `virtual_memory_usage_bytes`
+* Update latest crates dependencies, Arrow v52.2 and others
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5220-2024-07-24
+
 ## 0.18.1 (2024-07-13) - Quick patch to keep up with the latest DataFusion crate
 
 * Updates to DataFusion v40 and Arrow v52.1

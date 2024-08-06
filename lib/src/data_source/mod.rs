@@ -1,6 +1,8 @@
 #[cfg(feature = "plugin")]
 pub mod connector_plugin;
 pub mod csv;
+#[cfg(any(feature = "postgres", feature = "mysql"))]
+pub mod database;
 mod decoder;
 #[cfg(feature = "deltalake")]
 pub mod deltalake;

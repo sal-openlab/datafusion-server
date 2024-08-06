@@ -1,4 +1,4 @@
-FROM rust:1.79 AS builder
+FROM rust:1.80 AS builder
 
 ENV PYTHON_VERSION=3.11.9
 ENV PYTHON_HOME=/opt/python
@@ -42,7 +42,7 @@ COPY ./bin ./bin
 COPY ./Cargo.toml ./
 
 RUN cd bin \
- && cargo build --release --features=plugin,flight,avro,webdav,deltalake,telemetry
+ && cargo build --release --features=plugin,flight,avro,webdav,deltalake,postgres,mysql,telemetry
 
 FROM debian:bookworm-slim
 

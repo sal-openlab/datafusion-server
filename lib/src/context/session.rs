@@ -16,6 +16,8 @@ use tokio::sync::RwLock;
 
 #[cfg(feature = "plugin")]
 use crate::data_source::connector_plugin;
+#[cfg(any(feature = "postgres", feature = "mysql"))]
+use crate::data_source::database;
 #[cfg(feature = "deltalake")]
 use crate::data_source::deltalake;
 #[cfg(feature = "flight")]
@@ -655,7 +657,18 @@ impl Session for ConcurrentSessionContext {
 
     async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, ResponseError> {
         self.touch().await;
-        let context = &self.read().await.df_ctx;
-        Ok(context.sql(sql).await?)
+
+        #[cfg(not(any(feature = "postgres", feature = "mysql")))]
+        {
+            let context = &self.read().await.df_ctx;
+            Ok(context.sql(sql).await?)
+        }
+
+        #[cfg(any(feature = "postgres", feature = "mysql"))]
+        {
+            let context = &self.read().await.df_ctx;
+            database::table_register::from_sql(context, sql).await?;
+            Ok(context.sql(sql).await?)
+        }
     }
 }
