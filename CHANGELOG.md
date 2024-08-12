@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1 (2024-08-12) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to Apache DataFusion v41
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/41.0.0.md
+
 ## 0.19.0 (2024-08-06)
 
 * Seamlessly integrates with external database engines
