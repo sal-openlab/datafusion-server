@@ -22,9 +22,9 @@ use datafusion::{
         datatypes::{DataType, Field, Schema, SchemaRef, TimeUnit},
         record_batch::RecordBatch,
     },
+    catalog::Session,
     datasource::{TableProvider, TableType},
     error::DataFusionError,
-    execution::session_state::SessionState,
     logical_expr::Expr,
     physical_plan::{memory::MemoryExec, ExecutionPlan},
 };
@@ -65,7 +65,7 @@ impl TableProvider for DatabaseTable {
 
     fn scan<'life0, 'life1, 'life2, 'life3, 'async_trait>(
         &'life0 self,
-        _state: &'life1 SessionState,
+        _state: &'life1 (dyn Session + 'life1),
         projection: Option<&'life2 Vec<usize>>,
         filters: &'life3 [Expr],
         limit: Option<usize>,
