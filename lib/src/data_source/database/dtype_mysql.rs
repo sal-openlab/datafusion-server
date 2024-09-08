@@ -12,6 +12,7 @@ pub fn to_arrow_dtype(
     scale: Option<i8>,
     signed: bool,
 ) -> DataType {
+    #[allow(clippy::match_same_arms)]
     match mysql_dtype {
         "tinyint" => {
             if signed {
@@ -48,8 +49,8 @@ pub fn to_arrow_dtype(
         ),
         "float" => DataType::Float32,
         "double" => DataType::Float64,
-        // "bit" => DataType::Float64,
-        "char" | "varchar" | "text" => DataType::Utf8,
+        "bit" => DataType::Utf8,
+        "char" | "varchar" | "text" | "json" => DataType::Utf8,
         "binary" | "varbinary" | "blob" => DataType::Binary,
         "timestamp" => DataType::Timestamp(TimeUnit::Microsecond, Some("UTC".into())),
         "datetime" => DataType::Timestamp(TimeUnit::Microsecond, None),

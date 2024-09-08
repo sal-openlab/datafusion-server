@@ -3,6 +3,7 @@
 //
 
 use futures::stream::{Stream, StreamExt};
+use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
@@ -16,6 +17,7 @@ use sqlx::{
     {Pool, Row},
 };
 
+#[derive(Debug)]
 pub enum AnyDatabaseRow {
     #[cfg(feature = "postgres")]
     Postgres(PgRow),
@@ -61,6 +63,7 @@ impl AnyDatabaseRow {
     }
 
     #[cfg(feature = "postgres")]
+    #[allow(dead_code)]
     pub fn get_postgres<'a, T: sqlx::Type<sqlx::Postgres> + sqlx::Decode<'a, sqlx::Postgres>>(
         &'a self,
         column: &str,
@@ -93,6 +96,16 @@ pub trait DatabaseOperator {
         &'a self,
         query: &'a str,
     ) -> Pin<Box<dyn Stream<Item = Result<AnyDatabaseRow, sqlx::Error>> + Send + 'a>>;
+    async fn execute(&self, sql: &str) -> Result<(u64, Option<u64>), sqlx::Error>;
+    async fn begin_transaction(
+        &self,
+    ) -> Result<Box<dyn TransactionHandler + Send + 'static>, sqlx::Error>;
+}
+
+#[async_trait]
+pub trait TransactionHandler: Send {
+    async fn commit(self: Box<Self>) -> Result<(), sqlx::Error>;
+    async fn rollback(self: Box<Self>) -> Result<(), sqlx::Error>;
 }
 
 #[cfg(feature = "postgres")]
@@ -116,6 +129,33 @@ impl DatabaseOperator for Arc<Pool<sqlx::Postgres>> {
             .fetch(&**self)
             .map(|row| row.map(AnyDatabaseRow::Postgres));
         Box::pin(stream)
+    }
+
+    async fn execute(&self, sql: &str) -> Result<(u64, Option<u64>), sqlx::Error> {
+        let result = sqlx::query(sql).execute(&**self).await?;
+        Ok((result.rows_affected(), None))
+    }
+
+    async fn begin_transaction(
+        &self,
+    ) -> Result<Box<dyn TransactionHandler + Send + 'static>, sqlx::Error> {
+        let tx = self.begin().await?;
+        Ok(Box::new(PostgresTransactionHandler { tx }))
+    }
+}
+
+pub struct PostgresTransactionHandler {
+    tx: sqlx::Transaction<'static, sqlx::Postgres>,
+}
+
+#[async_trait]
+impl TransactionHandler for PostgresTransactionHandler {
+    async fn commit(self: Box<Self>) -> Result<(), sqlx::Error> {
+        self.tx.commit().await
+    }
+
+    async fn rollback(self: Box<Self>) -> Result<(), sqlx::Error> {
+        self.tx.rollback().await
     }
 }
 
@@ -141,6 +181,33 @@ impl DatabaseOperator for Arc<Pool<sqlx::MySql>> {
                 .fetch(&**self)
                 .map(|row| row.map(AnyDatabaseRow::MySql)),
         )
+    }
+
+    async fn execute(&self, sql: &str) -> Result<(u64, Option<u64>), sqlx::Error> {
+        let result = sqlx::query(sql).execute(&**self).await?;
+        Ok((result.rows_affected(), Some(result.last_insert_id())))
+    }
+
+    async fn begin_transaction(
+        &self,
+    ) -> Result<Box<dyn TransactionHandler + Send + 'static>, sqlx::Error> {
+        let tx = self.begin().await?;
+        Ok(Box::new(MySqlTransactionHandler { tx }))
+    }
+}
+
+pub struct MySqlTransactionHandler {
+    tx: sqlx::Transaction<'static, sqlx::MySql>,
+}
+
+#[async_trait]
+impl TransactionHandler for MySqlTransactionHandler {
+    async fn commit(self: Box<Self>) -> Result<(), sqlx::Error> {
+        self.tx.commit().await
+    }
+
+    async fn rollback(self: Box<Self>) -> Result<(), sqlx::Error> {
+        self.tx.rollback().await
     }
 }
 
@@ -211,4 +278,77 @@ impl DatabaseOperator for AnyDatabasePool {
             AnyDatabasePool::MySql(pool) => pool.fetch(query),
         }
     }
+
+    async fn execute(&self, sql: &str) -> Result<(u64, Option<u64>), sqlx::Error> {
+        match self {
+            #[cfg(feature = "postgres")]
+            AnyDatabasePool::Postgres(pool) => pool.execute(sql).await,
+            #[cfg(feature = "mysql")]
+            AnyDatabasePool::MySql(pool) => pool.execute(sql).await,
+        }
+    }
+
+    async fn begin_transaction(
+        &self,
+    ) -> Result<Box<dyn TransactionHandler + Send + 'static>, sqlx::Error> {
+        match self {
+            #[cfg(feature = "postgres")]
+            AnyDatabasePool::Postgres(pool) => pool.begin_transaction().await,
+            #[cfg(feature = "mysql")]
+            AnyDatabasePool::MySql(pool) => pool.begin_transaction().await,
+        }
+    }
 }
+
+#[async_trait]
+pub trait DatabaseOperatorExt: DatabaseOperator {
+    async fn execute_transaction<F, Fut, T>(
+        &self,
+        operation: F,
+    ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnOnce(&dyn TransactionHandler) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>> + Send,
+        T: Send + 'static,
+    {
+        let tx = self.begin_transaction().await?;
+
+        match operation(tx.as_ref()).await {
+            Ok(result) => {
+                tx.commit().await?;
+                Ok(result)
+            }
+            Err(err) => {
+                tx.rollback().await?;
+                Err(err)
+            }
+        }
+    }
+
+    // MEMO: Currently unused
+    // async fn execute_transaction_sync<F, T>(
+    //     &self,
+    //     operation: F,
+    // ) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    // where
+    //     F: FnOnce(&dyn TransactionHandler) -> Result<T, Box<dyn std::error::Error + Send + Sync>>
+    //         + Send
+    //         + 'static,
+    //     T: Send + 'static,
+    // {
+    //     let tx = self.begin_transaction().await?;
+    //
+    //     match operation(tx.as_ref()) {
+    //         Ok(result) => {
+    //             tx.commit().await?;
+    //             Ok(result)
+    //         }
+    //         Err(err) => {
+    //             tx.rollback().await?;
+    //             Err(err)
+    //         }
+    //     }
+    // }
+}
+
+impl<T: DatabaseOperator + ?Sized> DatabaseOperatorExt for T {}

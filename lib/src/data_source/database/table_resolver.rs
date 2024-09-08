@@ -8,13 +8,15 @@ use std::sync::{Arc, RwLock};
 use datafusion::{datasource::TableProvider, error::DataFusionError};
 
 use crate::data_source::database::{
-    any_pool::AnyDatabasePool, engine_type::DatabaseEngineType, table_provider::DatabaseTable,
+    any_pool::{AnyDatabasePool, DatabaseOperator},
+    engine_type::DatabaseEngineType,
+    table_provider::DatabaseTable,
 };
 
 #[derive(Clone)]
 pub struct TableResolver {
-    engine_type: DatabaseEngineType,
-    pool: AnyDatabasePool,
+    pub(crate) engine_type: DatabaseEngineType,
+    pub(crate) pool: AnyDatabasePool,
     database: String,
     tables: Arc<RwLock<HashMap<String, Arc<dyn TableProvider>>>>,
     schema_cache: bool,
@@ -63,5 +65,12 @@ impl TableResolver {
         }
 
         Ok(table)
+    }
+
+    pub async fn sql_exec(&self, sql: &str) -> Result<(u64, Option<u64>), DataFusionError> {
+        self.pool
+            .execute(sql)
+            .await
+            .map_err(|e| DataFusionError::Execution(e.to_string()))
     }
 }

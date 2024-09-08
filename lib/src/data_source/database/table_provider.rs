@@ -386,6 +386,7 @@ impl DatabaseTable {
         Ok(builders)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn append_value_to_builder(
         builder: &mut Box<dyn ArrayBuilder>,
         field: &Field,
@@ -434,6 +435,21 @@ impl DatabaseTable {
                     if let Some(builder) = builder.as_any_mut().downcast_mut::<StringBuilder>() {
                         if let Some(uuid) = row.get::<sqlx::types::Uuid>(field.name()) {
                             builder.append_value(uuid.to_string());
+                        } else {
+                            builder.append_null();
+                        }
+                    }
+                }
+                #[cfg(feature = "mysql")]
+                "bit" => {
+                    if let Some(builder) = builder.as_any_mut().downcast_mut::<StringBuilder>() {
+                        if let Some(bytes) = row.get::<Vec<u8>>(field.name()) {
+                            let mut bit_str = String::with_capacity(bytes.len() * 8);
+                            for byte in &bytes {
+                                use std::fmt::Write;
+                                write!(&mut bit_str, "{byte:08b}")?;
+                            }
+                            builder.append_value(bit_str);
                         } else {
                             builder.append_null();
                         }

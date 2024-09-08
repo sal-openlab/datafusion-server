@@ -9,6 +9,7 @@ use chrono::{DateTime, Utc};
 use datafusion::{
     arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
     dataframe::DataFrame,
+    error::DataFusionError,
     execution::context,
     logical_expr::{col, JoinType},
 };
@@ -33,7 +34,7 @@ use crate::settings::Settings;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SessionContext {
-    df_ctx: context::SessionContext,
+    pub(crate) df_ctx: context::SessionContext,
     last_accessed_at: DateTime<Utc>,
     keep_alive: i64,
     data_source_map: HashMap<String, DataSource>,
@@ -132,7 +133,7 @@ pub trait Session: Send + Sync + 'static {
         &self,
         merge_processor: &MergeProcessor,
     ) -> Result<(), ResponseError>;
-    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, ResponseError>;
+    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, DataFusionError>;
 }
 
 #[async_trait]
@@ -655,7 +656,7 @@ impl Session for ConcurrentSessionContext {
         Ok(())
     }
 
-    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, ResponseError> {
+    async fn execute_logical_plan(&self, sql: &str) -> Result<DataFrame, DataFusionError> {
         self.touch().await;
 
         #[cfg(not(any(feature = "postgres", feature = "mysql")))]
@@ -666,9 +667,16 @@ impl Session for ConcurrentSessionContext {
 
         #[cfg(any(feature = "postgres", feature = "mysql"))]
         {
-            let context = &self.read().await.df_ctx;
-            database::table_register::from_sql(context, sql).await?;
-            Ok(context.sql(sql).await?)
+            let sql = database::table_processor::from_sql(self, sql).await?;
+            let df_ctx = &self.read().await.df_ctx;
+
+            if sql.is_empty() {
+                log::debug!("After processing the DML, no query statements left to execute.");
+                let empty_dataframe = df_ctx.read_empty()?;
+                return Ok(empty_dataframe);
+            }
+
+            Ok(df_ctx.sql(&sql).await?)
         }
     }
 }
