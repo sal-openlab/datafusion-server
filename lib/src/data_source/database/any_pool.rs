@@ -61,6 +61,7 @@ impl AnyDatabaseRow {
     }
 
     #[cfg(feature = "postgres")]
+    #[allow(dead_code)]
     pub fn get_postgres<'a, T: sqlx::Type<sqlx::Postgres> + sqlx::Decode<'a, sqlx::Postgres>>(
         &'a self,
         column: &str,
