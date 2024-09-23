@@ -13,6 +13,7 @@ use plugin::plugin_manager::{PluginManager, PLUGIN_MANAGER};
 
 use crate::server::{interval_worker, signal_handler};
 use crate::settings::{Settings, LAZY_SETTINGS};
+use crate::statistics::{Statistics, LAZY_STATISTICS};
 
 mod context;
 mod data_source;
@@ -44,6 +45,10 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     LAZY_SETTINGS
         .set(settings.init_global_managers()?)
         .map_err(|_| anyhow::anyhow!("Can not initialize configurations"))?;
+
+    LAZY_STATISTICS
+        .set(Statistics::new())
+        .map_err(|_| anyhow::anyhow!("Can not initialize statistics"))?;
 
     simple_logger::init_with_level(Settings::global().log.level().unwrap_or(Level::Info))?;
 
