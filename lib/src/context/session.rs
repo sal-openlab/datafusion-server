@@ -581,7 +581,7 @@ impl Session for ConcurrentSessionContext {
                             for field_name in &target_field_names {
                                 projection_fields.push(if base_field_names.contains(field_name) {
                                     col(field_name)
-                                        .alias(&format!("{}_{}", &target.table_name, &field_name))
+                                        .alias(format!("{}_{}", &target.table_name, &field_name))
                                 } else {
                                     col(field_name)
                                 });
