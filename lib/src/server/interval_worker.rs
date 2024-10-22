@@ -28,6 +28,6 @@ pub async fn cleanup_and_update_metrics(
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
         #[cfg(feature = "telemetry")]
-        sysinfo.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid.into()]));
+        sysinfo.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid.into()]), true);
     }
 }
