@@ -18,7 +18,7 @@ pub struct DatabaseManager {
 
 impl DatabaseManager {
     pub fn new_with_config(
-        database_settings: &Option<Vec<Database>>,
+        database_settings: Option<&Vec<Database>>,
     ) -> Result<Self, sqlx::error::Error> {
         let mut resolvers: HashMap<String, Arc<TableResolver>> = HashMap::new();
 
@@ -91,7 +91,7 @@ impl DatabaseManager {
 
             Self::register(
                 resolvers,
-                namespace,
+                namespace.as_ref(),
                 database.scheme(),
                 database_name,
                 &url,
@@ -130,7 +130,7 @@ impl DatabaseManager {
 
             Self::register(
                 resolvers,
-                &Some(env::var("POSTGRES_NAMESPACE").unwrap_or("postgres".to_string())),
+                Some(&env::var("POSTGRES_NAMESPACE").unwrap_or("postgres".to_string())),
                 "postgres",
                 &env::var("POSTGRES_DATABASE").unwrap(),
                 &url,
@@ -169,7 +169,7 @@ impl DatabaseManager {
 
             Self::register(
                 resolvers,
-                &Some(env::var("MYSQL_NAMESPACE").unwrap_or("mysql".to_string())),
+                Some(&env::var("MYSQL_NAMESPACE").unwrap_or("mysql".to_string())),
                 "mysql",
                 &env::var("MYSQL_DATABASE").unwrap(),
                 &url,
@@ -189,14 +189,14 @@ impl DatabaseManager {
 
     fn register(
         resolvers: &mut HashMap<String, Arc<TableResolver>>,
-        namespace: &Option<String>,
+        namespace: Option<&String>,
         scheme: &str,
         database: &str,
         url: &str,
         schema_cache: bool,
         max_connections: u32,
     ) -> Result<(), sqlx::error::Error> {
-        let key = namespace.clone().unwrap_or(scheme.to_string());
+        let key = namespace.map_or_else(|| scheme.to_string(), std::clone::Clone::clone);
         log::debug!("Create '{key}' database connection pool");
 
         if let Entry::Vacant(entry) = resolvers.entry(key.clone()) {

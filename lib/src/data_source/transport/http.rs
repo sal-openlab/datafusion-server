@@ -28,7 +28,7 @@ pub async fn get(
 ) -> Result<ResponseData, ResponseError> {
     let response = Client::new()
         .get(uri)
-        .headers(to_header_map(&options.headers)?)
+        .headers(to_header_map(options.headers.as_ref())?)
         .send()
         .await
         .map_err(ResponseError::http_request)?;
@@ -39,7 +39,7 @@ pub async fn get(
     })
 }
 
-fn to_header_map(headers: &Option<HashMap<String, String>>) -> Result<HeaderMap, ResponseError> {
+fn to_header_map(headers: Option<&HashMap<String, String>>) -> Result<HeaderMap, ResponseError> {
     let mut result = HeaderMap::new();
 
     if let Some(headers) = headers {

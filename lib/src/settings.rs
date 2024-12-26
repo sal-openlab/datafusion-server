@@ -221,20 +221,22 @@ impl Settings {
     pub fn init_global_managers(mut self) -> Result<Self, ConfigError> {
         #[cfg(any(feature = "postgres", feature = "mysql"))]
         {
-            self.database_pool_manager = database_manager::DatabaseManager::new_with_config(
-                &self.databases,
-            )
-            .map_err(|e| {
-                ConfigError::Message(format!("Can not initialize database connection pools: {e}"))
-            })?;
+            self.database_pool_manager =
+                database_manager::DatabaseManager::new_with_config(self.databases.as_ref())
+                    .map_err(|e| {
+                        ConfigError::Message(format!(
+                            "Can not initialize database connection pools: {e}"
+                        ))
+                    })?;
         }
 
-        self.object_store_manager = credential_manager::ObjectStoreManager::new_with_config(
-            &self.storages,
-        )
-        .map_err(|e| {
-            ConfigError::Message(format!("Can not initialize object store credentials: {e}"))
-        })?;
+        self.object_store_manager =
+            credential_manager::ObjectStoreManager::new_with_config(self.storages.as_ref())
+                .map_err(|e| {
+                    ConfigError::Message(format!(
+                        "Can not initialize object store credentials: {e}"
+                    ))
+                })?;
 
         Ok(self)
     }

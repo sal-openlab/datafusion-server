@@ -145,7 +145,7 @@ impl DatabaseOperator for Arc<Pool<sqlx::MySql>> {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum AnyDatabasePool {
     #[cfg(feature = "postgres")]
     Postgres(Arc<Pool<sqlx::Postgres>>),

@@ -19,7 +19,7 @@ use crate::PluginManager;
 pub fn to_record_batch(
     format: &DataSourceFormat,
     uri: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
     plugin_options: &PluginOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {

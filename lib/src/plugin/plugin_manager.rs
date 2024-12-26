@@ -72,7 +72,7 @@ impl PluginManager {
         authority: &str,
         path: Option<&str>,
         plugin_options: &serde_json::Value,
-        datasource_schema: &Option<DataSourceSchema>,
+        datasource_schema: Option<&DataSourceSchema>,
         query: Option<HashMap<String, String>>,
     ) -> Result<Py<PyAny>, ResponseError> {
         let (py_file, entry, _version) =

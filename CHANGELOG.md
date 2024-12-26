@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.4 (2024-12-26)
+
+* Updates latest crate dependencies
+    + bump datafusion to v43 (ae7363)
+        - https://github.com/apache/datafusion/blob/main/dev/changelog/43.0.0.md
+        - https://github.com/apache/arrow-rs/blob/53.2.0/CHANGELOG.md
+* The MSRV has been updated to 1.81
+
 ## 0.19.3 (2024-10-22) - Quick patch to keep up with the latest DataFusion crate
 
 * Updates to Apache DataFusion v42.1 and Apache Arrow v53.1

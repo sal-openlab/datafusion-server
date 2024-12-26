@@ -19,7 +19,7 @@ use crate::response::{
 pub fn buffered_stream_responder(
     record_batches: &[RecordBatch],
     format: &ResponseFormat,
-    options: &Option<ResponseFormatOption>,
+    options: Option<&ResponseFormatOption>,
 ) -> Result<impl IntoResponse, ResponseError> {
     Ok(match format {
         ResponseFormat::Arrow => from_byte_stream(
@@ -49,10 +49,10 @@ pub fn buffered_stream_responder(
 }
 
 pub fn response_format(
-    query_response: &Option<QueryResponse>,
-    accept_header: &Option<TypedHeader<crate::request::header::Accept>>,
+    query_response: Option<&QueryResponse>,
+    accept_header: Option<&TypedHeader<crate::request::header::Accept>>,
 ) -> Result<ResponseFormat, ResponseError> {
-    Ok(if let Some(response) = &query_response {
+    Ok(if let Some(response) = query_response {
         response.clone()
     } else if let Some(accept) = &accept_header {
         QueryResponse::new_with_format(crate::request::header::response_format(accept)?)

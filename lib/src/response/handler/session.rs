@@ -132,12 +132,15 @@ async fn query_by_json<E: SessionManager>(
     let (query_lang, format, options) = match body {
         SessionQuery::Query(query) => (
             query,
-            http_response::response_format(&None, &accept_header)?,
+            http_response::response_format(None, accept_header.as_ref())?,
             None,
         ),
         SessionQuery::QueryWithFormat(query_with_format) => (
             query_with_format.query_lang,
-            http_response::response_format(&query_with_format.response, &accept_header)?,
+            http_response::response_format(
+                query_with_format.response.as_ref(),
+                accept_header.as_ref(),
+            )?,
             query_with_format
                 .response
                 .and_then(|response| response.options),
@@ -168,7 +171,9 @@ async fn query_by_json<E: SessionManager>(
         }
 
         Ok(Either::E1(http_response::buffered_stream_responder(
-            &batches, &format, &options,
+            &batches,
+            &format,
+            options.as_ref(),
         )?))
     } else {
         let stream = session_mgr
@@ -187,7 +192,7 @@ async fn query_by_sql<E: SessionManager>(
     session_mgr: &tokio::sync::Mutex<E>,
     session_id: &str,
 ) -> Result<impl IntoResponse, ResponseError> {
-    let format = http_response::response_format(&None, &accept_header)?;
+    let format = http_response::response_format(None, accept_header.as_ref())?;
 
     Ok(if format == ResponseFormat::Arrow {
         let stream = session_mgr
@@ -203,7 +208,7 @@ async fn query_by_sql<E: SessionManager>(
             .execute_sql(session_id, sql)
             .await?;
         Either::E2(http_response::buffered_stream_responder(
-            &batches, &format, &None,
+            &batches, &format, None,
         )?)
     })
 }

@@ -48,7 +48,7 @@ pub async fn query_responder<S: SessionManager>(
     }
 
     let (format, options) = (
-        http_response::response_format(&payload.response, &accept_header)?,
+        http_response::response_format(payload.response.as_ref(), accept_header.as_ref())?,
         payload.response.and_then(|response| response.options),
     );
 
@@ -78,7 +78,7 @@ pub async fn query_responder<S: SessionManager>(
         Ok(Either::E1(http_response::buffered_stream_responder(
             &record_batches,
             &format,
-            &options,
+            options.as_ref(),
         )))
     } else {
         let batch_stream = session_mgr

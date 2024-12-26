@@ -290,7 +290,7 @@ impl Session for ConcurrentSessionContext {
 
         let record_batches = csv::from_response_to_record_batch(
             &data_source.location,
-            &data_source.schema,
+            data_source.schema.as_ref(),
             &options,
         )
         .await?;
@@ -311,7 +311,7 @@ impl Session for ConcurrentSessionContext {
         Self::register_record_batch(
             self,
             &data_source,
-            &csv::from_bytes_to_record_batch(data, &None, &options)?,
+            &csv::from_bytes_to_record_batch(data, None, &options)?,
         )
         .await?;
 
@@ -328,7 +328,7 @@ impl Session for ConcurrentSessionContext {
         };
 
         let record_batches =
-            json::from_file_to_record_batch(&file_path, &data_source.schema, &options)?;
+            json::from_file_to_record_batch(&file_path, data_source.schema.as_ref(), &options)?;
 
         Self::register_record_batch(self, data_source, &record_batches).await?;
 
@@ -345,7 +345,7 @@ impl Session for ConcurrentSessionContext {
             DataSourceFormat::Json => {
                 json::from_response_to_record_batch(
                     &data_source.location,
-                    &data_source.schema,
+                    data_source.schema.as_ref(),
                     &options,
                 )
                 .await?
@@ -353,7 +353,7 @@ impl Session for ConcurrentSessionContext {
             DataSourceFormat::NdJson => {
                 nd_json::from_response_to_record_batch(
                     &data_source.location,
-                    &data_source.schema,
+                    data_source.schema.as_ref(),
                     &options,
                 )
                 .await?
@@ -438,7 +438,7 @@ impl Session for ConcurrentSessionContext {
             let record_batches = connector_plugin::to_record_batch(
                 &data_source.format,
                 &data_source.location,
-                &data_source.schema,
+                data_source.schema.as_ref(),
                 &options,
                 &plugin_options,
             )?;

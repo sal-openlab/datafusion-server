@@ -23,7 +23,7 @@ pub struct ObjectStoreManager {
 
 impl ObjectStoreManager {
     pub fn new_with_config(
-        storage_settings: &Option<Vec<Storage>>,
+        storage_settings: Option<&Vec<Storage>>,
     ) -> Result<Self, object_store::Error> {
         let mut stores: HashMap<String, Arc<DynObjectStore>> = HashMap::new();
 

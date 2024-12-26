@@ -14,7 +14,7 @@ use crate::response::http_error::ResponseError;
 
 pub async fn from_response_to_record_batch(
     uri: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     from_bytes_to_record_batch(
@@ -29,7 +29,7 @@ pub async fn from_response_to_record_batch(
 
 pub fn from_bytes_to_record_batch(
     data: bytes::Bytes,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let cursor = std::io::Cursor::new(data);
@@ -38,7 +38,7 @@ pub fn from_bytes_to_record_batch(
 
 fn to_record_batch<R: Read + Seek>(
     mut reader: R,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let has_header = options.has_header.unwrap_or(true);

@@ -18,7 +18,8 @@ pub async fn write(ctx: &SessionContext, data_source: &DataSource) -> Result<(),
     };
 
     let write_options = DataFrameWriteOptions::new()
-        .with_overwrite(options.overwrite.unwrap_or(false))
+        // TODO: raise error when options.overwrite is true and already exists target file
+        // .with_overwrite(options.overwrite.unwrap_or(false))
         .with_single_file_output(true);
 
     let df = ctx

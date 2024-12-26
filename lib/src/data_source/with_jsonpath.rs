@@ -12,7 +12,7 @@ use crate::response::http_error::ResponseError;
 
 pub fn to_record_batch(
     utf8text: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let json_path = match &options.json_path {

@@ -110,7 +110,8 @@ impl Decoder {
         }
 
         let rows = &rows[..];
-        let arrays = self.build_struct_array(rows, self.schema.fields(), &self.options.projection);
+        let arrays =
+            self.build_struct_array(rows, self.schema.fields(), self.options.projection.as_ref());
 
         let projected_fields = if let Some(projection) = self.options.projection.as_ref() {
             projection
@@ -141,7 +142,7 @@ impl Decoder {
         &self,
         rows: &[Value],
         struct_fields: &Fields,
-        projection: &Option<Vec<String>>,
+        projection: Option<&Vec<String>>,
     ) -> Result<Vec<ArrayRef>, ArrowError> {
         let arrays: Result<Vec<ArrayRef>, ArrowError> = struct_fields
             .iter()
@@ -266,7 +267,7 @@ impl Decoder {
                                 _ => Value::Object(serde_json::Map::default()),
                             })
                             .collect::<Vec<Value>>();
-                        let arrays = self.build_struct_array(&struct_rows, fields, &None)?;
+                        let arrays = self.build_struct_array(&struct_rows, fields, None)?;
                         // construct a struct array's data in order to set null buffer
                         let data_type = DataType::Struct(fields.clone());
                         let data = ArrayDataBuilder::new(data_type)
@@ -369,7 +370,7 @@ impl Decoder {
         let struct_children = self.build_struct_array(
             struct_rows.as_slice(),
             &Fields::from([key_field.clone(), value_field.clone()]),
-            &None,
+            None,
         )?;
 
         unsafe {
@@ -516,7 +517,7 @@ impl Decoder {
                         }
                     })
                     .collect();
-                let arrays = self.build_struct_array(rows.as_slice(), fields, &None)?;
+                let arrays = self.build_struct_array(rows.as_slice(), fields, None)?;
                 let data_type = DataType::Struct(fields.clone());
                 let buf = null_buffer.into();
                 unsafe {

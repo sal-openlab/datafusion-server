@@ -10,7 +10,7 @@ use serde_json::Value;
 
 pub fn from_json(
     json_text: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> anyhow::Result<Vec<RecordBatch>> {
     let json: Value = serde_json::from_str(json_text).map_err(|e| {
@@ -23,8 +23,8 @@ pub fn from_json(
 
     log::debug!("number of parsed JSON objects: {}", json_rows.len());
 
-    let df_schema = if schema.is_some() {
-        schema.clone().unwrap().to_arrow_schema()
+    let df_schema = if let Some(schema) = schema {
+        schema.to_arrow_schema()
     } else {
         infer_schema::from_json_value(json_rows, options)?
     };

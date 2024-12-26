@@ -15,7 +15,7 @@ use crate::response::http_error::ResponseError;
 
 pub fn from_file_to_record_batch(
     file_path: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let mut file_reader = BufReader::new(File::open(file_path)?);
@@ -31,7 +31,7 @@ pub fn from_file_to_record_batch(
 
 pub async fn from_response_to_record_batch(
     uri: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let response = match http::get(uri, options, http::ResponseDataType::Text).await? {
@@ -54,7 +54,7 @@ pub fn from_bytes_to_record_batch(
         std::str::from_utf8(data).map_err(|e| {
             ResponseError::request_validation(format!("Collapsed bytes buffer: {e}"))
         })?,
-        &None,
+        None,
         options,
     )?)
 }

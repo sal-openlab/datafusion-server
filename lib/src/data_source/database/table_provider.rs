@@ -3,10 +3,20 @@
 //
 
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use crate::data_source::database::any_pool::DatabaseOperator;
+#[cfg(feature = "mysql")]
+use crate::data_source::database::dtype_mysql;
+#[cfg(feature = "postgres")]
+use crate::data_source::database::dtype_postgres;
+use crate::data_source::database::{
+    any_pool::{AnyDatabasePool, AnyDatabaseRow},
+    engine_type::DatabaseEngineType,
+};
 use axum::async_trait;
 use chrono::{Datelike, Timelike};
 #[cfg(feature = "mysql")]
@@ -31,18 +41,9 @@ use datafusion::{
 use futures::StreamExt;
 use num_traits::ToPrimitive;
 
-use crate::data_source::database::any_pool::DatabaseOperator;
-#[cfg(feature = "mysql")]
-use crate::data_source::database::dtype_mysql;
-#[cfg(feature = "postgres")]
-use crate::data_source::database::dtype_postgres;
-use crate::data_source::database::{
-    any_pool::{AnyDatabasePool, AnyDatabaseRow},
-    engine_type::DatabaseEngineType,
-};
-
 const BATCH_SIZE: usize = 1000;
 
+#[derive(Debug)]
 pub struct DatabaseTable {
     pool: AnyDatabasePool,
     schema: SchemaRef,

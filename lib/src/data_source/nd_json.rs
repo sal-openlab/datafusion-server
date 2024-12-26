@@ -18,7 +18,7 @@ use crate::response::http_error::ResponseError;
 
 pub async fn from_response_to_record_batch(
     uri: &str,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let response = match http::get(uri, options, http::ResponseDataType::Binary).await? {
@@ -31,7 +31,7 @@ pub async fn from_response_to_record_batch(
 #[cfg(feature = "plugin")]
 pub fn from_bytes_to_record_batch(
     data: bytes::Bytes,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     to_record_batch(Cursor::new(data), schema, options)
@@ -39,7 +39,7 @@ pub fn from_bytes_to_record_batch(
 
 fn to_record_batch<R: BufRead + Seek>(
     mut reader: R,
-    schema: &Option<DataSourceSchema>,
+    schema: Option<&DataSourceSchema>,
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let df_schema = SchemaRef::new(if let Some(schema) = schema {
