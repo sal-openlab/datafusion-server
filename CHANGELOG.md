@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.5 (2025-01-04) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to Apache DataFusion v43
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/43.0.0.md
+* Updates other latest crates
+
 ## 0.19.4 (2024-12-26)
 
 * Updates latest crate dependencies
