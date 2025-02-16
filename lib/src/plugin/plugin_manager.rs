@@ -57,7 +57,7 @@ impl PluginManager {
     #[allow(clippy::unused_self)]
     pub fn py_interpreter_info(&self) -> String {
         Python::with_gil(|py| -> PyResult<String> {
-            let sys = PyModule::import_bound(py, "sys")?;
+            let sys = PyModule::import(py, "sys")?;
             sys.getattr("version")?.extract()
         })
         .unwrap_or("Unknown".to_string())
@@ -86,6 +86,8 @@ impl PluginManager {
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
 
         let result = Python::with_gil(|py| -> PyResult<Py<PyAny>> {
+            // TODO: to be followed for PyO3 v0.23
+            #[allow(deprecated)]
             let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
                 .getattr(entry.as_str())?
                 .into();
@@ -96,6 +98,8 @@ impl PluginManager {
                 None
             };
 
+            // TODO: to be followed for PyO3 v0.23
+            #[allow(deprecated)]
             let kwargs = if let Some(query) = query {
                 query.into_py_dict_bound(py)
             } else {
@@ -114,6 +118,8 @@ impl PluginManager {
                 kwargs
             );
 
+            // TODO: to be followed for PyO3 v0.23
+            #[allow(deprecated)]
             py_func.call_bound(py, (format, authority, path, arrow_schema), Some(&kwargs))
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
@@ -149,6 +155,8 @@ impl PluginManager {
 
         let record_batch = compute::concat_batches(&record_batches[0].schema(), record_batches)?;
 
+        // TODO: to be followed for PyO3 v0.23
+        #[allow(deprecated)]
         let result = Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
             let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
                 .getattr(entry.as_str())?

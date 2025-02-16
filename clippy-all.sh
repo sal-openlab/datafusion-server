@@ -19,8 +19,8 @@ done
 
 for combination in "${combinations[@]}"; do
     echo "Running Clippy with features: $combination"
-    cargo clippy --no-default-features --features "$combination"
-    if [ $? -ne 0 ]; then
+    if ! cargo clippy --no-default-features --features "$combination" -- --deny warnings
+    then
         echo "Clippy failed with features: $combination"
         exit 1
     fi

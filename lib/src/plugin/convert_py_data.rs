@@ -2,6 +2,8 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> February 23, 2023
 //
 
+// TODO: to be followed for PyO3 v0.23
+#[allow(deprecated)]
 #[cfg(feature = "plugin")]
 use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyString},
@@ -28,12 +30,14 @@ pub fn append_to_py_dict(
     Ok(())
 }
 
+// TODO: to be followed for PyO3 v0.23
+#[allow(deprecated)]
 #[cfg(feature = "plugin")]
 fn to_py_any(py: Python, value: &serde_json::Value) -> Result<Py<PyAny>, PyErr> {
     Ok(match value {
         serde_json::Value::Null => py.None(),
         serde_json::Value::Bool(v) => v.to_object(py),
-        serde_json::Value::String(v) => PyString::new_bound(py, v).to_object(py),
+        serde_json::Value::String(v) => PyString::new(py, v).to_object(py),
         serde_json::Value::Number(v) => v.as_f64().to_object(py),
         serde_json::Value::Array(values) => {
             let mut py_list = Vec::<Py<PyAny>>::new();
@@ -43,7 +47,7 @@ fn to_py_any(py: Python, value: &serde_json::Value) -> Result<Py<PyAny>, PyErr> 
             py_list.to_object(py)
         }
         serde_json::Value::Object(map) => {
-            let py_dict = PyDict::new_bound(py);
+            let py_dict = PyDict::new(py);
             for (key, value) in map {
                 py_dict.set_item(key, to_py_any(py, value)?)?;
             }
