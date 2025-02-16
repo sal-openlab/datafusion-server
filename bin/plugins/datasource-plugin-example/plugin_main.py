@@ -110,6 +110,14 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
                                 pa.field("key2", pa.float32()),
                             ]),
                         ),
+                        pa.field("col_list_struct",
+                            pa.list_(
+                                pa.struct([
+                                    pa.field("key1", pa.string()),
+                                    pa.field("key2", pa.float32()),
+                                ])
+                            )
+                        ),
                     ]
                 )
             )
@@ -120,18 +128,27 @@ def main(response_format: str, authority: str, path: str, schema: pa.Schema, **k
         bar = pa.array([12345, 67890])
         col_list = pa.array([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
 
-        data = [
+        col_struct = pa.array([
             {"key1": "value1", "key2": 1.1},
             {"key1": "value2", "key2": 2.2},
-        ]
-
-        col_struct = pa.array(data, type=pa.struct([
+        ], type=pa.struct([
             pa.field("key1", pa.string()),
             pa.field("key2", pa.float32())
         ]))
 
+        col_list_struct = pa.array([
+            [{"key1": "value1", "key2": 1.1}, {"key1": "value2", "key2": 2.2}],
+            [{"key1": "value3", "key2": 3.3}],
+        ], type=pa.list_(pa.struct([
+            pa.field("key1", pa.string()),
+            pa.field("key2", pa.float32())
+        ])))
+
         # creates RecordBatch and return
-        return pa.record_batch([foo, bar, col_list, col_struct], schema=schema)
+        return pa.record_batch(
+            [foo, bar, col_list, col_struct, col_list_struct],
+            schema=schema
+        )
 
     else:
         raise ValueError("Unsupported format: " + response_format)

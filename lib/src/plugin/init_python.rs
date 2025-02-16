@@ -3,9 +3,7 @@
 //
 
 #[cfg(feature = "plugin")]
-use pyo3::types::{PyAnyMethods, PyModule};
-#[cfg(feature = "plugin")]
-use pyo3::Python;
+use pyo3::{types::{PyAnyMethods, PyModule}, Python};
 
 #[cfg(feature = "plugin")]
 pub fn py_init() -> anyhow::Result<()> {

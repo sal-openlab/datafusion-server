@@ -103,7 +103,11 @@ impl DataFusionServerFlightService {
 
         let flight_data_schema = FlightData::new().with_data_header(bytes::Bytes::from(
             generator
-                .schema_to_bytes(batch_stream.schema().as_ref(), &options)
+                .schema_to_bytes_with_dictionary_tracker(
+                    batch_stream.schema().as_ref(),
+                    &mut dictionary_tracker,
+                    &options,
+                )
                 .ipc_message,
         ));
 

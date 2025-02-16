@@ -31,6 +31,7 @@ use crate::request::body::{
 };
 use crate::response::http_error::ResponseError;
 use crate::settings::Settings;
+use crate::udf;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SessionContext {
@@ -52,6 +53,7 @@ impl SessionContext {
         let df_ctx = context::SessionContext::new_with_config(config);
 
         object_store::registry::register(&df_ctx)?;
+        udf::registry::register(&df_ctx);
 
         let last_accessed_at = Utc::now();
         let data_source_map = HashMap::<String, DataSource>::new();
@@ -582,7 +584,7 @@ impl Session for ConcurrentSessionContext {
                             for field_name in &target_field_names {
                                 projection_fields.push(if base_field_names.contains(field_name) {
                                     col(field_name)
-                                        .alias(&format!("{}_{}", &target.table_name, &field_name))
+                                        .alias(format!("{}_{}", &target.table_name, &field_name))
                                 } else {
                                     col(field_name)
                                 });

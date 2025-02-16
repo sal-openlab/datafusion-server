@@ -23,6 +23,7 @@ mod response;
 mod server;
 pub mod settings;
 mod statistics;
+pub mod udf;
 
 #[cfg(any(not(feature = "flight"), not(feature = "telemetry")))]
 type BoxedFuture =

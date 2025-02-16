@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.19.3 (2024-10-22) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to Apache DataFusion v42.1 and Apache Arrow v53.1
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/42.1.0.md
+    + https://github.com/apache/arrow-rs/blob/065c7b8f94264eeb6a1ca23a92795fc4e0d31d51/CHANGELOG.md
+* Updates other latest crates
+
+## 0.19.2 (2024-09-23) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to Apache DataFusion v42 and Apache Arrow v53
+    + https://github.com/apache/arrow-datafusion/blob/main/dev/changelog/42.0.0.md
+    + https://github.com/apache/arrow-rs/blob/master/CHANGELOG.md#5300-2024-08-31
+* Updates other latest crates
+* Fixes broken `sysinfo` API route
+
 ## 0.19.1 (2024-08-12) - Quick patch to keep up with the latest DataFusion crate
 
 * Updates to Apache DataFusion v41

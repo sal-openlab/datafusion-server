@@ -93,8 +93,7 @@ impl TableProvider for DatabaseTable {
             let mut sql = format!("SELECT * FROM {table_name}");
 
             if !filters.is_empty() {
-                let filter_clauses: Vec<String> =
-                    filters.iter().map(Expr::canonical_name).collect();
+                let filter_clauses: Vec<String> = filters.iter().map(Expr::to_string).collect();
                 if !filter_clauses.is_empty() {
                     sql.push_str(&format!(" WHERE {}", filter_clauses.join(" AND ")));
                 }

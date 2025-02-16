@@ -539,11 +539,12 @@ impl Decoder {
             }
         };
         // build list
+        let null_buffer = MutableBuffer::from(list_nulls.to_vec());
         let list_data = ArrayData::builder(DataType::List(list_field.clone()))
             .len(list_len)
             .add_buffer(Buffer::from_slice_ref(&offsets))
             .add_child_data(array_data)
-            .null_bit_buffer(Some(list_nulls.into()));
+            .null_bit_buffer(Some(Buffer::from(null_buffer)));
         let list_data = unsafe { list_data.build_unchecked() };
         Ok(Arc::new(GenericListArray::<OffsetSize>::from(list_data)))
     }

@@ -8,8 +8,8 @@ use datafusion::{
     error::DataFusionError,
     sql::sqlparser::{
         ast::{
-            AssignmentTarget, Expr, Insert, ObjectName, Query, Select, SetExpr, Statement,
-            TableFactor,
+            AssignmentTarget, Expr, FromTable, Insert, ObjectName, Query, Select, SetExpr,
+            Statement, TableAlias, TableFactor,
         },
         dialect::GenericDialect,
         parser::Parser,
@@ -44,6 +44,9 @@ pub async fn from_sql(
             Statement::Update { .. } => {
                 process_update(ctx, &statement).await?;
             }
+            Statement::Delete(_) => {
+                process_delete(ctx, &statement).await?;
+            }
             _ => {}
         }
     }
@@ -69,8 +72,8 @@ async fn process_select(
     select: &Select,
 ) -> Result<(), DataFusionError> {
     for table_with_joins in &select.from {
-        if let TableFactor::Table { name, .. } = &table_with_joins.relation {
-            let (table_name, namespace) = table_with_namespace(name);
+        if let TableFactor::Table { name, alias, .. } = &table_with_joins.relation {
+            let (table_name, namespace) = table_with_namespace(name, alias);
 
             if let Some(resolver) = get_resolver(&namespace) {
                 let full_table_name = format!("{table_name}@{}", namespace.clone().unwrap());
@@ -93,7 +96,7 @@ async fn process_insert(
     statement: &mut Statement,
 ) -> Result<(), DataFusionError> {
     if let Statement::Insert(insert) = statement {
-        let (table_name, namespace) = table_with_namespace(&insert.table_name);
+        let (table_name, namespace) = table_with_namespace(&insert.table_name, &None);
 
         if let Some(resolver) = get_resolver(&namespace).map(Arc::clone) {
             if let Some(source) = &insert.source {
@@ -209,8 +212,8 @@ async fn process_update(
         .. // returning
     } = statement
     {
-        if let TableFactor::Table { name, .. } = &table.relation {
-            let (table_name, namespace) = table_with_namespace(name);
+        if let TableFactor::Table { name, alias, .. } = &table.relation {
+            let (table_name, namespace) = table_with_namespace(name, alias);
 
             if let Some(resolver) = get_resolver(&namespace) {
                 if from.is_some() {
@@ -298,6 +301,35 @@ async fn process_update(
     Ok(())
 }
 
+async fn process_delete(
+    ctx: &ConcurrentSessionContext,
+    statement: &Statement,
+) -> Result<(), DataFusionError> {
+    if let Statement::Delete(delete) = statement {
+        let (table_name, namespace) = match &delete.from {
+            FromTable::WithFromKeyword(tables) | FromTable::WithoutKeyword(tables) => {
+                if tables.len() != 1 {
+                    return Err(DataFusionError::Execution(
+                        "Must be one table specified".to_string(),
+                    ));
+                }
+
+                if let TableFactor::Table { name, alias, .. } = &tables.first().unwrap().relation {
+                    table_with_namespace(name, alias)
+                } else {
+                    return Err(DataFusionError::Execution(
+                        r#"Must be specified name of table factor (e.g. "Table1")"#.to_string(),
+                    ));
+                }
+            }
+        };
+
+        if let Some(resolver) = get_resolver(&namespace) {}
+    }
+
+    Ok(())
+}
+
 fn get_resolver(namespace: &Option<String>) -> Option<&Arc<TableResolver>> {
     if let Some(namespace) = namespace {
         Settings::global()
@@ -309,7 +341,7 @@ fn get_resolver(namespace: &Option<String>) -> Option<&Arc<TableResolver>> {
     }
 }
 
-fn table_with_namespace(name: &ObjectName) -> (String, Option<String>) {
+fn table_with_namespace(name: &ObjectName, alias: &Option<TableAlias>) -> (String, Option<String>) {
     fn quote_identifier(value: &str, quote_style: Option<char>) -> String {
         if let Some(quote) = quote_style {
             format!("{quote}{value}{quote}")
@@ -318,15 +350,27 @@ fn table_with_namespace(name: &ObjectName) -> (String, Option<String>) {
         }
     }
 
+    let aliasing_if_specified = |name: &str| -> String {
+        if let Some(alias) = alias {
+            let quoted_alias = quote_identifier(&alias.name.value, alias.name.quote_style);
+            format!("{name} AS {quoted_alias}")
+        } else {
+            name.to_owned()
+        }
+    };
+
     let table_ident = &name.0[0];
     let quoted_identifier = quote_identifier(&table_ident.value, table_ident.quote_style);
 
     if let Some(at_pos) = table_ident.value.rfind('@') {
         let (base_name, namespace) = table_ident.value.split_at(at_pos);
         let quoted_base_name = quote_identifier(base_name, table_ident.quote_style);
-        (quoted_base_name, Some(namespace[1..].to_owned()))
+        (
+            aliasing_if_specified(&quoted_base_name),
+            Some(namespace[1..].to_owned()),
+        )
     } else {
-        (quoted_identifier, None)
+        (aliasing_if_specified(&quoted_identifier), None)
     }
 }
 
@@ -354,10 +398,71 @@ fn remove_table_namespace(table_name: &mut ObjectName) {
 mod tests {
     use crate::data_source::database::table_processor::table_with_namespace;
     use datafusion::sql::sqlparser::{
-        ast::{Ident, ObjectName, SetExpr, Statement},
+        ast::{Ident, ObjectName, SetExpr, Statement, TableAlias},
         dialect::GenericDialect,
         parser::Parser,
     };
+
+    #[test]
+    fn get_table_with_namespace() {
+        let table_name = ObjectName(vec![Ident::new("table_name@namespace")]);
+        let (table, namespace) = table_with_namespace(&table_name, &None);
+        assert_eq!(table, "table_name");
+        assert_eq!(namespace.unwrap(), "namespace");
+
+        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name@namespace")]);
+        let (table, namespace) = table_with_namespace(&table_name, &None);
+        assert_eq!(table, r#""table_name""#);
+        assert_eq!(namespace.unwrap(), "namespace");
+    }
+
+    #[test]
+    fn get_aliased_table_with_namespace() {
+        let table_name = ObjectName(vec![Ident::new("table_name@namespace")]);
+        let alias = Some(TableAlias {
+            name: Ident::new("alias"),
+            columns: vec![],
+        });
+        let (table, namespace) = table_with_namespace(&table_name, &alias);
+        assert_eq!(table, "table_name AS alias");
+        assert_eq!(namespace.unwrap(), "namespace");
+
+        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name@namespace")]);
+        let (table, namespace) = table_with_namespace(&table_name, &alias);
+        assert_eq!(table, r#""table_name" AS alias"#);
+        assert_eq!(namespace.unwrap(), "namespace");
+    }
+
+    #[test]
+    fn get_table_without_namespace() {
+        let table_name = ObjectName(vec![Ident::new("table_name")]);
+        let (table, namespace) = table_with_namespace(&table_name, &None);
+        assert_eq!(table, "table_name");
+        assert_eq!(namespace, None);
+
+        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name")]);
+        let (table, namespace) = table_with_namespace(&table_name, &None);
+        assert_eq!(table, r#""table_name""#);
+        assert_eq!(namespace, None);
+    }
+
+    #[test]
+    fn get_aliased_table_without_namespace() {
+        let table_name = ObjectName(vec![Ident::new("table_name")]);
+        let alias = Some(TableAlias {
+            name: Ident::new(r#""Alias""#),
+            columns: vec![],
+        });
+
+        let (table, namespace) = table_with_namespace(&table_name, &alias);
+        assert_eq!(table, r#"table_name AS "Alias""#);
+        assert_eq!(namespace, None);
+
+        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name")]);
+        let (table, namespace) = table_with_namespace(&table_name, &alias);
+        assert_eq!(table, r#""table_name" AS "Alias""#);
+        assert_eq!(namespace, None);
+    }
 
     // #[test]
     // fn insert_from_select() {
@@ -395,64 +500,79 @@ mod tests {
     // }
 
     #[test]
-    fn get_table_with_namespace() {
-        let table_name = ObjectName(vec![Ident::new("table_name@namespace")]);
-        let (table, namespace) = table_with_namespace(&table_name);
-        assert_eq!(table, "table_name");
-        assert_eq!(namespace.unwrap(), "namespace");
+    fn update_from_select() {
+        let sql = r#"
+            UPDATE "table_name" A SET column1 = 'new_value' WHERE column_id = 1 AND (column_foo = 'bar' OR price < 1000);
+        "#;
 
-        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name@namespace")]);
-        let (table, namespace) = table_with_namespace(&table_name);
-        assert_eq!(table, r#""table_name""#);
-        assert_eq!(namespace.unwrap(), "namespace");
-    }
+        let ast = Parser::parse_sql(&GenericDialect {}, sql).expect("Unable to parse SQL");
 
-    #[test]
-    fn get_table_without_namespace() {
-        let table_name = ObjectName(vec![Ident::new("table_name")]);
-        let (table, namespace) = table_with_namespace(&table_name);
-        assert_eq!(table, "table_name");
-        assert_eq!(namespace, None);
+        #[allow(clippy::needless_for_each)]
+        for statement in &ast {
+            if let Statement::Update {
+                table,
+                assignments,
+                from,
+                selection,
+                returning,
+            } = statement
+            {
+                //println!("statement: {statement:?}");
+                println!("table: {table:?}");
+                println!("table: {table}");
+                println!();
+                println!("assignments: {assignments:?}");
+                assignments.iter().for_each(|a| println!("assignment: {a}"));
+                println!();
+                println!("from: {from:?}");
+                println!();
+                println!("selection: {selection:?}");
+                if let Some(s) = selection {
+                    println!("selection: {s}");
+                }
+                println!();
+                println!("returning: {returning:?}");
+            }
+        }
 
-        let table_name = ObjectName(vec![Ident::with_quote('"', "table_name")]);
-        let (table, namespace) = table_with_namespace(&table_name);
-        assert_eq!(table, r#""table_name""#);
-        assert_eq!(namespace, None);
+        assert_eq!(true, true);
     }
 
     // #[test]
-    // fn update_from_select() {
-    //     let sql = r#"
-    //         UPDATE "table_name" SET column1 = 'new_value' WHERE column_id = 1 AND (column_foo = 'bar' OR price < 1000);
-    //     "#;
+    // fn delete_by_select() {
+    //     // let sql = "
+    //     //     DELETE table_name WHERE column_id = 1 AND (column_foo = 'bar' OR price < 1000);
+    //     // ";
+    //     // let sql = "
+    //     //     DELETE table_name
+    //     //     WHERE column1 IN (SELECT column1 FROM other_table_name WHERE id=1234);
+    //     // ";
+    //     let sql = "
+    //         DELETE FROM table_name
+    //         WHERE EXISTS (SELECT 1 FROM other_table WHERE price < 1000)
+    //         OR column_foo = 123;
+    //     ";
     //
     //     let ast = Parser::parse_sql(&GenericDialect {}, sql).expect("Unable to parse SQL");
     //
     //     #[allow(clippy::needless_for_each)]
     //     for statement in &ast {
-    //         if let Statement::Update {
-    //             table,
-    //             assignments,
-    //             from,
-    //             selection,
-    //             returning,
-    //         } = statement
-    //         {
+    //         if let Statement::Delete(delete) = statement {
     //             //println!("statement: {statement:?}");
-    //             println!("table: {table:?}");
-    //             println!("table: {table}");
+    //             println!("tables: {:?}", delete.tables);
     //             println!();
-    //             println!("assignments: {assignments:?}");
-    //             assignments.iter().for_each(|a| println!("assignment: {a}"));
+    //             println!("from: {:?}", delete.from);
     //             println!();
-    //             println!("from: {from:?}");
-    //             println!();
-    //             println!("selection: {selection:?}");
-    //             if let Some(s) = selection {
-    //                 println!("selection: {s}");
+    //             println!("selection: {:?}", delete.selection);
+    //             if let Some(s) = &delete.selection {
+    //                 println!("selection(Expr): {s}");
     //             }
     //             println!();
-    //             println!("returning: {returning:?}");
+    //             println!("returning: {:?}", delete.returning);
+    //             println!();
+    //             println!("order_by: {:?}", delete.order_by);
+    //             println!();
+    //             println!("limit: {:?}", delete.limit);
     //         }
     //     }
     //
