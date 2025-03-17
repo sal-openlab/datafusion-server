@@ -33,10 +33,11 @@ use datafusion::{
         record_batch::RecordBatch,
     },
     catalog::Session,
-    datasource::{TableProvider, TableType},
+    datasource::{memory::MemTable, TableProvider, TableType},
     error::DataFusionError,
+    execution::context::SessionContext,
     logical_expr::Expr,
-    physical_plan::{memory::MemoryExec, ExecutionPlan},
+    physical_plan::ExecutionPlan,
 };
 use futures::StreamExt;
 use num_traits::ToPrimitive;
@@ -163,9 +164,16 @@ impl TableProvider for DatabaseTable {
                 record_batches.push(RecordBatch::try_new(projected_schema.clone(), arrays)?);
             }
 
-            let exec = MemoryExec::try_new(&[record_batches], projected_schema.clone(), None)?;
+            let memory_table = Arc::new(MemTable::try_new(
+                projected_schema.clone(),
+                vec![record_batches.clone()],
+            )?);
 
-            Ok(Arc::new(exec) as Arc<dyn ExecutionPlan>)
+            let ctx = SessionContext::new();
+            ctx.register_table("table", memory_table)?;
+            let dataframe = ctx.table("table").await?;
+
+            dataframe.create_physical_plan().await
         })
     }
 }

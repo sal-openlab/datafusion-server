@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.7 (2025-03-16) - Quick patch to keep up with the latest DataFusion crate
+
+* Updates to Apache DataFusion v46 and Apache Arrow v54.2.1
+    + https://github.com/apache/datafusion/blob/main/dev/changelog/46.0.0.md
+    + https://github.com/apache/arrow-rs/blob/54.2.0/CHANGELOG.md
+    + https://github.com/apache/arrow-rs/blob/54.2.1/CHANGELOG.md
+* Updates other latest crates
+
 ## 0.19.6 (2025-02-16) - Quick patch to keep up with the latest DataFusion crate
 
 * Updates to Apache DataFusion v45 and Apache Arrow v54.1
