@@ -3,7 +3,7 @@
 //
 
 use datafusion::arrow::{self, record_batch::RecordBatch};
-use jsonpath_rust::{JsonPath, JsonPathValue};
+use jsonpath_rust::JsonPath;
 use serde_json::Value;
 
 use crate::data_source::{decoder::json_decoder, infer_schema, schema::DataSourceSchema};
@@ -20,15 +20,11 @@ pub fn to_record_batch(
         None => "$.*",
     };
 
-    let json = serde_json::from_str(utf8text)?;
-    let path_finder = JsonPath::try_from(json_path)
-        .map_err(|e| ResponseError::json_parsing(format!("Invalid JSONPath {json_path:?}: {e}")))?;
-
-    let found_slices: Vec<JsonPathValue<Value>> = path_finder.find_slice(&json);
-    let json_rows: Vec<Value> = found_slices
-        .into_iter()
-        .map(JsonPathValue::to_data)
-        .collect();
+    let json: Value = serde_json::from_str(utf8text)?;
+    let found_slices = json
+        .query(json_path)
+        .map_err(|e| ResponseError::json_parsing(format!("Can not parse by JSONPath: {e}")))?;
+    let json_rows: Vec<Value> = found_slices.into_iter().cloned().collect();
 
     let df_schema = if let Some(schema) = schema {
         schema.to_arrow_schema()
