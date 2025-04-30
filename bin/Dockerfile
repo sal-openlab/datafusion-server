@@ -1,4 +1,4 @@
-FROM rust:1.84 AS builder
+FROM rust:1.86 AS builder
 
 ENV PYTHON_VERSION=3.11.11
 ENV PYTHON_HOME=/opt/python
