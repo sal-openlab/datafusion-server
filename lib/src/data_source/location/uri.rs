@@ -114,14 +114,11 @@ pub fn scheme(parts: &Parts) -> anyhow::Result<SupportedScheme> {
             "http" | "https" => {
                 if let Some(storages) = &Settings::global().storages {
                     for storage in storages {
-                        match storage {
-                            Storage::Webdav(http) => {
-                                let (scheme, authority, pq) = parts_to_string(parts);
-                                if format!("{scheme}://{authority}{pq}").starts_with(&http.url) {
-                                    return Ok(SupportedScheme::Webdav);
-                                }
+                        if let Storage::Webdav(http) = storage {
+                            let (scheme, authority, pq) = parts_to_string(parts);
+                            if format!("{scheme}://{authority}{pq}").starts_with(&http.url) {
+                                return Ok(SupportedScheme::Webdav);
                             }
-                            _ => continue,
                         }
                     }
                 }

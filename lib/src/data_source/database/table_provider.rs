@@ -3,7 +3,7 @@
 //
 
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::fmt::{Debug, Write};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -97,7 +97,7 @@ impl TableProvider for DatabaseTable {
             if !filters.is_empty() {
                 let filter_clauses: Vec<String> = filters.iter().map(Expr::to_string).collect();
                 if !filter_clauses.is_empty() {
-                    sql.push_str(&format!(" WHERE {}", filter_clauses.join(" AND ")));
+                    write!(&mut sql, " WHERE {}", filter_clauses.join(" AND "))?;
                 }
             }
 
@@ -120,7 +120,7 @@ impl TableProvider for DatabaseTable {
             ));
 
             if let Some(limit) = limit {
-                sql.push_str(&format!(" LIMIT {limit}"));
+                write!(&mut sql, " LIMIT {limit}")?;
             }
 
             // retrieve from external database system
@@ -226,11 +226,7 @@ impl DatabaseTable {
         database: &str,
         table_name: &str,
     ) -> Result<Self, DataFusionError> {
-        log::debug!(
-            "Inspecting external database schema: database={}, table={}",
-            database,
-            table_name
-        );
+        log::debug!("Inspecting external database schema: database={database}, table={table_name}");
 
         let sql = match engine_type {
             #[cfg(feature = "postgres")]
@@ -492,7 +488,7 @@ impl DatabaseTable {
                     field.name()
                 )))
             }
-        };
+        }
 
         Ok(())
     }

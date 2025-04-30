@@ -12,7 +12,7 @@ use crate::request::body::{DataSource, DataSourceFormat, DataSourceOption};
 use crate::response::http_error::ResponseError;
 
 pub async fn register(ctx: &SessionContext, data_source: &DataSource) -> Result<(), ResponseError> {
-    log::debug!("object_store::register(): {:?}", data_source);
+    log::debug!("object_store::register(): {data_source:?}");
 
     let uri = location::uri::to_parts(&data_source.location)?;
 
@@ -125,7 +125,7 @@ async fn register_avro(
     if data_source.schema.is_some() {
         arrow_schema = data_source.schema.as_ref().unwrap().to_arrow_schema();
         avro_options = avro_options.schema(&arrow_schema);
-    };
+    }
 
     ctx.register_avro(&data_source.name, location, avro_options)
         .await?;

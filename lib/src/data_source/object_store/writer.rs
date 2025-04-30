@@ -10,7 +10,7 @@ use crate::request::body::{DataSource, DataSourceFormat, DataSourceOption};
 use crate::response::http_error::ResponseError;
 
 pub async fn write(ctx: &SessionContext, data_source: &DataSource) -> Result<(), ResponseError> {
-    log::debug!("object_store::writer(): {:?}", data_source);
+    log::debug!("object_store::writer(): {data_source:?}");
 
     let options = match &data_source.options {
         Some(options) => options.clone(),

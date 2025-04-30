@@ -63,9 +63,6 @@ pub fn to_record_batch(
                 &scheme,
                 parts.authority.as_ref().map_or("", |auth| auth.as_str()),
             )?,
-            object_store::path::Path::from(
-                parts.path_and_query.as_ref().map_or("/", |pq| pq.path()),
-            ),
             Arc::new(TokioBackgroundExecutor::new()),
         )
     });

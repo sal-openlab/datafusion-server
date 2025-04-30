@@ -4,13 +4,13 @@ exclude = ["bin", "example", "tool"]
 resolver = "2"
 
 [workspace.package]
-version = "0.19.8"
+version = "0.19.9"
 license = "MIT"
 authors = ["Sasaki, Naoki <nsasaki@sal.co.jp>"]
 keywords = ["http", "sql", "arrow", "flight", "datafusion"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.84"
+rust-version = "1.86"
 homepage = "https://github.com/sal-openlab/datafusion-server"
 repository = "https://github.com/sal-openlab/datafusion-server.git"
 

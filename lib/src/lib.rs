@@ -97,7 +97,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
 
     tokio::select! {
         http_result = http_service.into_future() => if let Err(e) = http_result {
-            log::error!("Can not initialize http server: {:?}", e);
+            log::error!("Can not initialize http server: {e:?}");
             return Err(anyhow::anyhow!("http server initialization error: {:?}", e));
         },
         flight_result = async {
@@ -107,7 +107,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
                 futures::future::pending().await
             }
         } => if let Err(e) = flight_result {
-            log::error!("Can not initialize flight gRPC server: {:?}", e);
+            log::error!("Can not initialize flight gRPC server: {e:?}");
             return Err(anyhow::anyhow!("flight server initialization error: {:?}", e));
         },
         metrics_result = async {
@@ -117,8 +117,8 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
                 futures::future::pending().await
             }
         } => if let Err(e) = metrics_result {
-            log::error!("Can not initialize metrics server: {:?}", e);
-            return Err(anyhow::anyhow!("metrics server initialization error: {:?}", e));
+            log::error!("Can not initialize metrics server: {e:?}");
+            return Err(anyhow::anyhow!("metrics server initialization error: {e:?}"));
         },
         () = interval_worker::cleanup_and_update_metrics(session_mgr) => {},
     }

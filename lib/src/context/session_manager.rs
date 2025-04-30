@@ -276,7 +276,7 @@ impl SessionManager for SessionContextManager {
         }
 
         for session_id in expired_ids {
-            log::info!("Session {} has been expired", session_id);
+            log::info!("Session {session_id} has been expired");
             self.contexts.write().await.remove(&session_id);
         }
     }

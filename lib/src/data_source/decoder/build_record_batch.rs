@@ -29,7 +29,7 @@ pub fn from_json(
         infer_schema::from_json_value(json_rows, options)?
     };
 
-    log::trace!("detected: {:?}", df_schema);
+    log::trace!("detected: {df_schema:?}");
 
     let mut record_batches = Vec::<RecordBatch>::new();
     {

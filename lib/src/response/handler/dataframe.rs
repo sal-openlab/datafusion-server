@@ -22,8 +22,8 @@ pub async fn query_responder<S: SessionManager>(
     extract::Json(payload): extract::Json<DataFrameQuery>,
 ) -> Result<impl IntoResponse, ResponseError> {
     log::info!("Accessing request query body to arrow responder");
-    log::debug!("Accept Header: {:?}", accept_header);
-    log::trace!("Request Body: {:?}", payload);
+    log::debug!("Accept Header: {accept_header:?}");
+    log::trace!("Request Body: {payload:?}");
 
     let keep_alive = params
         .get("keepAlive")

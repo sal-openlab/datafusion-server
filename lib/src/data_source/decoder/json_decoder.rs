@@ -268,7 +268,7 @@ impl Decoder {
                             })
                             .collect::<Vec<Value>>();
                         let arrays = self.build_struct_array(&struct_rows, fields, None)?;
-                        // construct a struct array's data in order to set null buffer
+                        // construct a struct array's data to set null buffer
                         let data_type = DataType::Struct(fields.clone());
                         let data = ArrayDataBuilder::new(data_type)
                             .len(len)
@@ -834,7 +834,7 @@ impl Decoder {
                                 builder.values().append_value(&v);
                             } else {
                                 builder.values().append_null();
-                            };
+                            }
                         }
 
                         builder.append(true);
@@ -848,7 +848,7 @@ impl Decoder {
                                 builder.values().append(&v)?;
                             } else {
                                 builder.values().append_null();
-                            };
+                            }
                         }
 
                         builder.append(true);
@@ -960,7 +960,7 @@ fn flatten_json_values(values: &[Value]) -> Vec<Value> {
             } else if let Value::Null = row {
                 vec![Value::Null]
             } else {
-                // we interpret a scalar as a single-value list to minimise data loss
+                // interpret a scalar as a single-value list to minimize data loss
                 vec![row.clone()]
             }
         })
@@ -1041,7 +1041,7 @@ fn parse_decimal<T: DecimalType>(
                 base = T::Native::usize_as(10).pow_checked((scale_usize + 1 + mid - len) as u32)?;
             }
         }
-    };
+    }
 
     // each byte is digit、'-' or '.'
     let bytes = s.as_bytes();

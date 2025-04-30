@@ -45,7 +45,7 @@ fn process_query<'a>(
 async fn process_select(ctx: &SessionContext, select: &Select) -> Result<(), DataFusionError> {
     for table_with_joins in &select.from {
         if let TableFactor::Table { name, .. } = &table_with_joins.relation {
-            let table_identifier = &name.0[0].value;
+            let table_identifier = name.to_string();
             let (table_name, namespace) = if let Some(pos) = table_identifier.rfind('@') {
                 let (left, right) = table_identifier.split_at(pos);
                 (left.to_string(), Some(right[1..].to_string()))

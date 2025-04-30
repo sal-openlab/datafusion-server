@@ -33,7 +33,7 @@ pub fn to_record_batch(
     };
 
     log::debug!("number of parsed JSON objects: {}", json_rows.len());
-    log::debug!("detected: {:?}", df_schema);
+    log::debug!("detected: {df_schema:?}");
 
     let mut record_batches = Vec::<RecordBatch>::new();
     {

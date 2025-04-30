@@ -116,7 +116,7 @@ impl DataFusionServerFlightService {
             .map_err(|e| Status::internal(e.to_string()))?;
 
         while let Some(batch_result) = batch_stream.next().await {
-            log::trace!("batch_stream.next(): {:#?}", batch_result);
+            log::trace!("batch_stream.next(): {batch_result:#?}");
 
             match batch_result {
                 Ok(batch) => {
@@ -225,7 +225,7 @@ impl FlightService for DataFusionServerFlightService {
 
                 let (session_id, ticket_value) = split_descriptor_value(Some(ticket_str))?;
                 let sql = if ticket_value.chars().any(char::is_whitespace) {
-                    ticket_value // May be SQL statement
+                    ticket_value // Maybe SQL statement
                 } else {
                     format!("SELECT * FROM {ticket_value}")
                 };
@@ -242,7 +242,7 @@ impl FlightService for DataFusionServerFlightService {
 
                 tokio::spawn(async move {
                     if let Err(e) = Self::send_record_batch_stream(batch_stream, tx).await {
-                        log::error!("Error converting and sending batches: {}", e);
+                        log::error!("Error converting and sending batches: {e}");
                     }
                 });
 
