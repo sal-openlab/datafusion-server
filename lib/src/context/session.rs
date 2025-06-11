@@ -2,18 +2,7 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 14, 2023
 //
 
-use std::collections::HashMap;
-
-use axum::async_trait;
-use chrono::{DateTime, Utc};
-use datafusion::{
-    arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
-    dataframe::DataFrame,
-    execution::context,
-    logical_expr::{col, JoinType},
-};
-use tokio::sync::RwLock;
-
+use crate::context::variable::SessionVariableProvider;
 #[cfg(feature = "plugin")]
 use crate::data_source::connector_plugin;
 #[cfg(any(feature = "postgres", feature = "mysql"))]
@@ -27,9 +16,22 @@ use crate::data_source::{csv, json, local_fs, location, nd_json, object_store, p
 use crate::request::body::PluginOption;
 use crate::request::body::{
     DataSource, DataSourceFormat, DataSourceOption, MergeDirection, MergeOption, MergeProcessor,
+    Variables,
 };
 use crate::response::http_error::ResponseError;
 use crate::settings::Settings;
+
+use async_trait::async_trait; // TODO: Replace in the future when the Rust compiler's async trait supports object safety.
+use chrono::{DateTime, Utc};
+use datafusion::{
+    arrow::{compute, datatypes::SchemaRef, record_batch::RecordBatch},
+    dataframe::DataFrame,
+    execution::context,
+    logical_expr::{col, JoinType},
+    scalar::ScalarValue,
+};
+use std::{collections::HashMap, sync::Arc};
+use tokio::sync::RwLock;
 
 #[allow(clippy::module_name_repetitions)]
 pub struct SessionContext {
@@ -128,6 +130,7 @@ pub trait Session: Send + Sync + 'static {
     async fn save_to_object_store(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn save_to_file(&self, data_source: &DataSource) -> Result<(), ResponseError>;
     async fn remove_data_source(&self, name: &str) -> Result<(), ResponseError>;
+    async fn append_variables(&self, variables: &Variables) -> Result<(), ResponseError>;
     async fn execute_merge_processor(
         &self,
         merge_processor: &MergeProcessor,
@@ -542,6 +545,42 @@ impl Session for ConcurrentSessionContext {
 
             session.df_ctx.deregister_table(name)?;
             session.data_source_map.remove(name);
+        }
+
+        Ok(())
+    }
+
+    async fn append_variables(&self, variables: &Variables) -> Result<(), ResponseError> {
+        let variable_map: HashMap<String, ScalarValue> = variables
+            .variables
+            .iter()
+            .filter_map(|v| v.to_scalar_value().map(|sv| (v.name.clone(), sv)))
+            .collect();
+
+        log::debug!("Register variables to session context: {:?}", variable_map);
+
+        self.touch().await;
+        {
+            let session = &mut self.write().await;
+            let df_ctx = &session.df_ctx;
+
+            df_ctx.register_variable(
+                datafusion::variable::VarType::UserDefined,
+                Arc::new(SessionVariableProvider {
+                    inner: variable_map,
+                }),
+            );
+
+            // TODO: register_variable() is correct, but can not `SELECT :var1 FROM (SELECT 1) as dummy`.
+            // use datafusion::variable::VarProvider;
+            // let provider = Arc::new(SessionVariableProvider {
+            //     inner: variable_map,
+            // });
+            // match provider.get_value(vec!["var1".to_string()]) {
+            //     Ok(val) => log::debug!("Manual get_value for 'var1': {val:?}"),
+            //     Err(e) => log::debug!("Manual get_value for 'var1' failed: {e:?}"),
+            // }
+            // df_ctx.register_variable(datafusion::variable::VarType::UserDefined, provider);
         }
 
         Ok(())

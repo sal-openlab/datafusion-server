@@ -174,7 +174,7 @@ impl Settings {
     pub fn new_with_file(config_file: &Path) -> Result<Self, ConfigError> {
         Self::defaults()
             .add_source(File::with_name(config_file.to_str().ok_or(
-                ConfigError::Message(format!("Broken utf-8 file name: {config_file:#?}")),
+                ConfigError::Message(format!("Broken utf-8 file name: {}", config_file.display())),
             )?))
             .build()?
             .try_deserialize()

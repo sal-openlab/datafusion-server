@@ -26,7 +26,8 @@ pub async fn query_responder<S: SessionManager>(
     log::trace!("Request Body: {payload:?}");
 
     let keep_alive = params
-        .get("keepAlive")
+        .get("keep-alive")
+        .or_else(|| params.get("keepAlive"))
         .and_then(|v| v.parse::<i64>().ok())
         .unwrap_or(60);
 
@@ -38,6 +39,10 @@ pub async fn query_responder<S: SessionManager>(
     session_mgr
         .append_data_sources(&session_id, &payload.data_sources)
         .await?;
+
+    if let Some(variables) = &payload.variables {
+        session_mgr.append_variables(&session_id, variables).await?;
+    }
 
     if let Some(processor) = &payload.processor {
         if let Some(merge_processors) = &processor.merge_processors {

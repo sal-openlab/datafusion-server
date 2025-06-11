@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.0 (2025-06-12)
+
+* Variable registration to session context (experimental)
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v48 and Apache Arrow v55.1
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/48.0.0.md
+        + https://github.com/apache/arrow-rs/blob/55.1.0/CHANGELOG.md
+    * Updates other latest crates
+
 ## 0.19.9 (2025-04-29)
 
 * Updates latest crate dependencies

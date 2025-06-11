@@ -3,15 +3,6 @@
 //
 
 #[cfg(feature = "plugin")]
-use crate::data_source::schema::DataSourceSchema;
-#[cfg(feature = "plugin")]
-use crate::plugin::convert_py_data::append_to_py_dict;
-use crate::plugin::{init_python, plugin_map::PluginMap};
-#[cfg(feature = "plugin")]
-use crate::response::http_error::ResponseError;
-#[cfg(feature = "plugin")]
-use crate::settings::Settings;
-#[cfg(feature = "plugin")]
 use datafusion::arrow::{
     compute,
     pyarrow::{FromPyArrow, ToPyArrow},
@@ -20,11 +11,24 @@ use datafusion::arrow::{
 use once_cell::sync::OnceCell;
 #[cfg(feature = "plugin")]
 use pyo3::{
+    ffi::c_str,
     types::{IntoPyDict, PyAnyMethods, PyDict, PyModule},
     Bound, {Py, PyAny, PyResult, Python},
 };
 #[cfg(feature = "plugin")]
 use std::collections::HashMap;
+#[cfg(feature = "plugin")]
+use std::ffi::CString;
+
+#[cfg(feature = "plugin")]
+use crate::data_source::schema::DataSourceSchema;
+#[cfg(feature = "plugin")]
+use crate::plugin::convert_py_data::append_to_py_dict;
+use crate::plugin::{init_python, plugin_map::PluginMap};
+#[cfg(feature = "plugin")]
+use crate::response::http_error::ResponseError;
+#[cfg(feature = "plugin")]
+use crate::settings::Settings;
 
 pub static PLUGIN_MANAGER: OnceCell<PluginManager> = OnceCell::new();
 
@@ -86,11 +90,14 @@ impl PluginManager {
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
 
         let result = Python::with_gil(|py| -> PyResult<Py<PyAny>> {
-            // TODO: to be followed for PyO3 v0.23
-            #[allow(deprecated)]
-            let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
-                .getattr(entry.as_str())?
-                .into();
+            let py_func: Py<PyAny> = PyModule::from_code(
+                py,
+                CString::new(py_code)?.as_c_str(),
+                c_str!(""),
+                c_str!(""),
+            )?
+            .getattr(entry.as_str())?
+            .into();
 
             let arrow_schema = if let Some(schema) = &datasource_schema {
                 Some(schema.to_arrow_schema().to_pyarrow(py)?)
@@ -98,13 +105,11 @@ impl PluginManager {
                 None
             };
 
-            // TODO: to be followed for PyO3 v0.23
-            #[allow(deprecated)]
             let kwargs = if let Some(query) = query {
-                query.into_py_dict_bound(py)
+                query.into_py_dict(py)
             } else {
-                PyDict::new_bound(py)
-            };
+                Ok(PyDict::new(py))
+            }?;
 
             append_to_py_dict(py, &[plugin_options, &self.system_info()], &kwargs)?;
 
@@ -118,9 +123,7 @@ impl PluginManager {
                 kwargs
             );
 
-            // TODO: to be followed for PyO3 v0.23
-            #[allow(deprecated)]
-            py_func.call_bound(py, (format, authority, path, arrow_schema), Some(&kwargs))
+            py_func.call(py, (format, authority, path, arrow_schema), Some(&kwargs))
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
 

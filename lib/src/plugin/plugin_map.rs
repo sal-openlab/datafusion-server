@@ -24,7 +24,7 @@ impl PluginMap {
         let mut processor_py_map = HashMap::<String, (PathBuf, String, String)>::new();
 
         let start_dir = PathBuf::from(&Settings::global().server.plugin_dir);
-        log::debug!("Scanning plugin in {start_dir:?}");
+        log::debug!("Scanning plugin in {}", start_dir.display());
         PluginMap::scan_plugin(&start_dir, &mut scheme_py_map, &mut processor_py_map)?;
         log::debug!("Detected data source plugins: {scheme_py_map:?}");
         log::debug!("Detected processor plugins: {processor_py_map:?}");
@@ -59,7 +59,7 @@ impl PluginMap {
                 let def_file = path.join("plugin_def.toml");
 
                 if def_file.exists() {
-                    log::debug!("Detect plugin definition {def_file:?}");
+                    log::debug!("Detect plugin definition {}", def_file.display());
 
                     let definition = Definition::new(def_file.as_path())?;
 

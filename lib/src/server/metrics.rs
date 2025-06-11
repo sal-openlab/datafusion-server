@@ -15,7 +15,7 @@ use crate::settings::Settings;
 #[cfg(feature = "telemetry")]
 pub async fn create_server() -> Result<
     (
-        axum::serve::Serve<axum::Router, axum::Router>,
+        axum::serve::Serve<tokio::net::TcpListener, axum::Router, axum::Router>,
         std::net::SocketAddr,
     ),
     anyhow::Error,

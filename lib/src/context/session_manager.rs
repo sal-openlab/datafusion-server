@@ -6,7 +6,8 @@ use std::cmp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use axum::{async_trait, http};
+use async_trait::async_trait; // TODO: Replace in the future when the Rust compiler's async trait supports object safety.
+use axum::http;
 use datafusion::{
     arrow::record_batch::RecordBatch, dataframe::DataFrame, execution::context::SessionConfig,
     physical_plan::SendableRecordBatchStream,
@@ -16,7 +17,7 @@ use tokio::sync::RwLock;
 use crate::context::session::{ConcurrentSessionContext, Session, SessionContext};
 use crate::data_source::{location, schema::DataSourceSchema};
 use crate::request::body::{
-    DataSource, DataSourceFormat, MergeDirection, MergeOption, MergeProcessor,
+    DataSource, DataSourceFormat, MergeDirection, MergeOption, MergeProcessor, Variables,
 };
 use crate::response::{handler, http_error::ResponseError};
 #[cfg(feature = "telemetry")]
@@ -161,6 +162,12 @@ pub trait SessionManager: Send + Sync + 'static {
         session_id: &str,
         name: &str,
         data: bytes::Bytes,
+    ) -> Result<(), ResponseError>;
+
+    async fn append_variables(
+        &self,
+        session_id: &str,
+        variables: &Variables,
     ) -> Result<(), ResponseError>;
 
     async fn execute_merge_processor(
@@ -634,6 +641,17 @@ impl SessionManager for SessionContextManager {
     ) -> Result<(), ResponseError> {
         context!(self, session_id)?
             .append_from_parquet_bytes(name, data)
+            .await?;
+        Ok(())
+    }
+
+    async fn append_variables(
+        &self,
+        session_id: &str,
+        variables: &Variables,
+    ) -> Result<(), ResponseError> {
+        context!(self, session_id)?
+            .append_variables(variables)
             .await?;
         Ok(())
     }

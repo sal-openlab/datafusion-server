@@ -6,7 +6,7 @@ use futures::stream::{Stream, StreamExt};
 use std::pin::Pin;
 use std::sync::Arc;
 
-use axum::async_trait;
+use async_trait::async_trait; // TODO: Replace in the future when the Rust compiler's async trait supports object safety.
 #[cfg(feature = "mysql")]
 use sqlx::mysql::MySqlRow;
 #[cfg(feature = "postgres")]

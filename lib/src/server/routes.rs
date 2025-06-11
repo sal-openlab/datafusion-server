@@ -14,7 +14,7 @@ use axum::{
 use tokio::sync::Mutex;
 
 use crate::context::session_manager::SessionManager;
-use crate::response::handler::{data_source, dataframe, processor, session, sys_info};
+use crate::response::handler::{data_source, dataframe, processor, session, sys_info, variable};
 #[cfg(feature = "telemetry")]
 use crate::server::metrics;
 use crate::settings::Settings;
@@ -27,23 +27,27 @@ pub fn register<S: SessionManager>(session_mgr: &Arc<Mutex<S>>) -> Router {
     let session_route = Router::new()
         .route("/", get(session::index))
         .route("/create", get(session::create))
-        .route("/:session_id", get(session::detail))
-        .route("/:session_id", delete(session::remove))
-        .route("/:session_id/query", post(session::query))
-        .route("/:session_id/datasource", get(data_source::index))
-        .route("/:session_id/datasource", post(data_source::create))
-        .route("/:session_id/datasource/save", post(data_source::save))
-        .route("/:session_id/datasource/:name", get(data_source::detail))
-        .route("/:session_id/datasource/:name", delete(data_source::remove))
+        .route("/{session_id}", get(session::detail))
+        .route("/{session_id}", delete(session::remove))
+        .route("/{session_id}/query", post(session::query))
+        .route("/{session_id}/datasource", get(data_source::index))
+        .route("/{session_id}/datasource", post(data_source::create))
+        .route("/{session_id}/datasource/save", post(data_source::save))
+        .route("/{session_id}/datasource/{name}", get(data_source::detail))
         .route(
-            "/:session_id/datasource/:name/refresh",
+            "/{session_id}/datasource/{name}",
+            delete(data_source::remove),
+        )
+        .route(
+            "/{session_id}/datasource/{name}/refresh",
             get(data_source::refresh),
         )
-        .route("/:session_id/processor", post(processor::processing))
+        .route("/{session_id}/variable", post(variable::register))
+        .route("/{session_id}/processor", post(processor::processing))
         .with_state(session_mgr.clone());
 
     let session_upload_route = Router::new()
-        .route("/:session_id/datasource/upload", post(data_source::upload))
+        .route("/{session_id}/datasource/upload", post(data_source::upload))
         .layer(DefaultBodyLimit::max(
             Settings::global().session.upload_limit_size * 1024 * 1024,
         ))

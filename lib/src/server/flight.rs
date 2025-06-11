@@ -53,7 +53,7 @@ impl DataFusionServerFlightService {
         Self { session_mgr }
     }
 
-    fn resolve_descriptor(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+    fn resolve_descriptor(descriptor: &FlightDescriptor) -> Result<(String, String), Box<Status>> {
         Ok(process_descriptor!(
             descriptor,
             {
@@ -172,7 +172,7 @@ impl FlightService for DataFusionServerFlightService {
     ) -> Result<Response<FlightInfo>, Status> {
         metrics::track_flight("get_flight_info", request, |request| async move {
             let descriptor = request.into_inner();
-            let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
+            let (session_id, sql) = Self::resolve_descriptor(&descriptor).map_err(|e| *e)?;
             let schema = Self::schema_from_logical_plan(self, &session_id, &sql).await?;
 
             Ok(Response::new(
@@ -202,7 +202,7 @@ impl FlightService for DataFusionServerFlightService {
     ) -> Result<Response<SchemaResult>, Status> {
         metrics::track_flight("get_schema", request, |request| async move {
             let descriptor = request.into_inner();
-            let (session_id, sql) = Self::resolve_descriptor(&descriptor)?;
+            let (session_id, sql) = Self::resolve_descriptor(&descriptor).map_err(|e| *e)?;
 
             Ok(Response::new(
                 Self::ipc_schema_result(self, &session_id, &sql).await?,
@@ -223,7 +223,8 @@ impl FlightService for DataFusionServerFlightService {
             if let Ok(ticket_str) = std::str::from_utf8(&ticket.ticket) {
                 log::info!("Call do_get: {ticket_str}");
 
-                let (session_id, ticket_value) = split_descriptor_value(Some(ticket_str))?;
+                let (session_id, ticket_value) =
+                    split_descriptor_value(Some(ticket_str)).map_err(|e| *e)?;
                 let sql = if ticket_value.chars().any(char::is_whitespace) {
                     ticket_value // Maybe SQL statement
                 } else {
@@ -276,7 +277,8 @@ impl FlightService for DataFusionServerFlightService {
                 process_descriptor!(
                     descriptor,
                     {
-                        let (session_id, table_name) = split_descriptor_path(descriptor)?;
+                        let (session_id, table_name) =
+                            split_descriptor_path(descriptor).map_err(|e| *e)?;
                         Ok((session_id, table_name))
                     },
                     { Err(Status::invalid_argument("Invalid descriptor type 'cmd'")) }
@@ -337,29 +339,29 @@ impl FlightService for DataFusionServerFlightService {
     }
 }
 
-fn split_descriptor_path(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+fn split_descriptor_path(descriptor: &FlightDescriptor) -> Result<(String, String), Box<Status>> {
     split_descriptor_value(descriptor.path.first().map(String::as_str))
 }
 
-fn split_descriptor_cmd(descriptor: &FlightDescriptor) -> Result<(String, String), Status> {
+fn split_descriptor_cmd(descriptor: &FlightDescriptor) -> Result<(String, String), Box<Status>> {
     split_descriptor_value(Some(std::str::from_utf8(descriptor.cmd.as_ref()).map_err(
         |e| Status::invalid_argument(format!("Descriptor `cmd` is not utf-8 encoded string: {e}",)),
     )?))
 }
 
-pub fn split_descriptor_value(value: Option<&str>) -> Result<(String, String), Status> {
+pub fn split_descriptor_value(value: Option<&str>) -> Result<(String, String), Box<Status>> {
     if value.is_none() {
-        return Err(Status::invalid_argument(
+        return Err(Box::new(Status::invalid_argument(
             "Invalid path, descriptor not found",
-        ));
+        )));
     }
 
     let parts: Vec<&str> = value.unwrap().splitn(2, '/').collect();
 
     if parts.len() < 2 {
-        return Err(Status::invalid_argument(
+        return Err(Box::new(Status::invalid_argument(
             "Invalid descriptor format, must be included 'id/value'",
-        ));
+        )));
     }
 
     Ok((parts[0].to_string(), parts[1].to_string()))

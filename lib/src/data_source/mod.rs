@@ -1,6 +1,7 @@
 #[cfg(feature = "plugin")]
 pub mod connector_plugin;
 pub mod csv;
+pub mod data_type;
 #[cfg(any(feature = "postgres", feature = "mysql"))]
 pub mod database;
 mod decoder;

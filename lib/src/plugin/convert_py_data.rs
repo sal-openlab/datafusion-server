@@ -2,12 +2,10 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> February 23, 2023
 //
 
-// TODO: to be followed for PyO3 v0.23
-#[allow(deprecated)]
 #[cfg(feature = "plugin")]
 use pyo3::{
     types::{PyAnyMethods, PyDict, PyDictMethods, PyString},
-    Bound, IntoPy, Py, PyAny, PyErr, Python, ToPyObject,
+    Bound, IntoPyObject, Py, PyAny, PyErr, Python,
 };
 
 #[cfg(feature = "plugin")]
@@ -30,28 +28,33 @@ pub fn append_to_py_dict(
     Ok(())
 }
 
-// TODO: to be followed for PyO3 v0.23
-#[allow(deprecated)]
 #[cfg(feature = "plugin")]
 fn to_py_any(py: Python, value: &serde_json::Value) -> Result<Py<PyAny>, PyErr> {
+    use pyo3::types::PyList;
+
     Ok(match value {
         serde_json::Value::Null => py.None(),
-        serde_json::Value::Bool(v) => v.to_object(py),
-        serde_json::Value::String(v) => PyString::new(py, v).to_object(py),
-        serde_json::Value::Number(v) => v.as_f64().to_object(py),
+        serde_json::Value::Bool(v) => v.into_pyobject(py).map(|b| b.to_owned().into())?,
+        serde_json::Value::String(v) => PyString::new(py, v)
+            .into_pyobject(py)
+            .map(|b| b.clone().into())?,
+        serde_json::Value::Number(v) => match v.as_f64() {
+            Some(f) => f.into_pyobject(py).map(|b| b.clone().into())?,
+            None => py.None(),
+        },
         serde_json::Value::Array(values) => {
             let mut py_list = Vec::<Py<PyAny>>::new();
             for value in values {
                 py_list.push(to_py_any(py, value)?);
             }
-            py_list.to_object(py)
+            PyList::new(py, &py_list)?.clone().into()
         }
         serde_json::Value::Object(map) => {
             let py_dict = PyDict::new(py);
             for (key, value) in map {
                 py_dict.set_item(key, to_py_any(py, value)?)?;
             }
-            py_dict.into_py(py)
+            py_dict.into_pyobject(py).map(|b| b.clone().into())?
         }
     })
 }

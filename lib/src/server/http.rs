@@ -13,7 +13,13 @@ use crate::settings::Settings;
 
 pub async fn create_server<S: SessionManager>(
     session_mgr: Arc<tokio::sync::Mutex<S>>,
-) -> Result<(axum::serve::Serve<axum::Router, axum::Router>, SocketAddr), anyhow::Error> {
+) -> Result<
+    (
+        axum::serve::Serve<tokio::net::TcpListener, axum::Router, axum::Router>,
+        SocketAddr,
+    ),
+    anyhow::Error,
+> {
     let app = routes::register::<S>(&session_mgr).layer(
         tower_http::cors::CorsLayer::new()
             .allow_headers(vec![

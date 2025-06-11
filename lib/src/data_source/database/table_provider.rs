@@ -17,7 +17,7 @@ use crate::data_source::database::{
     any_pool::{AnyDatabasePool, AnyDatabaseRow},
     engine_type::DatabaseEngineType,
 };
-use axum::async_trait;
+use async_trait::async_trait; // TODO: Replace in the future when the Rust compiler's async trait supports object safety.
 use chrono::{Datelike, Timelike};
 #[cfg(feature = "mysql")]
 use datafusion::arrow::array::{UInt16Builder, UInt32Builder, UInt64Builder, UInt8Builder};

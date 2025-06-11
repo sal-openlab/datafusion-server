@@ -6,6 +6,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
+use crate::context::variable::SessionVariable;
 use crate::data_source::{
     location::{self, uri::SupportedScheme},
     schema,
@@ -236,6 +237,12 @@ pub struct DataSources {
 }
 
 #[derive(Deserialize, Clone, Debug)]
+#[serde(transparent)]
+pub struct Variables {
+    pub variables: Vec<SessionVariable>,
+}
+
+#[derive(Deserialize, Clone, Debug)]
 pub enum MergeDirection {
     #[serde(rename = "column")]
     Column,
@@ -390,6 +397,7 @@ impl QueryResponse {
 pub struct DataFrameQuery {
     #[serde(rename = "dataSources")]
     pub data_sources: Vec<DataSource>,
+    pub variables: Option<Variables>,
     pub processor: Option<Processor>,
     #[serde(rename = "query")]
     pub query_lang: QueryLanguage,
