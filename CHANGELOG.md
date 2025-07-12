@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.1 (2025-07-12)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v48.0.1
+        + No changelogs found
+    * Updates other latest crates
+
 ## 0.20.0 (2025-06-12)
 
 * Variable registration to session context (experimental)
