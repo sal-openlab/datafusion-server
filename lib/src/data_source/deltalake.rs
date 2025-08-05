@@ -12,10 +12,12 @@ use delta_kernel::{
         default::{executor::tokio::TokioBackgroundExecutor, DefaultEngine},
     },
     scan::ScanBuilder,
-    DeltaResult, Table,
+    snapshot::Snapshot,
+    DeltaResult,
 };
 use itertools::Itertools;
 use object_store::DynObjectStore;
+use url::Url;
 
 use crate::data_source::location::{
     file,
@@ -28,7 +30,7 @@ use crate::settings::Settings;
 
 pub fn to_record_batch(
     uri: &str,
-    options: &DataSourceOption,
+    _options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     log::debug!("deltalake::to_record_batch(): uri={uri:?}");
 
@@ -44,30 +46,29 @@ pub fn to_record_batch(
         }
         .trim_end_matches('/')
     );
+    let parsed_url = Url::parse(&location)
+        .map_err(|e| ResponseError::request_validation(format!("invalid delta table url: {e}")))?;
 
-    let table = Table::try_from_uri(location)
-        .map_err(|e| ResponseError::request_validation(e.to_string()))?;
-
-    let engine = Arc::new(if scheme == SupportedScheme::File {
+    let engine = if scheme == SupportedScheme::File {
         let mut options: HashMap<&str, String> = HashMap::new();
-        options.insert("skip_signature", "true".to_string()); // no cloud credentials are needed
-
-        DefaultEngine::try_new(
-            table.location(),
+        options.insert("skip_signature", "true".to_string());
+        Arc::new(DefaultEngine::try_new(
+            &parsed_url,
             options,
             Arc::new(TokioBackgroundExecutor::new()),
-        )?
+        )?)
     } else {
-        DefaultEngine::new(
+        Arc::new(DefaultEngine::new(
             build_store(
                 &scheme,
                 parts.authority.as_ref().map_or("", |auth| auth.as_str()),
             )?,
             Arc::new(TokioBackgroundExecutor::new()),
-        )
-    });
+        ))
+    };
 
-    let snapshot = table.snapshot(engine.as_ref(), options.version)?;
+    let snapshot = Snapshot::try_new(parsed_url, engine.as_ref(), None)
+        .map_err(|e| ResponseError::request_validation(e.to_string()))?;
     let scan = ScanBuilder::new(snapshot).build()?;
 
     let batches: Vec<RecordBatch> = scan

@@ -17,8 +17,8 @@ use datafusion::{
 use crate::settings::Settings;
 
 pub async fn from_sql(ctx: &SessionContext, sql: &str) -> Result<(), DataFusionError> {
-    let ast =
-        Parser::parse_sql(&GenericDialect {}, sql).map_err(|e| DataFusionError::SQL(e, None))?;
+    let ast = Parser::parse_sql(&GenericDialect {}, sql)
+        .map_err(|e| DataFusionError::SQL(Box::new(e), None))?;
 
     for statement in ast {
         if let Statement::Query(query) = statement {
