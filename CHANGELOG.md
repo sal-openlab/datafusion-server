@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.3 (2025-08-19)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v49.0.1
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/49.0.1.md
+    * Updates other latest crates
+
 ## 0.20.2 (2025-08-05)
 
 * Updates latest crate dependencies

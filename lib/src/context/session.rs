@@ -557,7 +557,7 @@ impl Session for ConcurrentSessionContext {
             .filter_map(|v| v.to_scalar_value().map(|sv| (v.name.clone(), sv)))
             .collect();
 
-        log::debug!("Register variables to session context: {:?}", variable_map);
+        log::debug!("Register variables to session context: {variable_map:?}");
 
         self.touch().await;
         {
