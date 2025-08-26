@@ -89,7 +89,7 @@ $ docker run -d --rm \
     -p 4000:4000 \
     -v ./bin/data:/var/datafusion-server/data \
     --name datafusion-server \
-    datafusion-server:0.20.3
+    datafusion-server:0.20.4
 ```
 
 If you are only using sample data in a container, omit the `-v ./bin/data:/var/xapi-server/data`.
@@ -117,7 +117,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-datafusion-server = "0.20.3"
+datafusion-server = "0.20.4"
 clap = { version = "4.5", features = ["derive"] }
 ```
 
@@ -190,7 +190,7 @@ Require Python interpreter v3.7+
 
 ```toml
 [dependencies]
-datafusion-server = { version = "0.20.3", features = ["plugin"] }
+datafusion-server = { version = "0.20.4", features = ["plugin"] }
 ```
 
 #### Debug build and run
@@ -211,7 +211,7 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-datafusion-server = { version = "0.20.3", features = ["plugin"] }
+datafusion-server = { version = "0.20.4", features = ["plugin"] }
 ```
 
 #### Build for release
