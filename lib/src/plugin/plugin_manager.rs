@@ -155,27 +155,25 @@ impl PluginManager {
 
         let py_code = std::fs::read_to_string(py_file)
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
-
         let record_batch = compute::concat_batches(&record_batches[0].schema(), record_batches)?;
-
-        // TODO: to be followed for PyO3 v0.23
-        #[allow(deprecated)]
         let result = Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
-            let py_func: Py<PyAny> = PyModule::from_code_bound(py, &py_code, "", "")?
-                .getattr(entry.as_str())?
-                .into();
+            let module = PyModule::from_code(
+                py,
+                CString::new(py_code)?.as_c_str(),
+                c_str!(""),
+                c_str!(""),
+            )?;
+            let py_func: Py<PyAny> = module.getattr(entry.as_str())?.into();
+            let pyarrow_obj = record_batch.to_pyarrow(py)?;
+            let kwargs = PyDict::new(py);
 
-            let pyarrow = record_batch.to_pyarrow(py)?;
-
-            let kwargs = PyDict::new_bound(py);
             append_to_py_dict(py, &[plugin_options, &self.system_info()], &kwargs)?;
-
             log::debug!("Call py func {} with args {:?}", entry.as_str(), kwargs);
 
-            let args = (pyarrow.downcast_bound::<PyAny>(py)?,);
-            let result = py_func.call_bound(py, args, Some(&kwargs))?;
+            let args = (pyarrow_obj.bind(py),);
+            let result = py_func.call(py, args, Some(&kwargs))?;
 
-            self.to_record_batches(result.downcast_bound(py)?)
+            self.to_record_batches(result.bind(py))
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
 
