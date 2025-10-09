@@ -98,7 +98,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
     tokio::select! {
         http_result = http_service.into_future() => if let Err(e) = http_result {
             log::error!("Can not initialize http server: {e:?}");
-            return Err(anyhow::anyhow!("http server initialization error: {:?}", e));
+            return Err(anyhow::anyhow!("http server initialization error: {e:?}"));
         },
         flight_result = async {
             if let Some(future) = flight_service {
@@ -108,7 +108,7 @@ pub async fn execute(settings: Settings) -> anyhow::Result<()> {
             }
         } => if let Err(e) = flight_result {
             log::error!("Can not initialize flight gRPC server: {e:?}");
-            return Err(anyhow::anyhow!("flight server initialization error: {:?}", e));
+            return Err(anyhow::anyhow!("flight server initialization error: {e:?}"));
         },
         metrics_result = async {
             if let Some(future) = metrics_service {
