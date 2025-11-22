@@ -60,7 +60,7 @@ impl PluginManager {
     #[cfg(feature = "plugin")]
     #[allow(clippy::unused_self)]
     pub fn py_interpreter_info(&self) -> String {
-        Python::with_gil(|py| -> PyResult<String> {
+        Python::attach(|py| -> PyResult<String> {
             let sys = PyModule::import(py, "sys")?;
             sys.getattr("version")?.extract()
         })
@@ -89,7 +89,7 @@ impl PluginManager {
         let py_code = std::fs::read_to_string(py_file)
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
 
-        let result = Python::with_gil(|py| -> PyResult<Py<PyAny>> {
+        let result = Python::attach(|py| -> PyResult<Py<PyAny>> {
             let py_func: Py<PyAny> = PyModule::from_code(
                 py,
                 CString::new(py_code)?.as_c_str(),
@@ -156,7 +156,7 @@ impl PluginManager {
         let py_code = std::fs::read_to_string(py_file)
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
         let record_batch = compute::concat_batches(&record_batches[0].schema(), record_batches)?;
-        let result = Python::with_gil(|py| -> PyResult<Vec<RecordBatch>> {
+        let result = Python::attach(|py| -> PyResult<Vec<RecordBatch>> {
             let module = PyModule::from_code(
                 py,
                 CString::new(py_code)?.as_c_str(),
@@ -170,7 +170,7 @@ impl PluginManager {
             append_to_py_dict(py, &[plugin_options, &self.system_info()], &kwargs)?;
             log::debug!("Call py func {} with args {:?}", entry.as_str(), kwargs);
 
-            let args = (pyarrow_obj.bind(py),);
+            let args = (pyarrow_obj,);
             let result = py_func.call(py, args, Some(&kwargs))?;
 
             self.to_record_batches(result.bind(py))

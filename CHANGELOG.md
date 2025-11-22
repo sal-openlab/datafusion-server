@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.9 (2025-11-22)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v51 and Apache Arrow v57
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/51.0.0.md
+        + https://github.com/apache/arrow-rs/blob/57.0.0/CHANGELOG.md
+    * Updates other latest crates
+        + PyO3 v0.26, Tonic v0.14, Delta Kernel v0.18
+
 ## 0.20.8 (2025-10-29)
 
 * Updates latest crate dependencies

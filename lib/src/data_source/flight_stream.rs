@@ -2,21 +2,22 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> March 24, 2024
 //
 
-use std::sync::Arc;
-
-use crate::data_source::location;
-use crate::request::body::DataSourceOption;
-use crate::response::http_error::ResponseError;
-use crate::server::flight::split_descriptor_value;
 use arrow_flight::{
     flight_service_client::FlightServiceClient, utils::flight_data_to_arrow_batch, FlightData,
     FlightDescriptor, Ticket,
 };
 use datafusion::arrow::{datatypes::Schema, record_batch::RecordBatch};
+use std::sync::Arc;
+use tonic::transport::Channel;
+
+use crate::data_source::location;
+use crate::request::body::DataSourceOption;
+use crate::response::http_error::ResponseError;
+use crate::server::flight::split_descriptor_value;
 
 pub async fn do_get(
     uri: &str,
-    #[allow(unused_variables)] options: &DataSourceOption, // TODO: Define the options specifications for `flight`
+    #[allow(unused_variables)] options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let uri_parts =
         location::uri::to_parts(uri).map_err(|e| ResponseError::unsupported_type(e.to_string()))?;
@@ -31,13 +32,19 @@ pub async fn do_get(
         ));
     };
 
-    let mut grpc_client = FlightServiceClient::connect(format!("{uri_scheme}://{authority}"))
+    let endpoint = format!("{uri_scheme}://{authority}");
+
+    let channel = Channel::from_shared(endpoint)
+        .map_err(|e| {
+            ResponseError::connection_by_peer(format!("Invalid gRPC endpoint URI: {e:?}"))
+        })?
+        .connect()
         .await
         .map_err(|e| {
-            ResponseError::connection_by_peer(format!(
-                "Can not established with peer gRPC server: {e:?}"
-            ))
+            ResponseError::connection_by_peer(format!("Can not establish gRPC channel: {e:?}"))
         })?;
+
+    let mut grpc_client = FlightServiceClient::new(channel);
 
     let request = tonic::Request::new(Ticket {
         ticket: format!("{}/{}", ticket.0, ticket.1).into(),

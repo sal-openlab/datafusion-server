@@ -9,11 +9,11 @@ use pyo3::Python;
 
 #[cfg(feature = "plugin")]
 pub fn py_init() -> anyhow::Result<()> {
-    pyo3::prepare_freethreaded_python();
+    Python::initialize();
 
     log::debug!("Python bindings has been initialized");
 
-    Python::with_gil(|py| {
+    Python::attach(|py| {
         let sys = PyModule::import(py, "sys")?;
         let version: String = sys.getattr("version")?.extract()?;
         log::debug!("Detected runtime: {}", &version);

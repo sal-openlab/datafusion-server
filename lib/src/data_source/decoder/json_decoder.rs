@@ -1071,7 +1071,7 @@ fn parse_decimal<T: DecimalType>(
         result = result.neg_checked()?;
     }
 
-    match T::validate_decimal_precision(result, precision) {
+    match T::validate_decimal_precision(result, precision, scale) {
         Ok(()) => Ok(result),
         Err(e) => Err(ArrowError::ParseError(format!(
             "parse decimal overflow: {e}"

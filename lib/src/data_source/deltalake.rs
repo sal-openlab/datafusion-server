@@ -2,10 +2,9 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> June 15, 2024
 //
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
-use datafusion::arrow::{array::RecordBatch, compute};
+use datafusion::arrow::array::RecordBatch;
 use delta_kernel::{
     engine::{
         arrow_data::ArrowEngineData,
@@ -16,7 +15,7 @@ use delta_kernel::{
     DeltaResult,
 };
 use itertools::Itertools;
-use object_store::DynObjectStore;
+use object_store::{local::LocalFileSystem, DynObjectStore};
 use url::Url;
 
 use crate::data_source::location::{
@@ -49,44 +48,35 @@ pub fn to_record_batch(
     let parsed_url = Url::parse(&location)
         .map_err(|e| ResponseError::request_validation(format!("invalid delta table url: {e}")))?;
 
-    let engine = if scheme == SupportedScheme::File {
-        let mut options: HashMap<&str, String> = HashMap::new();
-        options.insert("skip_signature", "true".to_string());
-        Arc::new(DefaultEngine::try_new(
-            &parsed_url,
-            options,
-            Arc::new(TokioBackgroundExecutor::new()),
-        )?)
+    let object_store: Arc<DynObjectStore> = if scheme == SupportedScheme::File {
+        Arc::new(LocalFileSystem::new()) as Arc<DynObjectStore>
     } else {
-        Arc::new(DefaultEngine::new(
-            build_store(
-                &scheme,
-                parts.authority.as_ref().map_or("", |auth| auth.as_str()),
-            )?,
-            Arc::new(TokioBackgroundExecutor::new()),
-        ))
+        build_store(
+            &scheme,
+            parts.authority.as_ref().map_or("", |auth| auth.as_str()),
+        )?
     };
 
-    let snapshot = Snapshot::try_new(parsed_url, engine.as_ref(), None)
+    let engine = Arc::new(DefaultEngine::new_with_executor(
+        object_store,
+        Arc::new(TokioBackgroundExecutor::new()),
+    ));
+
+    let snapshot = Snapshot::builder_for(parsed_url)
+        .build(engine.as_ref())
         .map_err(|e| ResponseError::request_validation(e.to_string()))?;
     let scan = ScanBuilder::new(snapshot).build()?;
 
     let batches: Vec<RecordBatch> = scan
-        .execute(engine)?
+        .execute(engine.clone())?
         .map(|scan_result| -> DeltaResult<_> {
-            let scan_result = scan_result?;
-            let mask = scan_result.full_mask();
-            let data = scan_result.raw_data?;
+            let data = scan_result?;
             let record_batch: RecordBatch = data
                 .into_any()
                 .downcast::<ArrowEngineData>()
                 .map_err(|_| delta_kernel::Error::EngineDataType("ArrowEngineData".to_string()))?
                 .into();
-            if let Some(mask) = mask {
-                Ok(compute::filter_record_batch(&record_batch, &mask.into())?)
-            } else {
-                Ok(record_batch)
-            }
+            Ok(record_batch)
         })
         .try_collect()?;
 

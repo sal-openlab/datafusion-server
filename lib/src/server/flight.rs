@@ -13,7 +13,7 @@ use datafusion::{
     arrow::{
         datatypes::Schema,
         error::ArrowError,
-        ipc::writer::{DictionaryTracker, IpcDataGenerator, IpcWriteOptions},
+        ipc::writer::{CompressionContext, DictionaryTracker, IpcDataGenerator, IpcWriteOptions},
     },
     physical_plan::SendableRecordBatchStream,
 };
@@ -82,15 +82,18 @@ impl DataFusionServerFlightService {
         session_id: &str,
         sql: &str,
     ) -> Result<Schema, Status> {
-        Ok(Schema::from(
-            self.session_mgr
-                .lock()
-                .await
-                .execute_logical_plan(session_id, sql)
-                .await
-                .map_err(from_http_response_err)?
-                .schema(),
-        ))
+        let df = self
+            .session_mgr
+            .lock()
+            .await
+            .execute_logical_plan(session_id, sql)
+            .await
+            .map_err(from_http_response_err)?;
+
+        let df_schema = df.schema();
+        let arrow_schema: &Schema = df_schema.as_arrow();
+
+        Ok(arrow_schema.clone())
     }
 
     async fn send_record_batch_stream(
@@ -100,6 +103,7 @@ impl DataFusionServerFlightService {
         let options = IpcWriteOptions::default();
         let generator = IpcDataGenerator::default();
         let mut dictionary_tracker = DictionaryTracker::new(false);
+        let mut compression_context = CompressionContext::default();
 
         let flight_data_schema = FlightData::new().with_data_header(bytes::Bytes::from(
             generator
@@ -120,8 +124,13 @@ impl DataFusionServerFlightService {
 
             match batch_result {
                 Ok(batch) => {
-                    let (encoded_dictionaries, encoded_message) = generator
-                        .encoded_batch(&batch, &mut dictionary_tracker, &options)
+                    let (encoded_dictionaries, encoded_batch) = generator
+                        .encode(
+                            &batch,
+                            &mut dictionary_tracker,
+                            &options,
+                            &mut compression_context,
+                        )
                         .map_err(|e| Status::internal(e.to_string()))?;
 
                     for dict in encoded_dictionaries {
@@ -130,7 +139,7 @@ impl DataFusionServerFlightService {
                             .map_err(|e| Status::internal(e.to_string()))?;
                     }
 
-                    tx.send(Ok(encoded_message.into()))
+                    tx.send(Ok(encoded_batch.into()))
                         .await
                         .map_err(|e| Status::internal(e.to_string()))?;
                 }
