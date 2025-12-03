@@ -1,0 +1,2 @@
+#!/bin/sh
+docker build -f Dockerfile.bookworm -t dev-rust:local .

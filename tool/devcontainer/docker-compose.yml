@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.bookworm
+      # platform: linux/amd64
+    volumes:
+      - ../..:/workspace:cached
+      - helix-config:/home/dev/.config/helix
+      - cargo-cache:/usr/local/cargo/registry
+      - rustup-cache:/usr/local/rustup
+      - npm-cache:/home/dev/.npm
+      - pip-cache:/home/dev/.cache/pip
+    working_dir: /workspace
+    tty: true
+    stdin_open: true
+
+volumes:
+  helix-config:
+  cargo-cache:
+  rustup-cache:
+  npm-cache:
+  pip-cache:

@@ -1,0 +1,149 @@
+#!/bin/bash
+set -e
+
+export COLORTERM=truecolor
+# If your terminal does not support true color (24bit)
+# $ unset COLORTERM
+
+human_bytes_from_k() {
+  local v=$1 # KB
+  local units=(K M G T)
+  local i=0
+
+  while [ $v -ge 1024 ] && [ $i -lt 3 ]; do
+    v=$(( v / 1024 ))
+    i=$(( i + 1 ))
+  done
+
+  printf "%d%s" "$v" "${units[$i]}"
+}
+
+style_print() {
+  local text="$1"
+  shift
+
+  local seq=""
+  local reset="$(tput sgr0)"
+  local arg
+
+  for arg in "$@"; do
+    case "$arg" in
+      # foreground
+      black)   seq="${seq}$(tput setaf 0)" ;;
+      red)     seq="${seq}$(tput setaf 1)" ;;
+      green)   seq="${seq}$(tput setaf 2)" ;;
+      yellow)  seq="${seq}$(tput setaf 3)" ;;
+      blue)    seq="${seq}$(tput setaf 4)" ;;
+      magenta) seq="${seq}$(tput setaf 5)" ;;
+      cyan)    seq="${seq}$(tput setaf 6)" ;;
+      white)   seq="${seq}$(tput setaf 7)" ;;
+      # background
+      bg-black)   seq="${seq}$(tput setab 0)" ;;
+      bg-red)     seq="${seq}$(tput setab 1)" ;;
+      bg-green)   seq="${seq}$(tput setab 2)" ;;
+      bg-yellow)  seq="${seq}$(tput setab 3)" ;;
+      bg-blue)    seq="${seq}$(tput setab 4)" ;;
+      bg-magenta) seq="${seq}$(tput setab 5)" ;;
+      bg-cyan)    seq="${seq}$(tput setab 6)" ;;
+      bg-white)   seq="${seq}$(tput setab 7)" ;;
+      # decoration
+      bold)       seq="${seq}$(tput bold)" ;;
+      underline)  seq="${seq}$(tput smul)" ;;
+      reverse)    seq="${seq}$(tput rev)" ;;
+      # other
+      dim)        seq="${seq}$(tput dim 2>/dev/null || true)" ;;
+      standout)   seq="${seq}$(tput smso 2>/dev/null || true)" ;;
+      # ignoring other keyword
+      *) ;;
+    esac
+  done
+
+  printf "%s%s%s" "$seq" "$text" "$reset"
+}
+
+print_banner() {
+  . /etc/os-release
+
+  printf "%s %s\n" \
+    "$(style_print "WELCOME TO HELIX + RUST DEV CONTAINER!" bold)" \
+    "$(style_print "built at $(cat /etc/container-built)" dim)"
+
+  printf "\n"
+  printf "$NAME $VERSION ($(uname -o) $(uname -r) $(uname -m))\n"
+  printf "\n"
+  printf "  System information as of $(date)\n"
+  printf "\n"
+  printf "  Processor:   $(grep "model name" /proc/cpuinfo | sort -u | cut -d ':' -f 2)"
+  printf ",$(grep "cpu cores" /proc/cpuinfo | sort -u | cut -d ':' -f 2) Cores\n"
+
+  free -k | {
+    read
+    read TITLE TOTAL USED FREE
+    printf "  Memory usage: %d%% of %s\n" \
+      $(( 100 * USED / TOTAL )) \
+      "$(human_bytes_from_k "$TOTAL")"
+    read TITLE TOTAL USED FREE
+    printf "  Swap usage:   %d%% of %s\n" \
+      $(( 100 * USED / TOTAL )) \
+      "$(human_bytes_from_k "$TOTAL")"
+  }
+
+  printf "\n"
+}
+
+print_banner
+
+HX_CONFIG_DEST="$HOME/.config/helix"
+HX_CONFIG_DEFAULT="/etc/helix-default"
+
+printf "Helix %s %s\n" \
+  "$(hx --version | cut -d ' ' -f 2)" \
+  "$(style_print "$(which hx)" dim)"
+
+for f in config.toml languages.toml; do
+  if [ ! -f "$HX_CONFIG_DEST/$f" ]; then
+    echo "  Initializing helix default $f"
+    cp "$HX_CONFIG_DEFAULT/$f" "$HX_CONFIG_DEST/$f"
+  fi
+done
+
+BR_CONFIG_DEST="$HOME/.config/broot"
+BR_CONFIG_DEFAULT="/etc/broot-default"
+
+printf "Broot %s %s\n" \
+  "$(broot --version | cut -d ' ' -f 2)" \
+  "$(style_print "br -> $(which broot)" dim)"
+
+for f in conf.hjson verbs.hjson; do
+  if [ ! -f "$BR_CONFIG_DEST/$f" ]; then
+    echo "  Initializing broot default $f"
+    cp "$BR_CONFIG_DEFAULT/$f" "$BR_CONFIG_DEST/$f"
+  fi
+done
+
+LG_CONFIG_DEST="$HOME/.config/lazygit"
+LG_CONFIG_DEFAULT="/etc/lazygit-default"
+
+printf "Lazygit %s %s\n" \
+  "$(lazygit --version | sed -n 's/.*version=\([^,]*\).*/\1/p; q')" \
+  "$(style_print "lg -> $(which lazygit)" dim)"
+
+for f in config.yml; do
+  if [ ! -f "$LG_CONFIG_DEST/$f" ]; then
+    echo "  Initializing lazygit default $f"
+    cp "$LG_CONFIG_DEFAULT/$f" "$LG_CONFIG_DEST/$f"
+  fi
+done
+
+cat << EOF
+Rust toolchain $(cat /etc/default-rust-toolchain)
+$(python --version)
+Node.js $(node --version)
+
+$(style_print "Note:" reverse) Do you need a different version of the rust toolchain?
+  $ rustup toolchain install x.yy
+  $ rustup component add rust-analyzer clippy rustfmt --toolchain x.yy
+
+EOF
+
+exec "$@"

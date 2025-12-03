@@ -1,0 +1,70 @@
+theme = "base16_transparent"
+
+[editor]
+true-color = false
+rulers = [80, 100, 120]
+cursorline = false
+color-modes = true
+auto-completion = true
+auto-save = true
+auto-format = true
+
+[editor.cursor-shape]
+insert = "bar"
+normal = "block"
+select = "underline"
+
+[editor.statusline]
+left = ["mode", "spinner", "file-name"]
+center = ["version-control"]
+right = ["diagnostics", "selections", "position", "file-encoding", "file-line-ending", "file-type"]
+mode.normal = "NOR"
+mode.insert = "INS"
+mode.select = "SEL"
+
+[editor.file-picker]
+max-depth = 6
+hidden = false
+
+[editor.whitespace.render]
+space = "all" # all, trailing, none
+tab = "all"
+newline = "all"
+
+[editor.whitespace.characters]
+space = "·"
+nbsp = "⍽"
+tab = "→"
+newline = "↲"
+
+[editor.indent-guides]
+render = true
+character = "|"
+
+[editor.soft-wrap]
+enable = true
+max-wrap = 20
+max-indent-retain = 20
+wrap-indicator = ""
+
+[editor.lsp]
+display-inlay-hints = true
+
+[editor.inline-diagnostics]
+cursor-line = "hint" # hint, warning 
+other-lines = "warning"
+# prefix-len = 1
+# max-wrap = 20
+# max-diagnostics = 10
+
+[keys.insert]
+A-j = "normal_mode"
+C-space = "completion"
+
+[keys.normal]
+ret = ["open_below", "normal_mode"]
+backspace = "delete_char_backward"
+tab = ":bn"
+S-tab = ":bp"
+C-s = ":w"
+

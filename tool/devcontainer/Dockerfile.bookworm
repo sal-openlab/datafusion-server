@@ -1,0 +1,178 @@
+FROM debian:bookworm
+# Debian 12 Bookworm using glib 2.36
+
+LABEL maintainer="nsasaki@sal.co.jp" \
+      version="1.0.0" \
+      description="This image contains the dev-environment for Rust"
+
+ARG TARGETARCH
+ARG NODE_VERSION=22.19.0
+ARG HELIX_VERSION=25.07.1
+ARG LAZYGIT_VERSION=0.56.0
+ARG GIT_DELTA_VERSION=0.18.2
+ARG BROOT_VERSION=1.53.0
+ARG DEFAULT_RUST_TOOLCHAIN=1.88
+ARG PYTHON_VERSION=3.11.14
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=en_US.UTF-8 \
+    LC_ALL=en_US.UTF-8 \
+    TZ=Asia/Tokyo \
+    SHELL=/bin/bash \
+    HELIX_RUNTIME=/opt/helix/runtime \
+    PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+COPY .config/helix /etc/helix-default
+COPY .config/broot /etc/broot-default
+COPY .config/lazygit /etc/lazygit-default
+COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    pkg-config \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libxml2-dev \
+    libxmlsec1-dev \
+    libffi-dev \
+    liblzma-dev \
+    locales \
+    tzdata \
+    ripgrep \
+    fd-find \
+    unzip \
+    procps \
+ && rm -rf /var/lib/apt/lists/* \
+ && sed -i 's/^# \(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
+ && locale-gen \
+ && ln -s /usr/bin/fdfind /usr/local/bin/fd \
+ && printf "$DEFAULT_RUST_TOOLCHAIN" > /etc/default-rust-toolchain \
+ && date --iso-8601="seconds" --utc > /etc/container-built
+
+# ===== Node.js =====
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+ && case "$ARCH" in \
+      amd64) NODE_ARCH="linux-x64" ;; \
+      arm64) NODE_ARCH="linux-arm64" ;; \
+      *) echo "Unsupported arch for Node: $ARCH" && exit 1 ;; \
+    esac \
+ && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${NODE_ARCH}.tar.xz" \
+      -o /tmp/node.tar.xz \
+ && tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 \
+ && rm /tmp/node.tar.xz \
+ && npm install -g \
+      typescript \
+      typescript-language-server \
+      vscode-langservers-extracted \
+      pyright
+
+# ===== Helix =====
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+ && case "$ARCH" in \
+      amd64) HX_ARCH="x86_64-linux" ;; \
+      arm64) HX_ARCH="aarch64-linux" ;; \
+      *) echo "Unsupported arch for Helix: $ARCH" && exit 1 ;; \
+    esac \
+ && curl -L "https://github.com/helix-editor/helix/releases/download/${HELIX_VERSION}/helix-${HELIX_VERSION}-${HX_ARCH}.tar.xz" \
+      -o /tmp/helix.tar.xz \
+ && mkdir -p /opt/helix \
+ && tar -xf /tmp/helix.tar.xz -C /opt/helix --strip-components=1 \
+ && ln -s /opt/helix/hx /usr/local/bin/hx \
+ && rm /tmp/helix.tar.xz
+
+# ===== Lazygit =====
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+ && case "$ARCH" in \
+      amd64) LG_ARCH="x86_64" ;; \
+      arm64) LG_ARCH="arm64" ;; \
+      *) echo "Unsupported arch for Lazygit: $ARCH" && exit 1 ;; \
+    esac \
+ && curl -L "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${LG_ARCH}.tar.gz" \
+      -o /tmp/lazygit.tar.gz \
+ && tar -xf /tmp/lazygit.tar.gz lazygit \
+ && install lazygit -D -t /usr/local/bin \
+ && ln -s /usr/local/bin/lazygit /usr/local/bin/lg \
+ && rm /tmp/lazygit.tar.gz lazygit
+
+# ===== Broot =====
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
+ && case "$ARCH" in \
+      amd64) BR_ARCH="x86_64-unknown-linux-gnu" ;; \
+      arm64) BR_ARCH="aarch64-unknown-linux-gnu" ;; \
+      *) echo "Unsupported arch for Broot: $ARCH" && exit 1 ;; \
+    esac \
+ && curl -L "https://dystroy.org/broot/download/broot_${BROOT_VERSION}.zip" \
+      -o /tmp/broot.zip \
+ && unzip -j /tmp/broot.zip "$BR_ARCH/broot" -d /usr/local/bin \
+ && chmod +x /usr/local/bin/broot \
+ && rm /tmp/broot.zip
+
+# ===== dev user environment =====
+ARG USERNAME=dev
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} ${USERNAME} \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USERNAME} \
+ && mkdir -p /workspace \
+ && chown -R ${USERNAME}:${USERNAME} /workspace \
+ && mkdir -p /home/${USERNAME}/.config/helix \
+ && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/helix \
+ && mkdir -p /home/${USERNAME}/.config/broot \
+ && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/broot \
+ && mkdir -p /home/${USERNAME}/.config/lazygit \
+ && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/lazygit \
+ && printf '%s\n' "PS1='\[\e[36m\]\u\[\e[37m\]@\[\e[32m\]\h\[\e[37m\]:\[\e[33m\]\W\[\e[0m\]\$ '" >> /home/${USERNAME}/.bashrc
+
+USER ${USERNAME}
+WORKDIR /workspace
+
+ENV RUSTUP_HOME=/home/${USERNAME}/.rustup \
+    CARGO_HOME=/home/${USERNAME}/.cargo \
+    PYENV_ROOT=/home/${USERNAME}/.pyenv \
+    PATH=/home/${USERNAME}/.pyenv/shims:/home/${USERNAME}/.pyenv/bin:/home/${USERNAME}/.cargo/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# ===== Rust (dev user) =====
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+      | sh -s -- -y --no-modify-path --default-toolchain ${DEFAULT_RUST_TOOLCHAIN} \
+ && rustup component add rust-analyzer clippy rustfmt --toolchain ${DEFAULT_RUST_TOOLCHAIN}
+
+# ===== git-delta (dev user) =====
+RUN cargo install git-delta --locked --version "${GIT_DELTA_VERSION}" \
+ && install -m 0755 "$CARGO_HOME/bin/delta" /usr/local/bin/delta \
+ && rm -rf "$CARGO_HOME/bin/delta" "$CARGO_HOME/registry" \
+ && git config --global core.pager delta \
+ && git config --global interactive.diffFilter 'delta --color-only' \
+ && git config --global delta.navigate true \
+ && git config --global merge.conflictStyle zdiff3
+
+# ===== pyenv + Python (dev user) =====
+RUN curl https://pyenv.run | bash \
+ && bash -lc "\
+    export PYENV_ROOT=${PYENV_ROOT}; \
+    export PATH=\"${PYENV_ROOT}/bin:\$PATH\"; \
+    eval \"\$(pyenv init -)\"; \
+    pyenv install -s ${PYTHON_VERSION}; \
+    pyenv global ${PYTHON_VERSION}; \
+    pyenv rehash; \
+    python --version; \
+    pip install --no-cache-dir \
+      python-lsp-server[all] \
+      ruff \
+      ruff-lsp \
+      black"
+
+# ===== User specific settings =====
+RUN broot --install
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["bash"]

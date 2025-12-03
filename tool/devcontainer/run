@@ -1,0 +1,12 @@
+#!/bin/sh
+
+docker run --rm -it \
+  -v ../..:/workspace:cached \
+  dev-rust:local
+
+  # persistent directories
+  # -v ./config:/home/dev/.config \
+  # -v ./cargo-cache:/usr/local/cargo/registry \
+  # -v ./rustup-cache:/usr/local/rustup \
+  # -v ./npm-cache:/home/dev/.npm \
+  # -v ./pip-cache:/home/dev/.cache/pip \

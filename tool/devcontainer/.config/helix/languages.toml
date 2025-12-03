@@ -1,0 +1,32 @@
+[[language]]
+name = "rust"
+auto-format = true
+roots = ["Cargo.toml", "Cargo.lock"]
+
+[language-server.rust-analyzer]
+command = "rust-analyzer"
+config = { check = { command = "clippy" } }
+
+[[language]]
+name = "typescript"
+language-servers = ["typescript-language-server"]
+
+[[language]]
+name = "tsx"
+language-servers = ["typescript-language-server"]
+
+[[language]]
+name = "javascript"
+language-servers = ["typescript-language-server"]
+
+[language-server.typescript-language-server]
+command = "typescript-language-server"
+args = ["--stdio"]
+
+[[language]]
+name = "python"
+language-servers = ["pylsp", "ruff-lsp"]
+auto-format = true
+
+[language-server.pylsp.config.plugins.black]
+enabled = true
