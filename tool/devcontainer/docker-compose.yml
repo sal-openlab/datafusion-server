@@ -13,6 +13,7 @@ services:
       - rustup-cache:/usr/local/rustup
       - npm-cache:/home/dev/.npm
       - pip-cache:/home/dev/.cache/pip
+      - jbide-cache:/home/dev/.cache/JetBrains
     working_dir: /workspace
     tty: true
     stdin_open: true
@@ -23,3 +24,4 @@ volumes:
   rustup-cache:
   npm-cache:
   pip-cache:
+  jbide-cache:

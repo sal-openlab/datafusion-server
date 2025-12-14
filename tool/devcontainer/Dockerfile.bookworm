@@ -3,13 +3,18 @@ FROM debian:bookworm
 
 LABEL maintainer="nsasaki@sal.co.jp" \
       version="1.0.0" \
-      description="This image contains the dev-environment for Rust"
+      description="This image contains a dev-environment for Rust"
+
+ARG USERNAME=dev
+ARG USERPASSWORD=dev
+ARG UID=1000
+ARG GID=1000
 
 ARG TARGETARCH
 ARG NODE_VERSION=22.19.0
 ARG HELIX_VERSION=25.07.1
 ARG LAZYGIT_VERSION=0.56.0
-ARG GIT_DELTA_VERSION=0.18.2
+#ARG GIT_DELTA_VERSION=0.18.2
 ARG BROOT_VERSION=1.53.0
 ARG DEFAULT_RUST_TOOLCHAIN=1.88
 ARG PYTHON_VERSION=3.11.14
@@ -22,16 +27,17 @@ ENV DEBIAN_FRONTEND=noninteractive \
     HELIX_RUNTIME=/opt/helix/runtime \
     PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-COPY .config/helix /etc/helix-default
-COPY .config/broot /etc/broot-default
-COPY .config/lazygit /etc/lazygit-default
-COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY config/helix /etc/helix-default
+COPY config/broot /etc/broot-default
+COPY config/lazygit /etc/lazygit-default
+COPY --chmod=0755 scripts/*.sh /etc/profile.d/
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
-    build-essential \
+    coreutils \
     ca-certificates \
-    curl \
+    openssh-server \
+    build-essential \
     git \
     pkg-config \
     libssl-dev \
@@ -46,18 +52,51 @@ RUN apt-get update \
     libxmlsec1-dev \
     libffi-dev \
     liblzma-dev \
+    libclang-dev \
     locales \
     tzdata \
     ripgrep \
     fd-find \
     unzip \
+    tree \
     procps \
+    tar \
+    bash \
+    less \
+    curl \
+    dumb-init \
  && rm -rf /var/lib/apt/lists/* \
  && sed -i 's/^# \(en_US.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
  && locale-gen \
  && ln -s /usr/bin/fdfind /usr/local/bin/fd \
  && printf "$DEFAULT_RUST_TOOLCHAIN" > /etc/default-rust-toolchain \
- && date --iso-8601="seconds" --utc > /etc/container-built
+ && date --iso-8601="seconds" --utc > /etc/container-built \
+ # Should be moved to entrypoint.sh when production release
+ && mkdir -p /var/run/sshd \
+ && ssh-keygen -A \
+ # Should be disabled password authentication when production release
+ && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+ && sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd
+
+# ===== dev user =====
+RUN groupadd -g ${GID} ${USERNAME} \
+ && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USERNAME} \
+ && printf "${USERNAME}:${USERPASSWORD}" | chpasswd \
+ && mkdir -p /workspace \
+ && chown -R ${USERNAME}:${USERNAME} /workspace \
+ && mkdir -p /home/${USERNAME}/.config/helix \
+ && mkdir -p /home/${USERNAME}/.config/broot \
+ && mkdir -p /home/${USERNAME}/.config/lazygit \
+ && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config \
+ && mkdir -p /home/${USERNAME}/.cache \
+ && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.cache \
+ && printf "PS1='\[\e[36m\]\u\[\e[37m\]@\[\e[32m\]\h\[\e[37m\]:\[\e[33m\]\W\[\e[0m\]\$ '\n" >> /home/${USERNAME}/.bashrc \
+ && printf '\n# Rust & pyenv paths\n' >> /home/${USERNAME}/.bashrc \
+ && printf 'export RUSTUP_HOME="$HOME/.rustup"\n' >> /home/${USERNAME}/.bashrc \
+ && printf 'export CARGO_HOME="$HOME/.cargo"\n' >> /home/${USERNAME}/.bashrc \
+ && printf 'export PYENV_ROOT="$HOME/.pyenv"\n' >> /home/${USERNAME}/.bashrc \
+ && printf "export PYO3_PYTHON=/home/${USERNAME}/.pyenv/versions/${PYTHON_VERSION}/bin/python\n" >> /home/${USERNAME}/.bashrc \
+ && printf 'export PATH="$PYENV_ROOT/shims:$PYENV_ROOT/bin:$CARGO_HOME/bin:$PATH"\n' >> /home/${USERNAME}/.bashrc
 
 # ===== Node.js =====
 RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
@@ -115,30 +154,18 @@ RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}" \
       -o /tmp/broot.zip \
  && unzip -j /tmp/broot.zip "$BR_ARCH/broot" -d /usr/local/bin \
  && chmod +x /usr/local/bin/broot \
- && rm /tmp/broot.zip
+ && rm /tmp/broot.zip \
+ && printf '\n# broot launcher\n' >> /home/${USERNAME}/.bashrc \
+ && printf '[ -f "$HOME/.config/broot/launcher/bash/br" ] && source "$HOME/.config/broot/launcher/bash/br"\n' >> /home/${USERNAME}/.bashrc
 
-# ===== dev user environment =====
-ARG USERNAME=dev
-ARG UID=1000
-ARG GID=1000
-RUN groupadd -g ${GID} ${USERNAME} \
- && useradd -m -u ${UID} -g ${GID} -s /bin/bash ${USERNAME} \
- && mkdir -p /workspace \
- && chown -R ${USERNAME}:${USERNAME} /workspace \
- && mkdir -p /home/${USERNAME}/.config/helix \
- && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/helix \
- && mkdir -p /home/${USERNAME}/.config/broot \
- && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/broot \
- && mkdir -p /home/${USERNAME}/.config/lazygit \
- && chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.config/lazygit \
- && printf '%s\n' "PS1='\[\e[36m\]\u\[\e[37m\]@\[\e[32m\]\h\[\e[37m\]:\[\e[33m\]\W\[\e[0m\]\$ '" >> /home/${USERNAME}/.bashrc
-
+# ===== User specific settings =====
 USER ${USERNAME}
-WORKDIR /workspace
 
 ENV RUSTUP_HOME=/home/${USERNAME}/.rustup \
     CARGO_HOME=/home/${USERNAME}/.cargo \
     PYENV_ROOT=/home/${USERNAME}/.pyenv \
+    PYO3_PYTHON=/home/${USERNAME}/.pyenv/versions/${PYTHON_VERSION}/bin/python \
+    LD_LIBRARY_PATH=/home/${USERNAME}/.pyenv/versions/${PYTHON_VERSION}/lib \
     PATH=/home/${USERNAME}/.pyenv/shims:/home/${USERNAME}/.pyenv/bin:/home/${USERNAME}/.cargo/bin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # ===== Rust (dev user) =====
@@ -147,13 +174,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
  && rustup component add rust-analyzer clippy rustfmt --toolchain ${DEFAULT_RUST_TOOLCHAIN}
 
 # ===== git-delta (dev user) =====
-RUN cargo install git-delta --locked --version "${GIT_DELTA_VERSION}" \
- && install -m 0755 "$CARGO_HOME/bin/delta" /usr/local/bin/delta \
- && rm -rf "$CARGO_HOME/bin/delta" "$CARGO_HOME/registry" \
- && git config --global core.pager delta \
- && git config --global interactive.diffFilter 'delta --color-only' \
- && git config --global delta.navigate true \
- && git config --global merge.conflictStyle zdiff3
+# RUN cargo install git-delta --locked --version "${GIT_DELTA_VERSION}" \
+#  && install -m 0755 "$CARGO_HOME/bin/delta" /usr/local/bin/delta \
+#  && rm -rf "$CARGO_HOME/bin/delta" "$CARGO_HOME/registry" \
+#  && git config --global core.pager delta \
+#  && git config --global interactive.diffFilter 'delta --color-only' \
+#  && git config --global delta.navigate true \
+#  && git config --global merge.conflictStyle zdiff3
 
 # ===== pyenv + Python (dev user) =====
 RUN curl https://pyenv.run | bash \
@@ -169,10 +196,12 @@ RUN curl https://pyenv.run | bash \
       python-lsp-server[all] \
       ruff \
       ruff-lsp \
-      black"
+      black" \
+ && mkdir -p /home/${USERNAME}/.cargo \
+ && printf "[env]\nPYO3_PYTHON = \"${PYO3_PYTHON}\"\n" > /home/${USERNAME}/.cargo/config.toml
 
-# ===== User specific settings =====
-RUN broot --install
+USER root
+EXPOSE 22
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["bash"]
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["/usr/sbin/sshd", "-D"]

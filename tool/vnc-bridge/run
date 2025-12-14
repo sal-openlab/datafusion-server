@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -eu
+
+docker run --rm \
+  -e VNC_PASSWORD=vnc \
+  -e VNC_GEOMETRY=1600x900 \
+  -p 5901:5901 \
+  --name vnc-bridge \
+  vnc-bridge:local
+
+  # --network dev-net \  # useful to places at same devcontainer's network

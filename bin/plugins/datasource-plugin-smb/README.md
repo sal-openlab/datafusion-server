@@ -1,4 +1,4 @@
-# SMB/CIFS Data Source Connector Plugin 
+# SMB/CIFS Data Source Connector Plugin
 
 ## Usage
 
@@ -37,7 +37,7 @@ $ brew install krb5
 ##### Create venv
 
 ```sh
-$ python3 -m venv venv
+$ python3 -m venv .venv
 ```
 
 ##### Activate venv

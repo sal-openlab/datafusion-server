@@ -1,12 +1,51 @@
 #!/bin/sh
 
-docker run --rm -it \
-  -v ../..:/workspace:cached \
-  dev-rust:local
+set -eu
 
-  # persistent directories
-  # -v ./config:/home/dev/.config \
-  # -v ./cargo-cache:/usr/local/cargo/registry \
-  # -v ./rustup-cache:/usr/local/rustup \
-  # -v ./npm-cache:/home/dev/.npm \
-  # -v ./pip-cache:/home/dev/.cache/pip \
+CWD="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$CWD/../.." && pwd)"
+
+IMAGE_NAME="dev-rust:local"
+CONTAINER_NAME="dev-rust"
+
+if docker ps --format '{{.Names}}' | grep -qx "$CONTAINER_NAME"; then
+  echo "[run] container '$CONTAINER_NAME' already running. exiting."
+  exit 0
+fi
+
+# persistent directories (host side)
+PERSIST_ROOT="$CWD/.cache"
+CONFIG_DIR="$PERSIST_ROOT/config"
+CARGO_CACHE_DIR="$PERSIST_ROOT/cargo"
+RUSTUP_CACHE_DIR="$PERSIST_ROOT/rustup"
+NPM_CACHE_DIR="$PERSIST_ROOT/npm"
+PIP_CACHE_DIR="$PERSIST_ROOT/pip"
+JBIDE_CACHE_DIR="$PERSIST_ROOT/jetbrains"
+
+# ensure persistent directories exist
+for d in \
+  "$CONFIG_DIR" \
+  "$CARGO_CACHE_DIR" \
+  "$RUSTUP_CACHE_DIR" \
+  "$NPM_CACHE_DIR" \
+  "$PIP_CACHE_DIR" \
+  "$JBIDE_CACHE_DIR" \
+; do
+  if [ ! -d "$d" ]; then
+    echo "[run] creating directory for $(basename $d)"
+    mkdir -p "$d"
+  fi
+done
+
+# run container
+exec docker run --rm \
+  --name "$CONTAINER_NAME" \
+  -p 22:22 \
+  -v "$PROJECT_ROOT:/workspace:cached" \
+  -v "$CONFIG_DIR:/home/dev/.config" \
+  -v "$CARGO_CACHE_DIR:/usr/local/cargo/registry" \
+  -v "$RUSTUP_CACHE_DIR:/usr/local/rustup" \
+  -v "$NPM_CACHE_DIR:/home/dev/.npm" \
+  -v "$PIP_CACHE_DIR:/home/dev/.cache/pip" \
+  -v "$JBIDE_CACHE_DIR:/home/dev/.cache/JetBrains" \
+  "$IMAGE_NAME"

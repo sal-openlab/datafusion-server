@@ -1,9 +1,6 @@
-#!/bin/bash
-set -e
+# /etc/profile.d/90-welcome.sh
 
-export COLORTERM=truecolor
-# If your terminal does not support true color (24bit)
-# $ unset COLORTERM
+[[ $- != *i* ]] && return
 
 human_bytes_from_k() {
   local v=$1 # KB
@@ -64,7 +61,7 @@ style_print() {
 print_banner() {
   . /etc/os-release
 
-  printf "%s %s\n" \
+  printf "\n%s %s\n" \
     "$(style_print "WELCOME TO HELIX + RUST DEV CONTAINER!" bold)" \
     "$(style_print "built at $(cat /etc/container-built)" dim)"
 
@@ -73,8 +70,6 @@ print_banner() {
   printf "\n"
   printf "  System information as of $(date)\n"
   printf "\n"
-  printf "  Processor:   $(grep "model name" /proc/cpuinfo | sort -u | cut -d ':' -f 2)"
-  printf ",$(grep "cpu cores" /proc/cpuinfo | sort -u | cut -d ':' -f 2) Cores\n"
 
   free -k | {
     read
@@ -87,63 +82,33 @@ print_banner() {
       $(( 100 * USED / TOTAL )) \
       "$(human_bytes_from_k "$TOTAL")"
   }
-
-  printf "\n"
 }
 
 print_banner
 
-HX_CONFIG_DEST="$HOME/.config/helix"
-HX_CONFIG_DEFAULT="/etc/helix-default"
+python_version="(not found)"
+if command -v python >/dev/null 2>&1; then
+  python_version="$(python --version | cut -d ' ' -f 2 2>&1)"
+elif command -v python3 >/dev/null 2>&1; then
+  python_version="$(python3 --version | cut -d ' ' -f 2 2>&1)"
+fi
 
-printf "Helix %s %s\n" \
-  "$(hx --version | cut -d ' ' -f 2)" \
-  "$(style_print "$(which hx)" dim)"
-
-for f in config.toml languages.toml; do
-  if [ ! -f "$HX_CONFIG_DEST/$f" ]; then
-    echo "  Initializing helix default $f"
-    cp "$HX_CONFIG_DEFAULT/$f" "$HX_CONFIG_DEST/$f"
-  fi
-done
-
-BR_CONFIG_DEST="$HOME/.config/broot"
-BR_CONFIG_DEFAULT="/etc/broot-default"
-
-printf "Broot %s %s\n" \
-  "$(broot --version | cut -d ' ' -f 2)" \
-  "$(style_print "br -> $(which broot)" dim)"
-
-for f in conf.hjson verbs.hjson; do
-  if [ ! -f "$BR_CONFIG_DEST/$f" ]; then
-    echo "  Initializing broot default $f"
-    cp "$BR_CONFIG_DEFAULT/$f" "$BR_CONFIG_DEST/$f"
-  fi
-done
-
-LG_CONFIG_DEST="$HOME/.config/lazygit"
-LG_CONFIG_DEFAULT="/etc/lazygit-default"
-
-printf "Lazygit %s %s\n" \
-  "$(lazygit --version | sed -n 's/.*version=\([^,]*\).*/\1/p; q')" \
-  "$(style_print "lg -> $(which lazygit)" dim)"
-
-for f in config.yml; do
-  if [ ! -f "$LG_CONFIG_DEST/$f" ]; then
-    echo "  Initializing lazygit default $f"
-    cp "$LG_CONFIG_DEFAULT/$f" "$LG_CONFIG_DEST/$f"
-  fi
-done
+node_version="(not found)"
+if command -v node >/dev/null 2>&1; then
+  node_version="$(node --version)"
+fi
 
 cat << EOF
-Rust toolchain $(cat /etc/default-rust-toolchain)
-$(python --version)
-Node.js $(node --version)
+
+Helix $(hx --version | cut -d ' ' -f 2) $(style_print "$(which hx)" dim)
+Broot $(broot --version | cut -d ' ' -f 2) $(style_print "br -> $(which broot)" dim)
+Lazygit $(lazygit --version | sed -n 's/.*version=\([^,]*\).*/\1/p; q') $(style_print "lg -> $(which lazygit)" dim)
+Rust Toolchain $(cat /etc/default-rust-toolchain)
+Python $python_version
+Node.js $node_version
 
 $(style_print "Note:" reverse) Do you need a different version of the rust toolchain?
-  $ rustup toolchain install x.yy
-  $ rustup component add rust-analyzer clippy rustfmt --toolchain x.yy
+  \$ rustup toolchain install x.yy
+  \$ rustup component add rust-analyzer clippy rustfmt --toolchain x.yy
 
 EOF
-
-exec "$@"

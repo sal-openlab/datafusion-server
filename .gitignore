@@ -1,3 +1,5 @@
 target/
+.venv/
+.direnv/
 Cargo.lock
 .DS_Store

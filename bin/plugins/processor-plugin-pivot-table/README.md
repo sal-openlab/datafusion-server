@@ -87,7 +87,7 @@ $ sudo apt install python3-dev
 ```
 
 * Windows
-  - https://www.python.org/downloads/windows/
+    - https://www.python.org/downloads/windows/
 
 ### Debugging
 
@@ -96,7 +96,7 @@ $ sudo apt install python3-dev
 ##### Create venv
 
 ```sh
-$ python3 -m venv venv
+$ python3 -m venv .venv
 ```
 
 ##### Activate venv

@@ -11,7 +11,6 @@ use datafusion::arrow::{
 use once_cell::sync::OnceCell;
 #[cfg(feature = "plugin")]
 use pyo3::{
-    ffi::c_str,
     types::{IntoPyDict, PyAnyMethods, PyDict, PyModule},
     Bound, {Py, PyAny, PyResult, Python},
 };
@@ -90,12 +89,24 @@ impl PluginManager {
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
 
         let result = Python::attach(|py| -> PyResult<Py<PyAny>> {
+            let code_cstr = CString::new(py_code.as_str())?;
+            let file_name_cstr = CString::new(py_file.to_string_lossy().as_ref())?;
+            let module_name_cstr = CString::new(
+                py_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default(),
+            )?;
+
             let py_func: Py<PyAny> = PyModule::from_code(
                 py,
-                CString::new(py_code)?.as_c_str(),
-                c_str!(""),
-                c_str!(""),
-            )?
+                code_cstr.as_c_str(),
+                file_name_cstr.as_c_str(),
+                module_name_cstr.as_c_str(),
+            )
+            .inspect_err(|e| {
+                e.print(py);
+            })?
             .getattr(entry.as_str())?
             .into();
 
@@ -124,6 +135,11 @@ impl PluginManager {
             );
 
             py_func.call(py, (format, authority, path, arrow_schema), Some(&kwargs))
+        })
+        .inspect_err(|e| {
+            Python::attach(|py| {
+                e.print(py);
+            });
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?;
 
@@ -157,11 +173,20 @@ impl PluginManager {
             .map_err(|e| ResponseError::internal_server_error(e.to_string()))?;
         let record_batch = compute::concat_batches(&record_batches[0].schema(), record_batches)?;
         let result = Python::attach(|py| -> PyResult<Vec<RecordBatch>> {
+            let code_cstr = CString::new(py_code.as_str())?;
+            let file_name_cstr = CString::new(py_file.to_string_lossy().as_ref())?;
+            let module_name_cstr = CString::new(
+                py_file
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default(),
+            )?;
+
             let module = PyModule::from_code(
                 py,
-                CString::new(py_code)?.as_c_str(),
-                c_str!(""),
-                c_str!(""),
+                code_cstr.as_c_str(),
+                file_name_cstr.as_c_str(),
+                module_name_cstr.as_c_str(),
             )?;
             let py_func: Py<PyAny> = module.getattr(entry.as_str())?.into();
             let pyarrow_obj = record_batch.to_pyarrow(py)?;

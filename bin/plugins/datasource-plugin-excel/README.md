@@ -1,7 +1,7 @@
 # Microsoft Excel data source connector plugin for datafusion-server
 
 * Supports Excel 2003+ (.xls and .xlsx) files
-  + .xlsm and other format is **not tested**
+    + .xlsm and other format is **not tested**
 
 ## Specifications
 
@@ -63,7 +63,7 @@ $ sudo apt install python3-dev
 ```
 
 * Windows
-  - https://www.python.org/downloads/windows/
+    - https://www.python.org/downloads/windows/
 
 ### Debugging
 
@@ -72,7 +72,7 @@ $ sudo apt install python3-dev
 ##### Create venv
 
 ```sh
-$ python3 -m venv venv
+$ python3 -m venv .venv
 ```
 
 ##### Activate venv
