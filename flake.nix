@@ -4,60 +4,26 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    fenix = {
-      url = "github:nix-community/fenix";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, fenix }:
+  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs { inherit system; };
-        python = pkgs.python311;
-        rustToolchain = fenix.packages.${system}.fromToolchainFile {
-          file = ./rust-toolchain.toml;
-          # Execute `nix run .#update-rust-toolchain` when rust-toolchain.toml changed.
-          sha256 = "sha256-Qxt8XAuaUR2OMdKbN4u8dBJOhSHxS+uS06Wl9+flVEk=";
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ rust-overlay.overlays.default ];
         };
-        updateRustToolchain = pkgs.writeShellApplication {
-          name = "update-rust-toolchain-sha";
-          runtimeInputs = [ pkgs.nix pkgs.gnused pkgs.coreutils ];
-          text = ''
-            set -euo pipefail
-
-            echo "[update] resetting sha256 to fakeSha256"
-            sed -i.bak \
-              -e '/rustToolchain = fenix\.packages\..*fromToolchainFile {/,/};/ { s#^[[:space:]]*sha256 = "sha256-[^"]*";#          sha256 = pkgs.lib.fakeSha256;# }' \
-              flake.nix
-
-            echo "[update] running \`nix develop\` to obtain the sha256"
-            if nix develop 2>err.log; then
-              echo "[update] unexpected success (sha256 already correct?)"
-              rm -f err.log
-              exit 0
-            fi
-
-            sha=$(grep -o 'got:[[:space:]]*sha256-[A-Za-z0-9+/=]*' err.log | sed 's/.*sha256-/sha256-/')
-            if [ -z "$sha" ]; then
-              echo "[update] failed to extract sha256" >&2
-              cat err.log >&2
-              exit 1
-            fi
-
-            echo "[update] updating 'flake.nix' with $sha"
-            sed -i.bak \
-              -e "/rustToolchain = fenix\\.packages\\..*fromToolchainFile {/,/};/ { s#^[[:space:]]*sha256 = pkgs\\.lib\\.fakeSha256;#          sha256 = \"$sha\";# }" \
-              flake.nix
-
-            rm -f err.log
-            echo "[update] done. please review 'flake.nix' and commit the change."
-          '';
-        };      in
+        python = pkgs.python311;
+        rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+      in
       {
         devShells.default = pkgs.mkShell {
           packages = [
-            # Rust (pinned by rust-toolchain.toml via fenix)
+            # Rust (pinned by rust-toolchain.toml via rust-overlay)
             rustToolchain
             pkgs.rust-analyzer
             pkgs.pkg-config
@@ -112,10 +78,6 @@
 
             echo "[nix] ready: rustc=$(rustc --version | head -n1), python=$(python --version)"
           '';
-        };
-        apps.update-rust-toolchain = {
-          type = "app";
-          program = "${updateRustToolchain}/bin/update-rust-toolchain-sha";
         };
       }
     );

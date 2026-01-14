@@ -1,5 +1,4 @@
 [toolchain]
-# execute `nix run .#update-rust-toolchain` to change sha256 in flake.nix
 channel = "1.88"
 components = ["rustc", "cargo", "rustfmt", "clippy"]
 # default, minimal, complete

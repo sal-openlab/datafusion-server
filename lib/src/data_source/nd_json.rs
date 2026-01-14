@@ -43,7 +43,7 @@ fn to_record_batch<R: BufRead + Seek>(
     options: &DataSourceOption,
 ) -> Result<Vec<RecordBatch>, ResponseError> {
     let df_schema = SchemaRef::new(if let Some(schema) = schema {
-        schema.to_arrow_schema()
+        schema.to_arrow_schema()?
     } else {
         let (inferred_schema, _) =
             infer_json_schema_from_seekable(&mut reader, options.infer_schema_rows)?;

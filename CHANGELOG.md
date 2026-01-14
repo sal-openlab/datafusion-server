@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.10 (2026-01-14)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v52 and Apache Arrow v57.1
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/52.0.0.md
+        + https://github.com/apache/arrow-rs/blob/57.1.0/CHANGELOG.md
+
 ## 0.20.9 (2025-11-22)
 
 * Updates latest crate dependencies

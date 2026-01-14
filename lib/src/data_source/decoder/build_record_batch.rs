@@ -24,7 +24,7 @@ pub fn from_json(
     log::debug!("number of parsed JSON objects: {}", json_rows.len());
 
     let df_schema = if let Some(schema) = schema {
-        schema.to_arrow_schema()
+        schema.to_arrow_schema()?
     } else {
         infer_schema::from_json_value(json_rows, options)?
     };

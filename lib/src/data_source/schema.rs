@@ -2,11 +2,11 @@
 // Sasaki, Naoki <nsasaki@sal.co.jp> January 29, 2023
 //
 
-use std::sync::Arc;
-
+use arrow::error::ArrowError;
 use datafusion::arrow::{self, datatypes::SchemaRef};
 use serde::Deserialize;
 use serde_derive::Serialize;
+use std::sync::Arc;
 
 use crate::data_source::data_type::DataType;
 
@@ -20,12 +20,12 @@ pub struct Field {
 
 impl Field {
     #[allow(dead_code)]
-    fn to_arrow_field(&self) -> Arc<arrow::datatypes::Field> {
-        Arc::new(arrow::datatypes::Field::new(
+    fn to_arrow_field(&self) -> Result<Arc<arrow::datatypes::Field>, ArrowError> {
+        Ok(Arc::new(arrow::datatypes::Field::new(
             self.name.clone(),
-            self.data_type.to_arrow_data_type(),
+            self.data_type.to_arrow_data_type()?,
             self.nullable.unwrap_or(true),
-        ))
+        )))
     }
 
     pub fn from_arrow_field(field: &arrow::datatypes::Field) -> Self {
@@ -45,18 +45,18 @@ pub struct DataSourceSchema {
 }
 
 impl DataSourceSchema {
-    pub fn to_arrow_schema(&self) -> arrow::datatypes::Schema {
+    pub fn to_arrow_schema(&self) -> Result<arrow::datatypes::Schema, ArrowError> {
         let mut schema_fields = Vec::<arrow::datatypes::Field>::new();
 
         for field in &self.fields {
             schema_fields.push(arrow::datatypes::Field::new(
                 field.name.clone(),
-                field.data_type.to_arrow_data_type(),
+                field.data_type.to_arrow_data_type()?,
                 field.nullable.unwrap_or(true),
             ));
         }
 
-        arrow::datatypes::Schema::new(schema_fields)
+        Ok(arrow::datatypes::Schema::new(schema_fields))
     }
 
     pub fn from_arrow_schema(schema: &SchemaRef) -> Self {

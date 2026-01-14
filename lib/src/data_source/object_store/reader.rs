@@ -59,7 +59,7 @@ async fn register_csv(
 
     let arrow_schema;
     let csv_options = if let Some(schema) = &data_source.schema {
-        arrow_schema = schema.to_arrow_schema();
+        arrow_schema = schema.to_arrow_schema()?;
         csv_options.schema(&arrow_schema)
     } else {
         csv_options.schema_infer_max_records(options.infer_schema_rows.unwrap_or(100))
@@ -87,7 +87,7 @@ async fn register_ndjson(
 
     let arrow_schema;
     let ndjson_options = if let Some(schema) = &data_source.schema {
-        arrow_schema = schema.to_arrow_schema();
+        arrow_schema = schema.to_arrow_schema()?;
         ndjson_options.schema(&arrow_schema)
     } else {
         ndjson_options.schema_infer_max_records = options.infer_schema_rows.unwrap_or(100);
@@ -123,7 +123,7 @@ async fn register_avro(
 
     let arrow_schema;
     if data_source.schema.is_some() {
-        arrow_schema = data_source.schema.as_ref().unwrap().to_arrow_schema();
+        arrow_schema = data_source.schema.as_ref().unwrap().to_arrow_schema()?;
         avro_options = avro_options.schema(&arrow_schema);
     }
 

@@ -3,7 +3,7 @@
 //
 
 #[cfg(feature = "plugin")]
-use datafusion::arrow::{
+use arrow::{
     compute,
     pyarrow::{FromPyArrow, ToPyArrow},
     record_batch::RecordBatch,
@@ -11,6 +11,7 @@ use datafusion::arrow::{
 use once_cell::sync::OnceCell;
 #[cfg(feature = "plugin")]
 use pyo3::{
+    exceptions::PyRuntimeError,
     types::{IntoPyDict, PyAnyMethods, PyDict, PyModule},
     Bound, {Py, PyAny, PyResult, Python},
 };
@@ -111,7 +112,14 @@ impl PluginManager {
             .into();
 
             let arrow_schema = if let Some(schema) = &datasource_schema {
-                Some(schema.to_arrow_schema().to_pyarrow(py)?)
+                Some(
+                    schema
+                        .to_arrow_schema()
+                        .map_err(|e| {
+                            PyRuntimeError::new_err(format!("failed to build arrow schema: {e}"))
+                        })?
+                        .to_pyarrow(py)?,
+                )
             } else {
                 None
             };

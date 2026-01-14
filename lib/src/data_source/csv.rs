@@ -45,7 +45,7 @@ fn to_record_batch<R: Read + Seek>(
     let delimiter = options.delimiter.unwrap_or(',') as u8;
 
     let df_schema = if let Some(schema) = schema {
-        SchemaRef::new(schema.to_arrow_schema())
+        SchemaRef::new(schema.to_arrow_schema()?)
     } else {
         let format = csv::reader::Format::default()
             .with_header(has_header)

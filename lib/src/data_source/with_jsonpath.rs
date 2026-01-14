@@ -27,7 +27,7 @@ pub fn to_record_batch(
     let json_rows: Vec<Value> = found_slices.into_iter().cloned().collect();
 
     let df_schema = if let Some(schema) = schema {
-        schema.to_arrow_schema()
+        schema.to_arrow_schema()?
     } else {
         infer_schema::from_json_value(&json_rows, options)?
     };

@@ -3,6 +3,7 @@
 //
 
 use crate::data_source::schema::Field;
+use arrow::error::ArrowError;
 use datafusion::arrow;
 use serde_derive::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -45,8 +46,8 @@ pub enum DataType {
 }
 
 impl DataType {
-    pub(crate) fn to_arrow_data_type(&self) -> arrow::datatypes::DataType {
-        match self {
+    pub(crate) fn to_arrow_data_type(&self) -> Result<arrow::datatypes::DataType, ArrowError> {
+        Ok(match self {
             DataType::Boolean => arrow::datatypes::DataType::Boolean,
             DataType::Int8 => arrow::datatypes::DataType::Int8,
             DataType::Int16 => arrow::datatypes::DataType::Int16,
@@ -79,12 +80,12 @@ impl DataType {
             DataType::String => arrow::datatypes::DataType::Utf8,
             DataType::List(child_type) => {
                 arrow::datatypes::DataType::List(arrow::datatypes::FieldRef::from(
-                    arrow::datatypes::Field::new("item", child_type.to_arrow_data_type(), true),
+                    arrow::datatypes::Field::new("item", child_type.to_arrow_data_type()?, true),
                 ))
             }
             DataType::LargeList(child_type) => {
                 arrow::datatypes::DataType::LargeList(arrow::datatypes::FieldRef::from(
-                    arrow::datatypes::Field::new("item", child_type.to_arrow_data_type(), true),
+                    arrow::datatypes::Field::new("item", child_type.to_arrow_data_type()?, true),
                 ))
             }
             DataType::Map(map_type) => arrow::datatypes::DataType::Map(
@@ -93,12 +94,12 @@ impl DataType {
                     arrow::datatypes::DataType::Struct(arrow::datatypes::Fields::from(vec![
                         arrow::datatypes::Field::new(
                             "key",
-                            map_type.key.to_arrow_data_type(),
+                            map_type.key.to_arrow_data_type()?,
                             false,
                         ),
                         arrow::datatypes::Field::new(
                             "value",
-                            map_type.value.to_arrow_data_type(),
+                            map_type.value.to_arrow_data_type()?,
                             true,
                         ),
                     ])),
@@ -106,44 +107,46 @@ impl DataType {
                 )),
                 map_type.ordered,
             ),
-            DataType::Struct(struct_type) => arrow::datatypes::DataType::Struct(
-                struct_type
+            DataType::Struct(struct_type) => {
+                let fields: Vec<arrow::datatypes::Field> = struct_type
                     .fields
                     .iter()
                     .map(|field| {
-                        arrow::datatypes::Field::new(
+                        Ok(arrow::datatypes::Field::new(
                             &field.name,
-                            field.data_type.to_arrow_data_type(),
+                            field.data_type.to_arrow_data_type()?,
                             true,
-                        )
+                        ))
                     })
-                    .collect(),
-            ),
+                    .collect::<Result<Vec<_>, ArrowError>>()?;
+
+                arrow::datatypes::DataType::Struct(fields.into())
+            }
             DataType::Union(union_type) => {
                 let type_ids = union_type
                     .types
                     .iter()
                     .map(|(type_id, _)| *type_id)
                     .collect::<Vec<i8>>();
-                let fields = union_type
+                let fields: Vec<arrow::datatypes::FieldRef> = union_type
                     .types
                     .iter()
                     .map(|(_, my_data_type)| {
-                        Arc::new(arrow::datatypes::Field::new(
+                        Ok(Arc::new(arrow::datatypes::Field::new(
                             "",
-                            my_data_type.to_arrow_data_type(),
+                            my_data_type.to_arrow_data_type()?,
                             true,
-                        )) as arrow::datatypes::FieldRef
+                        )) as arrow::datatypes::FieldRef)
                     })
-                    .collect::<Vec<arrow::datatypes::FieldRef>>();
+                    .collect::<Result<Vec<_>, ArrowError>>()?;
 
                 arrow::datatypes::DataType::Union(
-                    arrow::datatypes::UnionFields::new(type_ids, fields),
+                    arrow::datatypes::UnionFields::try_new(type_ids, fields)?,
                     UnionMode::to_arrow_union_mode(&union_type.mode),
                 )
             }
             DataType::Unknown => arrow::datatypes::DataType::Binary,
-        }
+        })
     }
 
     pub(crate) fn from_arrow_data_type(arrow_data_type: &arrow::datatypes::DataType) -> DataType {
