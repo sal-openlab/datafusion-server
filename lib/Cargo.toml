@@ -16,7 +16,8 @@ name = "datafusion_server"
 path = "src/lib.rs"
 
 [features]
-plugin = ["pyo3"]
+pyarrow = ["arrow/pyarrow"]
+plugin = ["dep:pyo3", "pyarrow"]
 flight = ["arrow-flight", "tonic"]
 avro = ["datafusion/avro"]
 webdav = ["object_store/http"]
@@ -53,7 +54,7 @@ axum = { version = "0.8.8", features = ["multipart"] }
 axum-extra = { version = "0.12.5", features = ["typed-header"] }
 mime = { version = "0.3.17" }
 datafusion = { version = "52.0.0" }
-arrow = { version = "57.1.0", features = ["pyarrow"] }
+arrow = { version = "57.1.0" }
 arrow-flight = { version = "57.1.0", optional = true }
 pyo3 = { version = "0.26.0", optional = true }
 object_store = { version = "0.12.4", features = ["aws", "gcp", "azure"] }
