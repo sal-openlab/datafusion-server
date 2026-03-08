@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.12 (2026-03-04)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v52.2
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/52.2.0.md
+
 ## 0.20.11 (2026-02-04)
 
 * Updates latest crate dependencies
