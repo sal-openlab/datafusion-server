@@ -48,7 +48,7 @@ pub fn to_record_batch(
 
     Ok(match format {
         DataSourceFormat::Arrow => Python::attach(|py| -> PyResult<Vec<RecordBatch>> {
-            PluginManager::global().to_record_batches(py_result.downcast_bound(py)?)
+            PluginManager::global().to_record_batches(py_result.cast_bound(py)?)
         })
         .map_err(|e| ResponseError::python_interpreter_error(e.to_string()))?,
         DataSourceFormat::Json => {
@@ -95,7 +95,7 @@ pub fn to_record_batch(
 fn py_result_to_bytes(py_result: &Py<PyAny>) -> Result<bytes::Bytes, ResponseError> {
     let mut buffer = bytes::BytesMut::new();
     Python::attach(|py| -> PyResult<()> {
-        let py_bytes = py_result.downcast_bound::<PyBytes>(py)?.as_bytes();
+        let py_bytes = py_result.cast_bound::<PyBytes>(py)?.as_bytes();
         buffer.extend_from_slice(py_bytes);
         Ok(())
     })

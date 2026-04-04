@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.21.0 (2026-04-04)
+
+* Updates latest crate dependencies
+    * Updates to Apache DataFusion v53 and Apache Arrow v58
+        + https://github.com/apache/datafusion/blob/main/dev/changelog/53.0.0.md
+        + https://github.com/apache/arrow-rs/blob/58.0.0/CHANGELOG.md
+
+### ⚠️ Delta Lake: Remote object store support temporarily disabled
+
+Delta Lake integration is currently limited to local file paths (`file://`).
+
+Remote object stores are **temporarily unavailable**:
+
+- `aws://` (Amazon S3)
+- `az://` (Azure Blob Storage)
+- `gcp://` (Google Cloud Storage)
+
+#### Reason
+
+This limitation is caused by a dependency mismatch:
+
+- `delta_kernel v0.20.0` depends on `object_store 0.12.x`
+- This project depends on `object_store 0.13.x`
+
+Since these versions define incompatible trait types, object stores cannot be shared across the boundary.
+
+#### Current workaround
+
+Only local file system access is supported for Delta Lake tables.
+
+#### Future plan
+
+Support will be restored once `delta_kernel` updates to a compatible `object_store` version.
+
 ## 0.20.13 (2026-03-15)
 
 * Updates latest crate dependencies

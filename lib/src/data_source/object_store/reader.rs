@@ -3,7 +3,7 @@
 #[cfg(feature = "avro")]
 use datafusion::datasource::file_format::options::AvroReadOptions;
 use datafusion::{
-    datasource::file_format::options::{CsvReadOptions, NdJsonReadOptions, ParquetReadOptions},
+    datasource::file_format::options::{CsvReadOptions, JsonReadOptions, ParquetReadOptions},
     execution::context::SessionContext,
 };
 
@@ -83,7 +83,7 @@ async fn register_ndjson(
         None => DataSourceOption::new(),
     };
 
-    let mut ndjson_options = NdJsonReadOptions::default();
+    let mut ndjson_options = JsonReadOptions::default();
 
     let arrow_schema;
     let ndjson_options = if let Some(schema) = &data_source.schema {
